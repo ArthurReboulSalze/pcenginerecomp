@@ -29,7 +29,7 @@ class CheckRunnerCliTests(unittest.TestCase):
         self.assertEqual(calls[0].args[0], [sys.executable, '-m', 'unittest', 'discover',
                                           '-s', 'tests', '-p', 'test_*.py', '-v'])
         self.assertEqual(calls[0].kwargs['timeout'], 600)
-        self.assertEqual(len(calls), 65)  # Python, 63 non-SDL native suites, fresh-process audio helper.
+        self.assertEqual(len(calls), 66)  # Python, 64 non-SDL native suites, fresh-process audio helper.
         self.assertTrue(any('pce-checkpoint-tests' in str(call.args[0][0]) for call in calls[1:]))
         self.assertTrue(any('pce-checkpoint-audio-tests' in str(call.args[0][0]) for call in calls[1:]))
         self.assertTrue(any('pce-cd-read-checkpoint-tests' in str(call.args[0][0]) for call in calls[1:]))
@@ -42,6 +42,17 @@ class CheckRunnerCliTests(unittest.TestCase):
         self.assertTrue(any('pce-adpcm-irq-tests' in str(call.args[0][0]) for call in calls[1:]))
         self.assertTrue(all(call.kwargs['check'] is True for call in calls))
         self.assertTrue(all(call.kwargs['timeout'] == 60 for call in calls[1:]))
+
+    def test_unknown_cd_suite_runs_once_with_its_native_deadline(self):
+        calls, _ = self.invoke([])
+        unknown = [call for call in calls[1:]
+                   if Path(call.args[0][0]).stem == 'pce-cd-unknown-tests']
+        self.assertEqual(len(unknown), 1)
+        suffix = '.exe' if sys.platform == 'win32' else ''
+        self.assertEqual(unknown[0].args[0],
+                         [str(ROOT/'build'/('pce-cd-unknown-tests' + suffix))])
+        self.assertIs(unknown[0].kwargs['check'], True)
+        self.assertEqual(unknown[0].kwargs['timeout'], 60)
 
     def test_explicit_finite_python_deadline_is_forwarded_without_changing_suites(self):
         baseline, _ = self.invoke([])

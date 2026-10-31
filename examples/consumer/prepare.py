@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from pcerecomp.analysis import Snapshot, analyze
 from pcerecomp.emitter import emit
-from pcerecomp.project import sha256, source_identity
+from pcerecomp.project import ABI, sha256, source_identity
 
 
 def prepare(output: Path, tool_root: Path = ROOT) -> Path:
@@ -40,7 +40,7 @@ name = "authored-consumer"
 path = {quote(tool_root.as_posix())}
 revision = "{identity['revision']}"
 source_sha256 = "{identity['source_sha256']}"
-runtime_abi = 26
+runtime_abi = {ABI}
 [module.source]
 path = "module/module.cpp"
 sha256 = "{sha256(output / 'module/module.cpp')}"

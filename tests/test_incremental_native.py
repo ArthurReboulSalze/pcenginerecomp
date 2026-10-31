@@ -113,7 +113,7 @@ class NativeManagedRebuildTests(unittest.TestCase):
                 self.assertEqual((capture['runtime_abi'], capture['complete'],
                     capture['retired_instructions'], capture['dropped_instructions'],
                     capture['unreadable_instructions'], len(capture['observations'])),
-                    (26, True, 200, 0, 0, 4))
+                    (ABI, True, 200, 0, 0, 4))
                 self.assertNotIn('bram_session', receipt)
                 return receipt, capture, digest
 

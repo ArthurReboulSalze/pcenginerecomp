@@ -21,8 +21,8 @@ def prepare(output: Path, tool_root: Path = ROOT) -> Path:
     from pcerecomp.isa import physical
     from pcerecomp.project import ABI, source_identity, sha256
     identity = source_identity(tool_root)
-    if ABI != 26 or identity["revision"] is None:
-        raise ValueError("Example requires a committed ABI26 toolkit checkout")
+    if identity["revision"] is None:
+        raise ValueError("Example requires a committed toolkit checkout")
     output.mkdir(parents=True)
     operations = [(0xA9, 0xFF), (0x53, 1), (0xA9, 0xF8), (0x53, 2),
                   (0xA9, 0xF7), (0x53, 8), (0xA9, 0x80), (0x8D, 7, 0x18),

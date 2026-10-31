@@ -30,8 +30,6 @@ def tools(tool_root):
     from pcerecomp.capture import load_capture
     from pcerecomp.emitter import emit_capture
     from pcerecomp.project import ABI, sha256, source_identity
-    if ABI != 26:
-        raise ValueError('This example requires runtime ABI 26')
     identity = source_identity(tool_root)
     if identity['revision'] is None:
         raise ValueError('Choose a committed toolkit checkout')
@@ -123,6 +121,7 @@ def capture(output, runner, tool_root=ROOT, profile='standard', capacity=64):
 def promote(output, tool_root=ROOT):
     output, tool_root = output.resolve(), tool_root.resolve()
     load_capture, emit_capture, sha256, identity = tools(tool_root)
+    from pcerecomp.project import ABI
     if any(path.exists() or path.is_symlink() for path in (output/'module', output/'project.toml')):
         raise ValueError('Module/descriptor already exists; preserve the previous result')
     trace, card = output/'actual-capture.json', output/'authored-card.pce'
@@ -131,7 +130,7 @@ def promote(output, tool_root=ROOT):
     # capture is useful diagnostics but cannot establish this bounded proof.
     if not raw['complete'] or raw['dropped_instructions'] or raw['unreadable_instructions']:
         raise ValueError('Refusing incomplete capture: dropped or unreadable instructions')
-    if raw['runtime_abi'] != 26 or raw['retired_instructions'] != STEPS:
+    if raw['runtime_abi'] != ABI or raw['retired_instructions'] != STEPS:
         raise ValueError('Capture ABI/retirement total differs from the authored run')
     if raw['observations'] != expected_observations():
         raise ValueError('Capture PC/MPR/physical source/bytes/hit identities differ')
@@ -182,7 +181,7 @@ name = "authored-reset-capture"
 path = {json.dumps(tool_root.as_posix())}
 revision = "{identity['revision']}"
 source_sha256 = "{identity['source_sha256']}"
-runtime_abi = 26
+runtime_abi = {ABI}
 [module.source]
 path = "module/module.cpp"
 sha256 = "{sha256(output/'module/module.cpp')}"

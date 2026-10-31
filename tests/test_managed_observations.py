@@ -225,7 +225,7 @@ class NativeManagedProfileTests(unittest.TestCase):
             self.assertEqual((before['work']['native'], before['work']['interpreted']), (101,99))
             observation, _ = load_capture(actual)
             self.assertEqual((observation['runtime_abi'], observation['complete'],
-                              observation['retired_instructions']), (26,True,200))
+                              observation['retired_instructions']), (ABI,True,200))
             objects = test_incremental_native.retained_files(workspace/'output', {'.obj','.o'})
             source_files = test_incremental_native.retained_files(workspace/'module', {'.cpp','.hpp'})
             selected, promoted_profile = emit([original, actual], 'promoted')

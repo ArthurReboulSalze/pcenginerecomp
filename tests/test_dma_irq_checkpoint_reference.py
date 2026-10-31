@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from pcerecomp.abi import ABI
 from tests.dma_irq_checkpoint_fixture import cases,program,pattern,expected_ram,MPR
 from scripts.dma_irq_checkpoint_reference import validate_hits,validate_work,validate_observation,raw_differences,source_key,expected_stack,validate_report,validate_capture,requested_tier
 from scripts.dma_irq_checkpoint_qualify import load,validate_stderr,full_hits
@@ -17,8 +18,8 @@ class DmaIrqCheckpointTests(unittest.TestCase):
         before=dict(plan[0],hits=1);after=dict(next(s for s in plan if s['pc']==m['done']-3),hits=1)
         work=lambda ticks:dict(instructions=1,calls=1,clock_calls=0,clock_ticks=ticks,irqs=0,rtis=0)
         record={k:v for k,v in after.items()if k not in('data','hits')};record.update(bytes=after['data'],ticks=15,vector=0,after=final)
-        r=dict(case=c['id'],cut_id=1,tier='native',cut=initial,final=final,prefix_work=work(24),window_work=work(15),prefix_hits=[before],window_hits=[after],prefix_journal=[],journal=[record],ram=expected_ram(),dma_counter_role='captured-bytes',mode='write',runtime_abi=26,prefix_native=1,prefix_interpreted=0,window_native=1,window_interpreted=0,guard_misses=0,provider_prefix=1,provider_suffix=0,origin_frame=0,checkpoint_sha256='0'*64,final_sha256='1'*64)
-        cap=dict(schema=1,runtime_abi=26,capacity=4,dropped_instructions=0,unreadable_instructions=0,retired_instructions=1,complete=True,observations=[dict({k:v for k,v in after.items()if k!='hits'},native_hits=1,interpreted_hits=0)])
+        r=dict(case=c['id'],cut_id=1,tier='native',cut=initial,final=final,prefix_work=work(24),window_work=work(15),prefix_hits=[before],window_hits=[after],prefix_journal=[],journal=[record],ram=expected_ram(),dma_counter_role='captured-bytes',mode='write',runtime_abi=ABI,prefix_native=1,prefix_interpreted=0,window_native=1,window_interpreted=0,guard_misses=0,provider_prefix=1,provider_suffix=0,origin_frame=0,checkpoint_sha256='0'*64,final_sha256='1'*64)
+        cap=dict(schema=1,runtime_abi=ABI,capacity=4,dropped_instructions=0,unreadable_instructions=0,retired_instructions=1,complete=True,observations=[dict({k:v for k,v in after.items()if k!='hits'},native_hits=1,interpreted_hits=0)])
         return c,r,cap
     def test_twenty_authored_recipes_two_real_boundary_roles(self):
         matrix=cases();self.assertEqual(len(matrix),20);self.assertEqual(len({c['id']for c in matrix}),20)

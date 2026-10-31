@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from pcerecomp import incremental, project
+from pcerecomp.abi import ABI
 from pcerecomp.emitter import emit_observation_profile
 from pcerecomp.observations import compose_observation_profile, load_observation_profile
 from tests.test_queued_persistence import isolated_environment
@@ -47,7 +48,7 @@ class BoundProfileNativeTests(unittest.TestCase):
             self.assertEqual(manifest['historical_totals']['retired_instructions'], 28)
             config = dict(schema=1, name='authored-bound-profile',
                 tool=dict(path=ROOT.as_posix(), revision=identity['revision'],
-                          source_sha256=identity['source_sha256'], runtime_abi=26),
+                          source_sha256=identity['source_sha256'], runtime_abi=ABI),
                 module={role: dict(path=path.as_posix(), sha256=project.sha256(path)) for role, path in
                         (('source', module/'module.cpp'), ('manifest', module/'module.json'),
                          ('observation_profile', profile_path))},

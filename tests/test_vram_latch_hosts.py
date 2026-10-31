@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import unittest
 
+from pcerecomp.abi import ABI
 from scripts.dev_client import DevClient
 from test_reset_boot import authored_card
 
@@ -132,7 +133,7 @@ class VramLatchHostChecks:
                     metadata, pixels = client.capture()
                     self.assertEqual(len(pixels), metadata['width']*metadata['height']*3)
                     history = client.capture_history()
-                    self.assertEqual(history['runtime_abi'], 26)
+                    self.assertEqual(history['runtime_abi'], ABI)
                     self.assertTrue(history['complete'])
                     self.assertEqual(history['unreadable_instructions'], 0)
                     after = client.call('status')
@@ -153,7 +154,7 @@ class VramLatchHostChecks:
                 self.assertEqual(result['development']['memory_write_requests'], 0)
                 self.assertEqual(result['development']['memory_bytes_changed'], 0)
                 observed = json.loads(capture.read_text())
-                self.assertEqual(observed['runtime_abi'], 26)
+                self.assertEqual(observed['runtime_abi'], ABI)
                 self.assertEqual(observed['retired_instructions'],
                                  result['native_steps']+result['interpreter_steps'])
                 self.assertTrue(observed['complete'])

@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import sys
 
+from .abi import ABI
 from . import __version__
 from .analysis import Snapshot, analyze
 from .emitter import emit, emit_capture, emit_observation_profile
@@ -135,7 +136,7 @@ def hucard_snapshot(args):
     mapped = card.mapped_rom()
     mapped_hash = hashlib.sha256(mapped).hexdigest()
     result = card.report() | dict(mapped_rom_sha256=mapped_hash,
-                                 mapped_rom_bytes=len(mapped), runtime_abi=26,
+                                 mapped_rom_bytes=len(mapped), runtime_abi=ABI,
                                  scope='HuCard reset source snapshot only; CFG discovery and execution remain separate')
     card.check_unchanged()
     args.out.mkdir(parents=True)

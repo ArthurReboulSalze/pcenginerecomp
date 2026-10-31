@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 
+from .abi import ABI
 from .isa import NATIVE, DATA_OPCODES, RMW_OPCODES, INDIRECT_JUMP_OPCODES, TEST_OPCODES, BIT_BRANCH_OPCODES, BLOCK_OPCODES
 from .data_ops import data_body
 
@@ -190,7 +191,7 @@ def emit(analysis: dict, output: Path):
     if path.exists():
         raise ValueError("Output module exists; choose an empty output directory")
     lines = ['// Generated private source; regenerate from the snapshot.', '#include "pce/runtime.hpp"',
-             '#include <algorithm>', 'namespace pce {', 'static_assert(abi_version == 26);',
+             '#include <algorithm>', 'namespace pce {', f'static_assert(abi_version == {ABI});',
              'Exit generated_step(Bus& bus, Cpu& s, std::uint64_t deadline) {',
              'if(s.ticks >= deadline) return Exit::budget;',
              'static constexpr std::array<std::uint8_t,8> expected_mpr{' + ','.join(str(v) for v in analysis["mpr"]) + '};',
@@ -210,7 +211,7 @@ def emit(analysis: dict, output: Path):
         lines.append(f"{retirement}; return Exit::executed; }}")
     lines += ['default: return Exit::miss;', '}', '}', '} // namespace pce', '']
     path.write_text("\n".join(lines), encoding="utf-8")
-    manifest = {"schema": 1, "runtime_abi": 26, "snapshot_sha256": analysis["snapshot_sha256"],
+    manifest = {"schema": 1, "runtime_abi": ABI, "snapshot_sha256": analysis["snapshot_sha256"],
                 "native_instructions_emitted": count, "execution_evidence": False,
                 "guards": ["full_mpr_snapshot", "exact_source_bytes_per_instruction", "instruction_deadline"],
                 "unsupported_policy": "return to dispatcher, then bounded interpreter or explicit trap"}
@@ -275,7 +276,7 @@ def _emit_context_analysis(analysis: dict, output: Path):
         raise ValueError("Output module exists; choose an empty output directory")
     lines = ['// Generated private source from static context analysis; not an execution capture.',
              '#include "pce/runtime.hpp"', '#include <algorithm>', 'namespace pce {',
-             'static_assert(abi_version == 26);',
+             f'static_assert(abi_version == {ABI});',
              'Exit generated_step(Bus& bus, Cpu& s, std::uint64_t deadline) {',
              'if(s.ticks >= deadline) return Exit::budget;',
              'std::uint64_t mapping=0;',
@@ -301,7 +302,7 @@ def _emit_context_analysis(analysis: dict, output: Path):
         lines += ['default: return Exit::miss;', '}']
     lines += ['default: return Exit::miss;', '}', '}', '} // namespace pce', '']
     path.write_text('\n'.join(lines), encoding='utf-8')
-    manifest = dict(schema=1, runtime_abi=26, analysis_schema=2,
+    manifest = dict(schema=1, runtime_abi=ABI, analysis_schema=2,
                     analysis_policy='proven_mpr_constants',
                     snapshot_sha256=analysis['snapshot_sha256'],
                     native_instructions_emitted=count, mapping_contexts=len(groups),
@@ -427,7 +428,7 @@ def _emit_observations(instructions, output, provenance, accounting, extra, excl
     groups = [(mpr, list(items)) for mpr, items in groupby(supported, key=lambda ins: ins['mpr'])]
     preamble = ['// Generated private code-bearing source from bounded retired observations.',
                 '#include "pce/runtime.hpp"', '#include <algorithm>', 'namespace pce {',
-                'static_assert(abi_version == 26);']
+                f'static_assert(abi_version == {ABI});']
     if native_span:
         preamble.insert(2, '#include "pce/native_span.hpp"')
 
@@ -580,7 +581,7 @@ def _emit_observations(instructions, output, provenance, accounting, extra, excl
     headers = sorted(name for name in files if name.endswith('.hpp'))
     identities = lambda names: [{'file': name, 'sha256': hashlib.sha256(files[name].encode('utf-8')).hexdigest()} for name in names]
     manifest = {
-        'schema': 1, 'runtime_abi': 26, **provenance,
+        'schema': 1, 'runtime_abi': ABI, **provenance,
         'translation_units': identities(translation_units), 'generated_headers': identities(headers),
         'partition_size': partition_size, 'partitioned': partitioned,
         'dispatch_strategy': 'full_mpr_pc_opcode_operand_key',

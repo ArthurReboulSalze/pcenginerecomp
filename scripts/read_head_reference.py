@@ -16,6 +16,7 @@ import sys
 
 ROOT=Path(__file__).resolve().parent.parent
 sys.path[:0]=[str(ROOT),str(ROOT/'tests')]
+from pcerecomp.abi import ABI
 from scripts import mapper_reference as infrastructure
 from scripts import filtered_audio_reference as reference
 from scripts import hucard_reference as common
@@ -191,7 +192,7 @@ def validate_capture(capture,execution,native,hits):
     integers=('schema','runtime_abi','capacity','dropped_instructions','unreadable_instructions','retired_instructions')
     if any(type(capture[key]) is not int for key in integers) or capture['schema']!=1 or capture['capacity']<=0:
         raise ValueError('Head capture integer types differ')
-    if capture.get('runtime_abi')!=26 or capture.get('complete') is not True or capture.get('dropped_instructions')!=0 or capture.get('unreadable_instructions')!=0:
+    if capture.get('runtime_abi')!=ABI or capture.get('complete') is not True or capture.get('dropped_instructions')!=0 or capture.get('unreadable_instructions')!=0:
         raise ValueError('Incomplete or incompatible head source capture')
     if type(capture['observations']) is not list:raise ValueError('Head source records must be a list')
     total=0;seen=set()

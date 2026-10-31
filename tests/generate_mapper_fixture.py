@@ -4,6 +4,7 @@ from tempfile import TemporaryDirectory
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from pcerecomp.abi import ABI
 from pcerecomp.emitter import emit_capture
 from pcerecomp.isa import physical
 
@@ -27,7 +28,7 @@ def generate(out):
         add(0x4103, (0xA9, value))
     add(0xE200, (0x73, 0, 0x20, 0xF0, 0x1F, 16, 0))
     add(0xE200, (0x73, 0, 0x20, 0, 0x40, 16, 0))
-    capture = dict(schema=1, runtime_abi=26, capacity=64, dropped_instructions=0,
+    capture = dict(schema=1, runtime_abi=ABI, capacity=64, dropped_instructions=0,
         unreadable_instructions=0, retired_instructions=len(observations),
         complete=True, observations=observations)
     out.mkdir(parents=True, exist_ok=True)

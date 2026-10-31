@@ -97,7 +97,7 @@ void continuation(pce::AudioProfile profile,unsigned rate,pce::AudioTiming timin
     pce::checkpoint::validate_audio_configuration(*resumed,*configured);
     configured->psg.centered_dac=false;
     refuses([&]{pce::checkpoint::validate_audio_configuration(*resumed,*configured);});
-    configured->psg.centered_dac=true;configured->cd.reference_unknown_status=true;
+    configured->psg.centered_dac=true;configured->cd.unknown_policy=pce::CdUnknownPolicy::gear_good;
     refuses([&]{pce::checkpoint::validate_audio_configuration(*resumed,*configured);});
     auto truncated=before;truncated.pop_back();
     refuses([&]{restore(truncated,*configured);});

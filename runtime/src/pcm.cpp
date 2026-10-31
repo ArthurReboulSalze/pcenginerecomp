@@ -295,8 +295,13 @@ struct AudioCheckpointAccess {
            v.reads,v.writes,v.toc_replies,v.data_bytes_acked,v.read_commands,v.sectors_read,
            v.read_retries,v.read_errors,v.pending_sense.key,v.pending_sense.asc,
            v.pending_sense.ascq,v.pending_sense.fru,v.pending_sense.failed_lba,
-           v.sense_commands,v.sense_errors,v.audio_enabled,v.reference_unknown_status,
-           v.unknown_commands,v.unknown_opcodes,v.last_unknown_command,v.last_unknown_size);
+           v.sense_commands,v.sense_errors,v.audio_enabled);
+        auto policy=static_cast<std::uint8_t>(v.unknown_policy);
+        ar(policy);
+        if(policy>static_cast<std::uint8_t>(CdUnknownPolicy::nec_invalid))
+            throw checkpoint::ArchiveError("invalid checkpoint CD unknown-command policy");
+        if constexpr(reading<A>)v.unknown_policy=static_cast<CdUnknownPolicy>(policy);
+        ar(v.unknown_commands,v.invalid_commands,v.unknown_opcodes,v.last_unknown_command,v.last_unknown_size);
         origin(ar,v.pending_origin);origin(ar,v.last_unknown_origin);
         auto& s=v.scsi;
         ar(s.enabled,s.status_pending,s.phase,s.signals,s.latch,s.data,s.master_ticks,
@@ -443,6 +448,7 @@ void validate_audio(const Bus& bus) {
        s.response_size>s.response.size() || s.response_index>s.response_size || s.load_remaining>256 ||
        s.load_lba>0x1fffff || cd.last_unknown_size>cd.last_unknown_command.size() ||
        cd.pending_sense.key>15 || cd.reset>15 || cd.interrupt_enable>127 ||
+       static_cast<std::uint8_t>(cd.unknown_policy)>static_cast<std::uint8_t>(CdUnknownPolicy::nec_invalid) ||
        cd.pending_origin.readable>127 || cd.last_unknown_origin.readable>127)
         throw ArchiveError("checkpoint CD transport state exceeds bounds");
     if(bool(s.event)!=bool(s.deadline))throw ArchiveError("checkpoint CD event/deadline mismatch");
@@ -473,7 +479,7 @@ void validate_audio_configuration(const Bus& decoded,const Bus& configured) {
        decoded.psg.centered_dac!=configured.psg.centered_dac ||
        decoded.adpcm.enabled!=configured.adpcm.enabled || a.enabled!=b.enabled ||
        a.scsi.enabled!=b.scsi.enabled || a.audio_enabled!=b.audio_enabled ||
-       a.reference_unknown_status!=b.reference_unknown_status || bool(a.provider)!=bool(b.provider) ||
+       a.unknown_policy!=b.unknown_policy || bool(a.provider)!=bool(b.provider) ||
        bool(a.toc)!=bool(b.toc) || (a.toc && !same_toc(*a.toc,*b.toc)) ||
        decoded.pcm.enabled!=configured.pcm.enabled || decoded.pcm.profile()!=configured.pcm.profile() ||
        decoded.pcm.output_rate()!=configured.pcm.output_rate() || decoded.pcm.timing()!=configured.pcm.timing())

@@ -16,6 +16,16 @@ unsigned command_length(unsigned op) {
     default: return 0;
     }
 }
+unsigned invalid_command_length(unsigned op) {
+    // NEC reference framing uses the operation-code group before dispatch.
+    // The bounded table is protocol data; no command operation is invented.
+    constexpr std::array<unsigned,16> lengths={6,6,10,10,10,10,10,10,10,10,12,12,10,10,10,10};
+    return lengths[op>>4];
+}
+void validate_unknown_policy(CdUnknownPolicy policy) {
+    if(policy!=CdUnknownPolicy::fault && policy!=CdUnknownPolicy::gear_good && policy!=CdUnknownPolicy::nec_invalid)
+        throw Fault("invalid CD unknown-command policy");
+}
 unsigned bcd(unsigned value) { return value/10*16+value%10; }
 }
 void CdToc::validate() const {
@@ -206,22 +216,33 @@ void CdControl::handshake() {
             scsi.command[scsi.command_size++]=scsi.latch;
             scsi.signals &= static_cast<std::uint16_t>(~req);
         } else if(!request && !ack && scsi.command_size) {
-            const auto length=command_length(scsi.command[0]);
+            const auto known_length=command_length(scsi.command[0]);
+            const auto length=known_length ? known_length:
+                unknown_policy==CdUnknownPolicy::nec_invalid ? invalid_command_length(scsi.command[0]):0;
             if(!length || scsi.command_size>=length) {
                 scsi.last_command=scsi.command; scsi.last_command_size=scsi.command_size;
-                if(!length) {
+                if(!known_length) {
                     auto& attempts=unknown_opcodes[scsi.command[0]];
                     if(attempts==std::numeric_limits<std::uint64_t>::max())
                         throw Fault("CD unknown-command diagnostic counter overflow");
+                    if(unknown_policy==CdUnknownPolicy::gear_good && unknown_commands==std::numeric_limits<std::uint64_t>::max())
+                        throw Fault("CD unknown-command response counter overflow");
+                    if(unknown_policy==CdUnknownPolicy::nec_invalid &&
+                       (invalid_commands==std::numeric_limits<std::uint64_t>::max() || sense_errors==std::numeric_limits<std::uint64_t>::max()))
+                        throw Fault("CD invalid-command response counter overflow");
                     ++attempts;last_unknown_command=scsi.command;
                     last_unknown_size=scsi.command_size;last_unknown_origin=pending_origin;
                 }
                 pending_origin=CommandOrigin{};
-                if(!length && reference_unknown_status) {
+                if(!known_length && unknown_policy==CdUnknownPolicy::gear_good) {
                     // A selected emulator-reference protocol quirk, not an
                     // implementation of an unknown command's operation. Known
                     // commands with unsupported semantics retain their fault.
                     ++unknown_commands;start_status(0);scsi.command_size=0;
+                    update_irq();return;
+                }
+                if(!known_length && unknown_policy==CdUnknownPolicy::nec_invalid) {
+                    ++invalid_commands;check_condition(5,0x20);scsi.command_size=0;
                     update_irq();return;
                 }
                 if(scsi.command[0]!=0 && scsi.command[0]!=3 && scsi.command[0]!=0xDE && scsi.command[0]!=8 &&
@@ -264,6 +285,7 @@ void CdControl::handshake() {
     update_irq();
 }
 void CdControl::advance_to(std::uint64_t ticks) {
+    validate_unknown_policy(unknown_policy);
     if(!scsi.enabled) return;
     if(ticks<scsi.master_ticks) throw Fault("CPU/CD clock regression");
     // Process events at their guest timestamp, including a held ACK at REQ.
@@ -302,6 +324,7 @@ void CdControl::advance_to(std::uint64_t ticks) {
     scsi.master_ticks=ticks;
 }
 std::uint8_t CdControl::transport_read(unsigned port) {
+    validate_unknown_policy(unknown_policy);
     if(port==0) return static_cast<std::uint8_t>(scsi.signals&0xF8);
     const auto value=scsi.phase==data_phase || scsi.phase==status_phase || scsi.phase==message_phase ? scsi.data:scsi.latch;
     // Sample the old byte before raising ACK; only a requested DATA IN byte
@@ -315,6 +338,7 @@ std::uint8_t CdControl::transport_read(unsigned port) {
     return value;
 }
 void CdControl::transport_write(unsigned port,std::uint8_t value) {
+    validate_unknown_policy(unknown_policy);
     switch(port) {
     case 0:
         if(scsi.phase==data_phase) { start_status(0,8); schedule(1,900000); handshake(); }

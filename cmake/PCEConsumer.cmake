@@ -73,7 +73,7 @@ function(pce_add_native_module output)
       string(JSON _value GET "${_json}" ${_field})
       if(NOT _type STREQUAL "NUMBER" OR
          (_field STREQUAL "schema" AND NOT _value STREQUAL "1") OR
-         (_field STREQUAL "runtime_abi" AND NOT _value STREQUAL "26"))
+         (_field STREQUAL "runtime_abi" AND NOT _value STREQUAL "27"))
         message(FATAL_ERROR "Unsupported native module ${_field}")
       endif()
     endforeach()

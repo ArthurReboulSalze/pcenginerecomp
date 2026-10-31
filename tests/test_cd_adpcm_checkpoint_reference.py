@@ -1,5 +1,6 @@
 import copy
 import unittest
+from pcerecomp.abi import ABI
 from tests.cd_adpcm_checkpoint_fixture import cases,expected,hits,validate_payload,validate_gear_cut,raw_differences
 from scripts.cd_adpcm_checkpoint_reference import validate_execution
 from scripts.cd_adpcm_checkpoint_qualify import validate_stderr
@@ -19,7 +20,7 @@ class CdAdpcmCheckpointTests(unittest.TestCase):
   for case in cases():
    prefix=sum(hits(case,True).values());suffix=sum(hits(case).values())
    for native in (False,True):
-    row=dict(runtime_abi=26,prefix_native=prefix if native else 0,prefix_interpreted=0 if native else prefix,suffix_native=suffix if native else 0,suffix_interpreted=0 if native else suffix,guard_misses=0,provider_reads_before_suffix=0,provider_reads_suffix=int(case['cut'] in (0,5,6,7)))
+    row=dict(runtime_abi=ABI,prefix_native=prefix if native else 0,prefix_interpreted=0 if native else prefix,suffix_native=suffix if native else 0,suffix_interpreted=0 if native else suffix,guard_misses=0,provider_reads_before_suffix=0,provider_reads_suffix=int(case['cut'] in (0,5,6,7)))
     self.assertEqual(validate_execution(row,case,native,True),(prefix,suffix))
     row['prefix_native']=True
     with self.assertRaises(ValueError):validate_execution(row,case,native,True)

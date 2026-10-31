@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 
+from .abi import CAPTURE_ABIS
 from .isa import decode
 
 MAX_CAPTURE_BYTES = 64 * 1024 * 1024
@@ -28,7 +29,7 @@ def validate_capture(capture):
         validate_checkpoint_origin(capture['checkpoint_origin'])
     if type(capture['schema']) is not int or capture['schema'] != 1:
         raise ValueError('Unsupported code-capture schema')
-    if type(capture['runtime_abi']) is not int or capture['runtime_abi'] not in (12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26):
+    if type(capture['runtime_abi']) is not int or capture['runtime_abi'] not in CAPTURE_ABIS:
         raise ValueError('Unsupported code-capture runtime ABI')
     capacity = integer(capture['capacity'], MAX_OBSERVATIONS, 'capacity', 1)
     dropped = integer(capture['dropped_instructions'], U64, 'dropped instructions')

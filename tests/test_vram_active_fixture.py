@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from pcerecomp.abi import ABI
 from generate_vram_active_fixture import (
     ActiveSlots,authored_fixture,definitions,generate,LINE,FRAME,DATA,DEST,SAT,PAYLOAD,SECOND,TAIL)
 
@@ -143,7 +144,7 @@ class VramActiveFixtureTests(unittest.TestCase):
     def test_authored_export_remains_media_free_and_deterministic(self):
         with tempfile.TemporaryDirectory()as directory:
             out=Path(directory);meta=generate(out,emit_module=False)
-            self.assertEqual(meta['runtime_abi'],26)
+            self.assertEqual(meta['runtime_abi'],ABI)
             self.assertEqual((out/'authored.bin').read_bytes(),bytes(32768))
             self.assertEqual(len(meta['cases']),138)
             self.assertFalse((out/'module.cpp').exists())

@@ -10,6 +10,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from pcerecomp.abi import ABI
 from pcerecomp.irq_trace import parse_trace
 from scripts.irq_device_reference import (
     callback_shape, qualify_case, qualify_comparison, qualify_gear_journal,
@@ -362,7 +363,7 @@ class IrqDeviceReferenceChecks(unittest.TestCase):
                 item = {key: copy.deepcopy(source[key]) for key in ('pc', 'mpr', 'physical', 'data')}
                 item.update(native_hits=int(tier == 'native'), interpreted_hits=int(tier == 'interpreter'))
                 observations.append(item)
-            captures[tier] = dict(runtime_abi=26, complete=True, retired_instructions=2,
+            captures[tier] = dict(runtime_abi=ABI, complete=True, retired_instructions=2,
                                   dropped_instructions=0, unreadable_instructions=0, observations=observations)
             work[tier] = dict(schema=1, case=case['id'], tier=tier, primer_steps=1,
                               measured_steps=1, native_steps=2 if tier == 'native' else 0,

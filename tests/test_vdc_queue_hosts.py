@@ -11,6 +11,7 @@ import subprocess
 import tempfile
 import unittest
 
+from pcerecomp.abi import ABI
 from scripts.dev_client import DevClient
 from test_reset_boot import authored_card
 
@@ -101,7 +102,7 @@ class VdcQueueHostChecks:
                     settled=client.call('status');metadata,pixels=client.capture()
                     self.assertEqual(len(pixels),metadata['width']*metadata['height']*3)
                     history=client.capture_history()
-                    self.assertEqual(history['runtime_abi'],26)
+                    self.assertEqual(history['runtime_abi'],ABI)
                     self.assertTrue(history['complete'])
                     self.assertEqual(without_id(client.call('status')),without_id(settled))
                     self.assertEqual(capture.stat().st_size,0)
@@ -118,7 +119,7 @@ class VdcQueueHostChecks:
                 self.assertEqual(final['stop'],'dev_quit')
                 self.assertEqual(final['vdc_access'],state)
                 observed=json.loads(capture.read_text(encoding='utf-8'))
-                self.assertEqual(observed['runtime_abi'],26)
+                self.assertEqual(observed['runtime_abi'],ABI)
                 self.assertEqual(observed['retired_instructions'],final['native_steps']+final['interpreter_steps'])
                 self.assertTrue(observed['complete'])
                 self.assertEqual(bios.read_bytes(),raw)

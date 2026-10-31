@@ -12,6 +12,24 @@ from pcerecomp import project
 
 
 class ConsumerProjectTests(unittest.TestCase):
+    def test_unknown_cd_profiles_are_explicit_bound_and_forwarded(self):
+        contexts = set()
+        for policy in ('fault', 'gear-good', 'nec-invalid'):
+            with self.subTest(policy=policy):
+                self.replace('cd_unknown_status = "fault"', f'cd_unknown_status = "{policy}"')
+                checked = self.verify()
+                command = project.command_for(checked, Path('runner'))
+                self.assertEqual(command[command.index('--cd-unknown-status') + 1], policy)
+                contexts.add(project.checkpoint_context(checked))
+        self.assertEqual(len(contexts), 3)
+
+    def test_unknown_cd_profile_does_not_accept_guessed_or_untyped_values(self):
+        for token in ('"good"', '"check-condition"', '"nec"', 'true', '2'):
+            with self.subTest(token=token):
+                self.replace('cd_unknown_status = "fault"', f'cd_unknown_status = {token}')
+                with self.assertRaises(ValueError):
+                    self.verify()
+
     def test_checkpoint_context_binds_exact_recipe_and_excludes_execution_limits(self):
         checked = self.verify()
         expected = project.checkpoint_context(checked)
@@ -61,7 +79,7 @@ class ConsumerProjectTests(unittest.TestCase):
                                 'audio_origin': {'pending_pcm_frames': 5, 'source_wav_frames': 120},
                                 'window': {'ticks': 600, 'native_steps': 7, 'interpreter_steps': 3}}}
         observed = capture([observation(native=7, interpreted=3)], capacity=4)
-        observed.update(runtime_abi=26, checkpoint_origin=origin)
+        observed.update(runtime_abi=project.ABI, checkpoint_origin=origin)
         actual_run = subprocess.run
         def execute_result(name, result, captured):
             capture_path = self.root/(name+'-capture.json')
@@ -111,12 +129,12 @@ class ConsumerProjectTests(unittest.TestCase):
         for name in project.SOURCE_DIRS:
             (self.tool / name).mkdir(parents=True)
         (self.tool / "runtime/include/pce").mkdir(parents=True)
-        (self.tool / "runtime/include/pce/runtime.hpp").write_text("inline constexpr unsigned abi_version = 26;\n")
+        (self.tool / "runtime/include/pce/runtime.hpp").write_text(f"inline constexpr unsigned abi_version = {project.ABI};\n")
         (self.tool / "CMakeLists.txt").write_text("# authored stub\n")
         (self.tool / "pcerecomp/logic.py").write_text("VALUE = 1\n")
         (self.root / "program.bin").write_bytes(bytes([0xEA, 0x80, 0xFD]))
         (self.root / "module.cpp").write_text("// authored contract fixture\n")
-        (self.root / "module.json").write_text(json.dumps({"schema": 1, "runtime_abi": 26, "native_instructions_emitted": 2}))
+        (self.root / "module.json").write_text(json.dumps({"schema": 1, "runtime_abi": project.ABI, "native_instructions_emitted": 2}))
         self.manifest_sha256 = project.sha256(self.root / "module.json")
         self.descriptor = self.root / "project.toml"
         self.text = f'''schema = 1
@@ -125,7 +143,7 @@ name = "fixture"
 path = "tool"
 revision = "{'0' * 40}"
 source_sha256 = "{project.source_identity(self.tool)['source_sha256']}"
-runtime_abi = 26
+runtime_abi = {project.ABI}
 [module.source]
 path = "module.cpp"
 sha256 = "{project.sha256(self.root / 'module.cpp')}"
@@ -301,7 +319,7 @@ wall_seconds = 5
         for name in ("module_part_0000.cpp", "module_parts.hpp"):
             (self.root / name).write_text("// authored artifact fixture\n", encoding="utf-8")
         identity = lambda name: {"file": name, "sha256": project.sha256(self.root / name)}
-        return {"schema": 1, "runtime_abi": 26, "native_instructions_emitted": 2,
+        return {"schema": 1, "runtime_abi": project.ABI, "native_instructions_emitted": 2,
                 "translation_units": [identity("module.cpp"), identity("module_part_0000.cpp")],
                 "generated_headers": [identity("module_parts.hpp")]}
 
@@ -475,7 +493,7 @@ wall_seconds = 5
             self.assertIsNone(project.source_identity(self.tool)["revision"])
 
     def test_strict_schema_abi_and_fields(self):
-        for old, new in (("schema = 1", "schema = true"), ("runtime_abi = 26", "runtime_abi = 27"), ("runtime_abi = 26", "runtime_abi = 25"),
+        for old, new in (("schema = 1", "schema = true"), (f"runtime_abi = {project.ABI}", f"runtime_abi = {project.ABI + 1}"), (f"runtime_abi = {project.ABI}", f"runtime_abi = {project.ABI - 1}"),
                          ('name = "fixture"', 'name = "fixture"\nunrecognized = 1'),
                          ("steps = 200", "steps = true"), ("joypad = 2", "joypad = true"),
                          ("wall_seconds = 5", "wall_seconds = 86401")):
@@ -540,7 +558,7 @@ wall_seconds = 5
     def test_manifest_rejects_nonobject_and_noninteger_abi(self):
         path = self.root / "module.json"
         old_hash = project.sha256(path)
-        for manifest in ([], {"schema": 1, "runtime_abi": 26.0, "native_instructions_emitted": 2}):
+        for manifest in ([], {"schema": 1, "runtime_abi": float(project.ABI), "native_instructions_emitted": 2}):
             path.write_text(json.dumps(manifest))
             self.replace(old_hash, project.sha256(path))
             with self.assertRaisesRegex(ValueError, "Module schema/runtime ABI mismatch"):
@@ -645,7 +663,7 @@ wall_seconds = 5
         directory, binary = self.build_fixture()
         actual_run = subprocess.run
         capture_path = self.root / "capture.json"
-        capture = {"schema": 1, "runtime_abi": 26, "capacity": 4, "dropped_instructions": 0,
+        capture = {"schema": 1, "runtime_abi": project.ABI, "capacity": 4, "dropped_instructions": 0,
                    "unreadable_instructions": 0, "retired_instructions": 7, "complete": True,
                    "observations": [{"pc": 16384, "mpr": [255,248,128,129,130,131,132,0],
                                      "physical": [1048576], "data": [234], "native_hits": 7, "interpreted_hits": 0}]}
@@ -743,7 +761,7 @@ wall_seconds = 5
             observations = [{"pc": 16384, "mpr": [255, 248, 128, 129, 130, 131, 132, 0],
                              "physical": [1048576], "data": [234],
                              "native_hits": native, "interpreted_hits": interpreted}]
-        return {"schema": 1, "runtime_abi": 26, "capacity": capacity,
+        return {"schema": 1, "runtime_abi": project.ABI, "capacity": capacity,
                 "dropped_instructions": dropped, "unreadable_instructions": unreadable,
                 "retired_instructions": native + interpreted + dropped + unreadable,
                 "complete": not (dropped + unreadable), "observations": observations}
@@ -751,7 +769,7 @@ wall_seconds = 5
     def test_fresh_capture_rejects_historical_abi_without_changing_offline_format(self):
         from pcerecomp.capture import validate_capture
         directory, binary = self.build_fixture()
-        for abi in range(12, 26):
+        for abi in range(12, project.ABI):
             with self.subTest(abi=abi):
                 capture = self.authored_capture() | {"runtime_abi": abi}
                 self.assertEqual(len(validate_capture(capture)), 1)

@@ -1,5 +1,6 @@
 import copy
 import unittest
+from pcerecomp.abi import ABI
 from tests.cd_read_checkpoint_fixture import cases,expected,hits,validate_payload,expected_cut,expected_timing,validate_gear_cut
 from scripts.cd_read_checkpoint_reference import validate_execution
 from scripts.cd_read_checkpoint_qualify import validate_stderr
@@ -21,7 +22,7 @@ class CdReadCheckpointReferenceTests(unittest.TestCase):
             prefix=sum(hits(case,True).values());suffix=sum(hits(case).values())
             before=0 if case['cut'] in (0,1) else (2 if case['cut']==4 else 1)
             for native in (False,True):
-                row=dict(runtime_abi=26,prefix_native=prefix if native else 0,prefix_interpreted=0 if native else prefix,
+                row=dict(runtime_abi=ABI,prefix_native=prefix if native else 0,prefix_interpreted=0 if native else prefix,
                     suffix_native=suffix if native else 0,suffix_interpreted=0 if native else suffix,guard_misses=0,
                     provider_reads_before_suffix=0,provider_reads_suffix=1 if case['cut']>=6 else 2-before)
                 self.assertEqual(validate_execution(row,case,native,True),(prefix,suffix))

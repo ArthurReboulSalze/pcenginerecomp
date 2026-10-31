@@ -78,7 +78,7 @@ static int probe(const char* path,const std::string& tier,bool toc=false,bool un
     }
     std::string trailing;if(input>>trailing)return 2;
     pce::Bus b;initialize(b,seed);if(toc)b.cd.set_toc(authored_toc(true));
-    b.cd.reference_unknown_status=unknown;
+    b.cd.unknown_policy=unknown ? pce::CdUnknownPolicy::gear_good:pce::CdUnknownPolicy::fault;
     pce::Cpu s;s.mpr=scsi_mpr;s.a=a;s.x=x;s.y=y;s.sp=sp;s.p=p;
     std::cout<<"{\"states\":[";
     for(unsigned i=0;i<count;++i) {

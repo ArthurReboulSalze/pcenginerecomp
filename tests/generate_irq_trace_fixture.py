@@ -231,13 +231,14 @@ def authored_fixture():
 
 
 def generate(out,emit_module=True):
+    from pcerecomp.abi import ABI
     out=Path(out);out.mkdir(parents=True,exist_ok=True);pool,cases,sources=authored_fixture()
     for case in cases:
         rom=bytearray(pool);rom[8190:8192]=case['entry'].to_bytes(2,'little')
         (out/case['rom']).write_bytes(rom);case['rom_sha256']=hashlib.sha256(rom).hexdigest()
     if emit_module:
         from pcerecomp.emitter import emit_capture
-        capture=dict(schema=1,runtime_abi=26,capacity=len(sources),dropped_instructions=0,unreadable_instructions=0,
+        capture=dict(schema=1,runtime_abi=ABI,capacity=len(sources),dropped_instructions=0,unreadable_instructions=0,
                      retired_instructions=len(sources),complete=True,observations=sources)
         with TemporaryDirectory(prefix='irq-authored-',dir=out) as stage:
             target=Path(stage)/'module';emit_capture(capture,target,single_unit=True)
@@ -257,7 +258,7 @@ def generate(out,emit_module=True):
         'static constexpr std::pair<std::uint32_t,std::uint8_t> bytes[]{'+','.join('{'+str(i)+','+str(value)+'}' for i,value in enumerate(pool) if value!=0xEA)+'};',
         'for(auto [physical,value]:bytes)rom[physical]=value;rom[8190]=item.entry&255;rom[8191]=item.entry>>8;return rom;}','']
     (out/'irq_boundary_fixture.hpp').write_text('\n'.join(header),encoding='utf-8')
-    metadata=dict(schema=1,runtime_abi=26,cases=cases,initial_mpr=list(INITIAL_MPR),measured_mpr=list(FINAL_MPR),
+    metadata=dict(schema=1,runtime_abi=ABI,cases=cases,initial_mpr=list(INITIAL_MPR),measured_mpr=list(FINAL_MPR),
         initialization='Only guest opcodes: SEI, MPR writes, full WRAM clear via TII, real timer start/delay/disable preserving pending request, explicit SP/A/X/Y/P. No host CPU, RAM, MPR, IRQ or timer seeds.',
         literal_clock='Elapsed ticks from actual post-primer marker; raw trace timestamps are never rewritten.',
         scope='Finite timer-only IRQ instruction boundaries. IRQ1/IRQ2 source priority and VDC acknowledge phases are not qualified. Native source plan is authored static metadata, not an execution capture.')

@@ -268,6 +268,7 @@ def authored_fixture():
 
 
 def generate(out,emit_module=True):
+    from pcerecomp.abi import ABI
     out = Path(out); out.mkdir(parents=True,exist_ok=True); cases,images,sources = authored_fixture()
     media = bytes(16*2048); (out/'authored.bin').write_bytes(media)
     (out/'authored.cue').write_text('FILE "authored.bin" BINARY\n  TRACK 01 MODE1/2048\n    INDEX 01 00:00:00\n',encoding='ascii')
@@ -275,7 +276,7 @@ def generate(out,emit_module=True):
     if emit_module:
         from pcerecomp.emitter import emit_capture
         observations = [{key:value for key,value in item.items() if key != 'hits'} for item in sources]
-        capture = dict(schema=1,runtime_abi=26,capacity=len(observations),dropped_instructions=0,
+        capture = dict(schema=1,runtime_abi=ABI,capacity=len(observations),dropped_instructions=0,
             unreadable_instructions=0,retired_instructions=len(observations),complete=True,observations=observations)
         with TemporaryDirectory(prefix='irq-device-authored-',dir=out) as stage:
             target=Path(stage)/'module'; emit_capture(capture,target,single_unit=True)
@@ -297,7 +298,7 @@ def generate(out,emit_module=True):
         header.append('if(std::string(item.id)=="'+case['id']+'"){'+''.join(f'rom[{i}]={v};'for i,v in changed)+'return rom;}')
     header.append('throw std::runtime_error("Unknown authored BIOS");}')
     (out/'irq_device_fixture.hpp').write_text('\n'.join(header),encoding='utf-8')
-    result=dict(schema=1,runtime_abi=26,cases=cases,cue='authored.cue',literal_columns=LITERAL_COLUMNS,
+    result=dict(schema=1,runtime_abi=ABI,cases=cases,cue='authored.cue',literal_columns=LITERAL_COLUMNS,
         media_files=[dict(path=name,sha256=hashlib.sha256((out/name).read_bytes()).hexdigest(),bytes=(out/name).stat().st_size)for name in ('authored.cue','authored.bin')],
         source_plan='Authored finite instruction ledger; no runtime capture supplied expectations.',
         transport_end='Handlers consume the current requested byte and mask IRQ2 with ACK held. This is not an idle/completed-command claim.')

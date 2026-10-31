@@ -15,6 +15,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(ROOT), str(ROOT/'tests')]
+from pcerecomp.abi import ABI
 from scripts import filtered_audio_reference as reference
 from scripts import hucard_reference as common
 from scripts.mapper_reference import pinned_snapshot, cmake_quote
@@ -189,7 +190,7 @@ def build_tool(args,out,report,bindings,compiler,fixture):
 
 def validate_capture(capture,hits,native):
     total = sum(hits.values())
-    if capture.get('schema') != 1 or capture.get('runtime_abi') != 26 or capture.get('complete') is not True or \
+    if capture.get('schema') != 1 or capture.get('runtime_abi') != ABI or capture.get('complete') is not True or \
        capture.get('retired_instructions') != total or capture.get('dropped_instructions') != 0 or capture.get('unreadable_instructions') != 0:
         raise ValueError('Capture incomplete, wrong ABI or wrong actual retirement total')
     wanted = []

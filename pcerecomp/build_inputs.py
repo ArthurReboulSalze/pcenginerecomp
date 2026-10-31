@@ -19,6 +19,8 @@ import struct
 import subprocess
 from concurrent.futures import ThreadPoolExecutor
 
+from .abi import ABI
+
 
 def _linked(info):
     return stat.S_ISLNK(info.st_mode) or bool(getattr(info, 'st_file_attributes', 0) & 0x400)
@@ -127,7 +129,7 @@ def prepare(project, *, generator, desktop, cmake_args, toolchain_root, dependen
                       tool_compile=[tree_identity(root) for root in compile_roots])
     contract = dict(schema=1, producer='windows-x64-llvm-mingw-ninja-v1',
         tool=dict(path=str(project['tool_root']), source_sha256=project['tool_identity']['source_sha256'],
-                  runtime_abi=26), module_inputs={key:value for key,value in project['identities'].items()
+                  runtime_abi=ABI), module_inputs={key:value for key,value in project['identities'].items()
                                                if key.startswith('module_')},
         trees=identities, desktop=desktop, configuration='Release', generator=generator,
         options=options, target='x86_64-w64-windows-gnu',

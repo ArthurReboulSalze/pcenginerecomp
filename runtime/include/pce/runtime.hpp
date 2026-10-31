@@ -17,7 +17,7 @@
 #include <string>
 
 namespace pce {
-inline constexpr unsigned abi_version = 26;
+inline constexpr unsigned abi_version = 27;
 enum Flag : std::uint8_t { C=1, Z=2, I=4, D=8, B=16, T=32, V=64, N=128 };
 enum class Exit { executed, miss, unsupported, budget };
 enum class BankKind { unmapped, ram, rom, io, bram };
@@ -108,6 +108,8 @@ struct CdSense {
     std::uint8_t key=0, asc=0, ascq=0, fru=0;
     std::optional<std::uint32_t> failed_lba;
 };
+// Explicit response profiles, not implementations of unrecognized operations.
+enum class CdUnknownPolicy : std::uint8_t { fault, gear_good, nec_invalid };
 struct CdControl {
     bool enabled=false, bram_unlocked=true, ack=false;
     std::uint8_t interrupt_enable=0, interrupt_active=0, reset=0;
@@ -116,9 +118,10 @@ struct CdControl {
     CdSense pending_sense;
     std::uint64_t sense_commands=0, sense_errors=0;
     bool audio_enabled=false;
-    bool reference_unknown_status=false; // Explicit Gear/Mesen unknown-command response quirk.
+    CdUnknownPolicy unknown_policy=CdUnknownPolicy::fault;
     std::uint64_t unknown_commands=0;
-    // Bounded diagnostics. Counts attempts in either policy; unknown_commands
+    std::uint64_t invalid_commands=0; // Completed NEC-profile invalid CDB responses.
+    // Bounded diagnostics. Counts dispatched attempts in all profiles; unknown_commands
     // continues to count only accepted reference-profile responses.
     std::array<std::uint64_t,256> unknown_opcodes{};
     std::array<std::uint8_t,16> last_unknown_command{};

@@ -8,6 +8,7 @@ import tomllib
 import unittest
 from unittest.mock import patch
 
+from pcerecomp.abi import ABI
 from pcerecomp import incremental as inc, project
 from pcerecomp.capture import load_capture
 from pcerecomp.emitter import emit_observation_profile
@@ -186,7 +187,7 @@ class NativeManagedProfileTests(unittest.TestCase):
                 emit_observation_profile(profile, module, project.sha256(profile_path), partition_layout='stable')
                 config = dict(schema=1, name='authored-managed-profile',
                     tool=dict(path=ROOT.as_posix(), revision=identity['revision'],
-                        source_sha256=identity['source_sha256'], runtime_abi=26),
+                        source_sha256=identity['source_sha256'], runtime_abi=ABI),
                     module={role: dict(path=(module/file).as_posix(), sha256=project.sha256(module/file))
                         for role,file in (('source','module.cpp'),('manifest','module.json'))},
                     payload=dict(path=payload.as_posix(), sha256=project.sha256(payload),

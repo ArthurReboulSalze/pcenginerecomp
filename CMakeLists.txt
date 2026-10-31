@@ -78,7 +78,7 @@ if(PCE_BUILD_TESTS OR PCE_BUILD_REFERENCE_PROBE)
     set(${_fixture_upper}_DIR "${CMAKE_CURRENT_BINARY_DIR}/${_fixture}-fixture")
     add_custom_command(OUTPUT "${${_fixture_upper}_DIR}/module.cpp" "${${_fixture_upper}_DIR}/${_fixture}_fixture.hpp"
       COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_${_fixture}_fixture.py" "${${_fixture_upper}_DIR}"
-      DEPENDS "tests/generate_${_fixture}_fixture.py" pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py
+      DEPENDS "tests/generate_${_fixture}_fixture.py" pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py pcerecomp/abi.py
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   endforeach()
 endif()
@@ -87,6 +87,8 @@ if(PCE_BUILD_REFERENCE_PROBE)
   target_link_libraries(pce-vram-latch-modes-probe PRIVATE pce-runtime)
   add_executable(pce-sense-probe tests/sense_oracle_probe.cpp runtime/src/no_module.cpp)
   target_link_libraries(pce-sense-probe PRIVATE pce-runtime)
+  add_executable(pce-cd-unknown-probe tests/cd_unknown_oracle_probe.cpp runtime/src/no_module.cpp)
+  target_link_libraries(pce-cd-unknown-probe PRIVATE pce-runtime)
   add_executable(pce-timer-probe tests/timer_oracle_probe.cpp runtime/src/no_module.cpp)
   target_link_libraries(pce-timer-probe PRIVATE pce-runtime)
   add_executable(pce-arcade-probe tests/arcade_oracle_probe.cpp runtime/src/no_module.cpp)
@@ -114,13 +116,13 @@ if(PCE_BUILD_TESTS OR PCE_BUILD_REFERENCE_PROBE)
   set(IRQ_DIR "${CMAKE_CURRENT_BINARY_DIR}/irq-fixture")
   add_custom_command(OUTPUT "${IRQ_DIR}/module.cpp" "${IRQ_DIR}/irq_fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_irq_fixture.py" "${IRQ_DIR}"
-    DEPENDS tests/generate_irq_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py
+    DEPENDS tests/generate_irq_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
   set(BLOCK_DIR "${CMAKE_CURRENT_BINARY_DIR}/block-fixture")
   add_custom_command(OUTPUT "${BLOCK_DIR}/module.cpp" "${BLOCK_DIR}/block_fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_block_fixture.py" "${BLOCK_DIR}"
-    DEPENDS tests/generate_block_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_block_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
 endif()
 if(PCE_BUILD_REFERENCE_PROBE)
@@ -144,7 +146,7 @@ if(PCE_BUILD_REFERENCE_PROBE)
   get_target_property(_capture_sources ${_capture_module} SOURCES)
   add_custom_command(OUTPUT ${_capture_sources} "${CAPTURE_DIR}/module_parts.hpp" "${CAPTURE_DIR}/module.json" "${CAPTURE_DIR}/capture_fixture.hpp" "${CAPTURE_DIR}/plans.json"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_capture_reference_fixture.py" "${CAPTURE_DIR}"
-    DEPENDS tests/generate_capture_reference_fixture.py pcerecomp/capture.py pcerecomp/emitter.py pcerecomp/isa.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_capture_reference_fixture.py pcerecomp/capture.py pcerecomp/emitter.py pcerecomp/isa.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-capture-probe tests/capture_oracle_probe.cpp "${CAPTURE_DIR}/capture_fixture.hpp")
   target_include_directories(pce-capture-probe PRIVATE "${CAPTURE_DIR}")
@@ -169,7 +171,7 @@ if(PCE_BUILD_REFERENCE_PROBE)
   set(ORACLE_DIR "${CMAKE_CURRENT_BINARY_DIR}/oracle-fixture")
   add_custom_command(OUTPUT "${ORACLE_DIR}/module.cpp" "${ORACLE_DIR}/fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_fixture.py" "${ORACLE_DIR}" oracle
-    DEPENDS tests/generate_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-oracle-probe tests/oracle_probe.cpp "${ORACLE_DIR}/module.cpp" "${ORACLE_DIR}/fixture.hpp")
   target_include_directories(pce-oracle-probe PRIVATE "${ORACLE_DIR}")
@@ -179,7 +181,7 @@ if(PCE_BUILD_TESTS)
   set(ARCADE_DIR "${CMAKE_CURRENT_BINARY_DIR}/arcade-fixture")
   add_custom_command(OUTPUT "${ARCADE_DIR}/module.cpp" "${ARCADE_DIR}/arcade_fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_arcade_fixture.py" "${ARCADE_DIR}"
-    DEPENDS tests/generate_arcade_fixture.py pcerecomp/capture.py pcerecomp/emitter.py pcerecomp/isa.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_arcade_fixture.py pcerecomp/capture.py pcerecomp/emitter.py pcerecomp/isa.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-arcade-tests tests/arcade_card_tests.cpp "${ARCADE_DIR}/module.cpp" "${ARCADE_DIR}/arcade_fixture.hpp")
   target_include_directories(pce-arcade-tests PRIVATE "${ARCADE_DIR}")
@@ -188,7 +190,7 @@ if(PCE_BUILD_TESTS)
   set(MAPPER_DIR "${CMAKE_CURRENT_BINARY_DIR}/mapper-fixture")
   add_custom_command(OUTPUT "${MAPPER_DIR}/module.cpp" "${MAPPER_DIR}/mapper_fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_mapper_fixture.py" "${MAPPER_DIR}"
-    DEPENDS tests/generate_mapper_fixture.py pcerecomp/capture.py pcerecomp/emitter.py pcerecomp/isa.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_mapper_fixture.py pcerecomp/capture.py pcerecomp/emitter.py pcerecomp/isa.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-mapper-tests tests/mapper_tests.cpp "${MAPPER_DIR}/module.cpp" "${MAPPER_DIR}/mapper_fixture.hpp")
   target_include_directories(pce-mapper-tests PRIVATE "${MAPPER_DIR}")
@@ -292,6 +294,9 @@ if(PCE_BUILD_TESTS)
   add_executable(pce-cdda-tests tests/cdda_tests.cpp runtime/src/no_module.cpp)
   target_link_libraries(pce-cdda-tests PRIVATE pce-runtime)
   add_test(NAME cd-audio-control COMMAND pce-cdda-tests)
+  add_executable(pce-cd-unknown-tests tests/cd_unknown_tests.cpp runtime/src/no_module.cpp)
+  target_link_libraries(pce-cd-unknown-tests PRIVATE pce-runtime)
+  add_test(NAME cd-unknown-commands COMMAND pce-cd-unknown-tests)
   add_executable(pce-cdda-gap-tests tests/cdda_gap_tests.cpp runtime/src/no_module.cpp)
   target_link_libraries(pce-cdda-gap-tests PRIVATE pce-runtime)
   add_test(NAME cd-audio-gap-start COMMAND pce-cdda-gap-tests)
@@ -344,7 +349,7 @@ if(PCE_BUILD_TESTS)
   set(IRQ_BOUNDARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/irq-boundary-fixture")
   add_custom_command(OUTPUT "${IRQ_BOUNDARY_DIR}/module.cpp" "${IRQ_BOUNDARY_DIR}/module.json" "${IRQ_BOUNDARY_DIR}/irq_boundary_fixture.hpp" "${IRQ_BOUNDARY_DIR}/fixture.json"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_irq_trace_fixture.py" "${IRQ_BOUNDARY_DIR}"
-    DEPENDS tests/generate_irq_trace_fixture.py pcerecomp/emitter.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/capture.py
+    DEPENDS tests/generate_irq_trace_fixture.py pcerecomp/emitter.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/capture.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-irq-boundary-tests tests/irq_boundary_probe.cpp "${IRQ_BOUNDARY_DIR}/module.cpp" "${IRQ_BOUNDARY_DIR}/irq_boundary_fixture.hpp")
   target_include_directories(pce-irq-boundary-tests PRIVATE "${IRQ_BOUNDARY_DIR}")
@@ -353,7 +358,7 @@ if(PCE_BUILD_TESTS)
   set(IRQ_DEVICE_DIR "${CMAKE_CURRENT_BINARY_DIR}/irq-device-fixture")
   add_custom_command(OUTPUT "${IRQ_DEVICE_DIR}/module.cpp" "${IRQ_DEVICE_DIR}/module.json" "${IRQ_DEVICE_DIR}/irq_device_fixture.hpp" "${IRQ_DEVICE_DIR}/fixture.json" "${IRQ_DEVICE_DIR}/authored.cue" "${IRQ_DEVICE_DIR}/authored.bin"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_irq_device_fixture.py" "${IRQ_DEVICE_DIR}"
-    DEPENDS tests/generate_irq_device_fixture.py pcerecomp/emitter.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/capture.py
+    DEPENDS tests/generate_irq_device_fixture.py pcerecomp/emitter.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/capture.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-irq-device-tests tests/irq_device_probe.cpp "${IRQ_DEVICE_DIR}/module.cpp" "${IRQ_DEVICE_DIR}/irq_device_fixture.hpp")
   target_include_directories(pce-irq-device-tests PRIVATE "${IRQ_DEVICE_DIR}")
@@ -363,7 +368,7 @@ if(PCE_BUILD_TESTS)
   set(IRQ_STALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/irq-stall-fixture")
   add_custom_command(OUTPUT "${IRQ_STALL_DIR}/module.cpp" "${IRQ_STALL_DIR}/module.json" "${IRQ_STALL_DIR}/irq_stall_fixture.hpp" "${IRQ_STALL_DIR}/fixture.json" "${IRQ_STALL_DIR}/authored.cue" "${IRQ_STALL_DIR}/authored.bin"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_irq_stall_fixture.py" "${IRQ_STALL_DIR}"
-    DEPENDS tests/generate_irq_stall_fixture.py tests/generate_irq_device_fixture.py pcerecomp/emitter.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/capture.py
+    DEPENDS tests/generate_irq_stall_fixture.py tests/generate_irq_device_fixture.py pcerecomp/emitter.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/capture.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-irq-stall-tests tests/irq_stall_probe.cpp "${IRQ_STALL_DIR}/module.cpp" "${IRQ_STALL_DIR}/irq_stall_fixture.hpp")
   target_include_directories(pce-irq-stall-tests PRIVATE "${IRQ_STALL_DIR}")
@@ -373,7 +378,7 @@ if(PCE_BUILD_TESTS)
   set(VRAM_ACTIVE_DIR "${CMAKE_CURRENT_BINARY_DIR}/vram-active-fixture")
   add_custom_command(OUTPUT "${VRAM_ACTIVE_DIR}/module.cpp" "${VRAM_ACTIVE_DIR}/module.json" "${VRAM_ACTIVE_DIR}/vram_active_fixture.hpp" "${VRAM_ACTIVE_DIR}/fixture.json" "${VRAM_ACTIVE_DIR}/authored.cue" "${VRAM_ACTIVE_DIR}/authored.bin"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_vram_active_fixture.py" "${VRAM_ACTIVE_DIR}"
-    DEPENDS tests/generate_vram_active_fixture.py tests/generate_irq_device_fixture.py pcerecomp/emitter.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/capture.py
+    DEPENDS tests/generate_vram_active_fixture.py tests/generate_irq_device_fixture.py pcerecomp/emitter.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/capture.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-vram-active-tests tests/vram_active_probe.cpp "${VRAM_ACTIVE_DIR}/module.cpp" "${VRAM_ACTIVE_DIR}/vram_active_fixture.hpp")
   target_include_directories(pce-vram-active-tests PRIVATE "${VRAM_ACTIVE_DIR}")
@@ -450,7 +455,7 @@ if(PCE_BUILD_TESTS)
   set(TIMER_DIR "${CMAKE_CURRENT_BINARY_DIR}/timer-fixture")
   add_custom_command(OUTPUT "${TIMER_DIR}/module.cpp" "${TIMER_DIR}/timer_fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_timer_fixture.py" "${TIMER_DIR}"
-    DEPENDS tests/generate_timer_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_timer_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-timer-tests tests/timer_tests.cpp "${TIMER_DIR}/module.cpp" "${TIMER_DIR}/timer_fixture.hpp")
   target_include_directories(pce-timer-tests PRIVATE "${TIMER_DIR}")
@@ -474,7 +479,7 @@ if(PCE_BUILD_TESTS)
   set(FIXTURE_DIR "${CMAKE_CURRENT_BINARY_DIR}/fixture")
   add_custom_command(OUTPUT "${FIXTURE_DIR}/module.cpp" "${FIXTURE_DIR}/fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_fixture.py" "${FIXTURE_DIR}"
-    DEPENDS tests/generate_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-runtime-tests tests/runtime_tests.cpp "${FIXTURE_DIR}/module.cpp" "${FIXTURE_DIR}/fixture.hpp")
   target_include_directories(pce-runtime-tests PRIVATE "${FIXTURE_DIR}")
@@ -483,7 +488,7 @@ if(PCE_BUILD_TESTS)
   set(IO_DIR "${CMAKE_CURRENT_BINARY_DIR}/io-fixture")
   add_custom_command(OUTPUT "${IO_DIR}/module.cpp" "${IO_DIR}/io_fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_io_fixture.py" "${IO_DIR}"
-    DEPENDS tests/generate_io_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_io_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-io-tests tests/io_tests.cpp "${IO_DIR}/module.cpp" "${IO_DIR}/io_fixture.hpp")
   target_include_directories(pce-io-tests PRIVATE "${IO_DIR}")
@@ -492,7 +497,7 @@ if(PCE_BUILD_TESTS)
   set(VDC_DIR "${CMAKE_CURRENT_BINARY_DIR}/vdc-fixture")
   add_custom_command(OUTPUT "${VDC_DIR}/module.cpp" "${VDC_DIR}/vdc_fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_vdc_fixture.py" "${VDC_DIR}"
-    DEPENDS tests/generate_vdc_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_vdc_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-vdc-tests tests/vdc_tests.cpp "${VDC_DIR}/module.cpp" "${VDC_DIR}/vdc_fixture.hpp")
   target_include_directories(pce-vdc-tests PRIVATE "${VDC_DIR}")
@@ -505,7 +510,7 @@ if(PCE_BUILD_TESTS)
   set(SCSI_DIR "${CMAKE_CURRENT_BINARY_DIR}/scsi-fixture")
   add_custom_command(OUTPUT "${SCSI_DIR}/module.cpp" "${SCSI_DIR}/scsi_fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_scsi_fixture.py" "${SCSI_DIR}"
-    DEPENDS tests/generate_scsi_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_scsi_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-scsi-tests tests/scsi_tests.cpp "${SCSI_DIR}/module.cpp" "${SCSI_DIR}/scsi_fixture.hpp")
   target_include_directories(pce-scsi-tests PRIVATE "${SCSI_DIR}")
@@ -545,7 +550,7 @@ if(PCE_BUILD_TESTS)
   set(JOYPAD_DIR "${CMAKE_CURRENT_BINARY_DIR}/joypad-fixture")
   add_custom_command(OUTPUT "${JOYPAD_DIR}/module.cpp" "${JOYPAD_DIR}/joypad_fixture.hpp"
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/generate_joypad_fixture.py" "${JOYPAD_DIR}"
-    DEPENDS tests/generate_joypad_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py
+    DEPENDS tests/generate_joypad_fixture.py pcerecomp/analysis.py pcerecomp/isa.py pcerecomp/emitter.py pcerecomp/data_ops.py pcerecomp/abi.py
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" VERBATIM)
   add_executable(pce-joypad-tests tests/joypad_tests.cpp "${JOYPAD_DIR}/module.cpp" "${JOYPAD_DIR}/joypad_fixture.hpp")
   target_include_directories(pce-joypad-tests PRIVATE "${JOYPAD_DIR}")

@@ -12,6 +12,7 @@ import tempfile
 import unittest
 import wave
 
+from pcerecomp.abi import ABI
 from pcerecomp.capture import load_capture
 from scripts.dev_client import DevClient, DevError
 
@@ -150,7 +151,7 @@ class HuCardHostChecks:
         capture_path = self.root/'actual.json'
         state = self.state(self.invoke(options=['--code-capture', str(capture_path)]))
         capture, _ = load_capture(capture_path)
-        self.assertEqual(capture['runtime_abi'], 26)
+        self.assertEqual(capture['runtime_abi'], ABI)
         self.assertEqual(capture['retired_instructions'], 1)
         self.assertEqual(capture['observations'], [dict(pc=0xE100, mpr=[0]*8, physical=[0x100],
                                                      data=[0xEA], native_hits=0, interpreted_hits=1)])

@@ -2,6 +2,7 @@
 import copy
 import unittest
 
+from pcerecomp.abi import ABI
 from scripts.read_head_reference import expected, expected_hits, plans, q_response, validate_capture, validate_execution, validate_rows
 from generate_scsi_fixture import make_fixture
 
@@ -43,7 +44,7 @@ class ReadHeadReferenceTests(unittest.TestCase):
     def capture(self):
         snapshot,cases=make_fixture();pc=next(pc for pc,op,address in cases if op==0x8D and address==0x1800)
         physical=[0x1F0000+(pc&8191)+i for i in range(3)]
-        return dict(schema=1,runtime_abi=26,capacity=1024,complete=True,dropped_instructions=0,unreadable_instructions=0,
+        return dict(schema=1,runtime_abi=ABI,capacity=1024,complete=True,dropped_instructions=0,unreadable_instructions=0,
             retired_instructions=7,observations=[dict(pc=pc,mpr=list(snapshot.mpr),physical=physical,
                 data=[snapshot.memory[address] for address in physical],native_hits=7,interpreted_hits=0)])
 

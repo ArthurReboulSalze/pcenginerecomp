@@ -20,6 +20,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(ROOT), str(ROOT/'tests')]
+from pcerecomp.abi import ABI
 from scripts import mapper_reference as infrastructure
 from scripts import hucard_reference as common
 from scripts import filtered_audio_reference as reference
@@ -267,7 +268,7 @@ def qualify_case(case,traces,captures,work,journal):
     require(sum(expected_sources.values())==total,'authored source ledger extent')
     for tier in ('native','interpreter'):
         capture=captures[tier]
-        require(capture['runtime_abi']==26 and capture['complete']is True and
+        require(capture['runtime_abi']==ABI and capture['complete']is True and
                 capture['retired_instructions']==total and not capture['dropped_instructions'] and
                 not capture['unreadable_instructions'],'complete actual native work')
         require(source_counts(capture,tier)==expected_sources,'independent full PC/MPR/physical/byte hit ledger')

@@ -14,6 +14,7 @@ import sys
 
 ROOT=Path(__file__).resolve().parent.parent
 sys.path[:0]=[str(ROOT),str(ROOT/'tests')]
+from pcerecomp.abi import ABI
 from scripts import mapper_reference as infrastructure
 from scripts import hucard_reference as common
 from scripts import filtered_audio_reference as reference
@@ -106,7 +107,7 @@ def run(args):
                 traces[tier]=records(result.stdout)
                 if traces[tier]!=golden_rows:raise ValueError('Exact original Gear trace mismatch')
                 observed,digest=load_capture(capture);bindings['raw_outputs'][str(capture)]=digest
-                if observed['runtime_abi']!=26 or not observed['complete']or observed['retired_instructions']!=2*STEPS or any(o['interpreted_hits']if tier=='native'else o['native_hits']for o in observed['observations']):raise ValueError('Actual context tier/loss metadata differs')
+                if observed['runtime_abi']!=ABI or not observed['complete']or observed['retired_instructions']!=2*STEPS or any(o['interpreted_hits']if tier=='native'else o['native_hits']for o in observed['observations']):raise ValueError('Actual context tier/loss metadata differs')
                 tag,n,i,g,checks=result.stderr.strip().split()
                 if tag!='CONTEXT_WORK'or (int(n),int(i),int(checks))!=((80,0,1600)if tier=='native'else(0,80,1600))or(int(g)>0)!=(tier=='native'):raise ValueError('Exact native/interpreted work differs')
                 work[tier]=dict(native=int(n),interpreted=int(i),pure_guards=int(g),literal_checks=int(checks));captures[tier]=observed;literals[tier]=int(checks)

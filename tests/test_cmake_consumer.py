@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import unittest
 
+from pcerecomp.abi import ABI
 from pcerecomp.emitter import emit_capture
 from tests.test_capture import capture, observation
 
@@ -28,7 +29,7 @@ set(PCE_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
 add_subdirectory("{ROOT.as_posix()}" tool)
 pce_add_native_module(native_objects MODULE module.cpp MANIFEST module.json)
 ''', encoding='utf-8')
-            for abi in (25, 27):
+            for abi in (ABI - 1, ABI + 1):
                 with self.subTest(abi=abi):
                     (root/'module.json').write_text(json.dumps(dict(schema=1, runtime_abi=abi)))
                     result = subprocess.run(['cmake', '-S', str(root), '-B', str(root/f'build-{abi}'),

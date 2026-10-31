@@ -3,6 +3,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from pcerecomp.abi import ABI
 from pcerecomp.emitter import emit_capture
 from pcerecomp.isa import physical
 MPR=(255,248,248,248,248,255,248,0)
@@ -32,7 +33,7 @@ def generate(out):
         observations.append(dict(pc=pc,mpr=list(MPR),data=data,physical=[physical(pc+j,MPR) for j in range(len(data))],native_hits=0,interpreted_hits=1))
         rows.append('{"%s",%d,%d,%d,%d,%d,{%s}}'%(name,pc,len(data),cycles,old,new,','.join(map(str,data))))
     out.mkdir(parents=True,exist_ok=True)
-    capture=dict(schema=1,runtime_abi=26,capacity=64,dropped_instructions=0,unreadable_instructions=0,retired_instructions=len(observations),complete=True,observations=observations)
+    capture=dict(schema=1,runtime_abi=ABI,capacity=64,dropped_instructions=0,unreadable_instructions=0,retired_instructions=len(observations),complete=True,observations=observations)
     with TemporaryDirectory(prefix='psg-phase-authored-',dir=out.parent) as scratch:
         generated=Path(scratch)/'module';emit_capture(capture,generated,single_unit=True)
         for source in generated.iterdir():(out/source.name).write_bytes(source.read_bytes())

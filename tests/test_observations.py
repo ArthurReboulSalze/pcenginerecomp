@@ -9,6 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from pcerecomp.isa import decode
+from pcerecomp.abi import ABI
 from pcerecomp.observations import (
     compose_observation_profile, load_observation_profile,
     observation_profile_provenance, validate_observation_profile,
@@ -152,7 +153,7 @@ class ObservationProfileTests(unittest.TestCase):
             compose_observation_profile([self.write(value)])
 
     def test_invalid_original_schema_abi_unknown_fields_and_origin(self):
-        variants = [capture() | {'schema': 2}, capture() | {'runtime_abi': 27},
+        variants = [capture() | {'schema': 2}, capture() | {'runtime_abi': ABI + 1},
                     capture() | {'runtime_abi': True}, capture() | {'unknown': 1},
                     capture() | {'checkpoint_origin': {'sha256': 'a'*64}}]
         for value in variants:

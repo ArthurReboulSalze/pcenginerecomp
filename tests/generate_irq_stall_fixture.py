@@ -376,13 +376,14 @@ def authored_fixture():
 
 
 def generate(out,emit_module=True):
+    from pcerecomp.abi import ABI
     out=Path(out);out.mkdir(parents=True,exist_ok=True);cases,images,sources=authored_fixture()
     (out/'authored.bin').write_bytes(bytes(16*2048))
     (out/'authored.cue').write_text('FILE "authored.bin" BINARY\n  TRACK 01 MODE1/2048\n    INDEX 01 00:00:00\n',encoding='ascii')
     for case in cases:(out/case['rom']).write_bytes(images[case['id']])
     if emit_module:
         from pcerecomp.emitter import emit_capture
-        capture=dict(schema=1,runtime_abi=26,capacity=len(sources),dropped_instructions=0,
+        capture=dict(schema=1,runtime_abi=ABI,capacity=len(sources),dropped_instructions=0,
             unreadable_instructions=0,retired_instructions=len(sources),complete=True,observations=sources)
         with TemporaryDirectory(prefix='irq-stall-authored-',dir=out)as stage:
             target=Path(stage)/'module';emit_capture(capture,target,single_unit=True)
@@ -405,7 +406,7 @@ def generate(out,emit_module=True):
         header.append('if(std::string(item.id)=="'+case['id']+'"){'+''.join(f'rom[{i}]={value};'for i,value in changed)+'return rom;}')
     header.append('throw std::runtime_error("Unknown authored BIOS");}')
     (out/'irq_stall_fixture.hpp').write_text('\n'.join(header),encoding='utf-8')
-    metadata=dict(schema=1,runtime_abi=26,cases=cases,cue='authored.cue',literal_columns=LITERAL_COLUMNS,
+    metadata=dict(schema=1,runtime_abi=ABI,cases=cases,cue='authored.cue',literal_columns=LITERAL_COLUMNS,
         media_files=[dict(path=name,sha256=hashlib.sha256((out/name).read_bytes()).hexdigest(),bytes=(out/name).stat().st_size)for name in('authored.cue','authored.bin')],
         vram_encoding='32768 words serialized low-byte then high-byte; 65536 bytes',
         source_plan='Authored finite CPU and integer blank-slot timing ledger; no captured or runtime values supply expectations.',

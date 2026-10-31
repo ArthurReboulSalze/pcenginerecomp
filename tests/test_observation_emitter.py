@@ -9,6 +9,7 @@ import subprocess
 import tempfile
 import unittest
 
+from pcerecomp.abi import ABI
 from pcerecomp.emitter import emit_capture, emit_observation_profile
 from pcerecomp.observations import compose_observation_profile, observation_profile_provenance
 from tests.test_capture import MPR, capture, observation
@@ -44,7 +45,7 @@ class ObservationEmissionTests(unittest.TestCase):
             root=Path(directory); paths=inputs(root)
             profile=compose_observation_profile(paths); original=copy.deepcopy(profile)
             manifest=emit_observation_profile(profile, root/'generated', 'b'*64)
-            self.assertEqual(manifest['runtime_abi'], 26)
+            self.assertEqual(manifest['runtime_abi'], ABI)
             self.assertEqual(manifest['observation_profile_sha256'], 'b'*64)
             self.assertEqual(manifest['observation_profile_format'], 'pce-observation-profile-1')
             self.assertEqual(manifest['observation_profile_schema'], 1)
@@ -63,7 +64,7 @@ class ObservationEmissionTests(unittest.TestCase):
                         'capture_execution_window', 'capture_retired_instructions', 'captured_native_hits'):
                 self.assertNotIn(key,manifest)
             source=(root/'generated/module.cpp').read_text()
-            self.assertIn('static_assert(abi_version == 26);',source)
+            self.assertIn(f'static_assert(abi_version == {ABI});',source)
             self.assertIn('s.a=42;',source);self.assertIn('s.a=43;',source)
             self.assertNotIn('interpret_step(',source)
             self.assertEqual(profile,original)

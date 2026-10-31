@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from scripts import active_irq_qualify as qualification
+from pcerecomp.abi import ABI
 from tests.active_irq_fixture import cases,program
 
 
@@ -144,7 +145,7 @@ class ActiveIrqReferenceTests(unittest.TestCase):
         case=cases()[0];source=program(case)[2][0]
         actual=dict(tier='native',window_hits=[dict(source,hits=2)],checkpoint_sha256='a'*64,
             cut=dict(values=[0]*7+[100]),origin_frame=4,prefix_native=20,prefix_interpreted=0)
-        capture=dict(schema=1,runtime_abi=26,capacity=4096,dropped_instructions=0,
+        capture=dict(schema=1,runtime_abi=ABI,capacity=4096,dropped_instructions=0,
             unreadable_instructions=0,retired_instructions=2,complete=True,
             observations=[dict(source,native_hits=2,interpreted_hits=0)],
             checkpoint_origin=dict(sha256='a'*64,ticks=100,frame=4,native_steps=20,interpreter_steps=0))

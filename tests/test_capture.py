@@ -5,6 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from pcerecomp.abi import ABI
 from pcerecomp.capture import load_capture, validate_capture
 from pcerecomp.emitter import emit_capture
 from pcerecomp.isa import decode
@@ -33,7 +34,7 @@ class CaptureTests(unittest.TestCase):
         origin = {'sha256': 'a'*64, 'ticks': 1000, 'frame': 7,
                   'native_steps': 800, 'interpreter_steps': 200}
         current = capture([observation(native=3, interpreted=2)])
-        current['runtime_abi'] = 26
+        current['runtime_abi'] = ABI
         current['checkpoint_origin'] = origin
         self.assertEqual(len(validate_capture(current)), 1)
         with tempfile.TemporaryDirectory() as temp:
@@ -52,28 +53,28 @@ class CaptureTests(unittest.TestCase):
 
     def test_current_abi_capture_is_preserved_and_future_abi_is_rejected(self):
         current = capture([observation()])
-        current['runtime_abi'] = 26
+        current['runtime_abi'] = ABI
         original = copy.deepcopy(current)
         with tempfile.TemporaryDirectory() as temp:
             out = Path(temp)/'current'
             manifest = emit_capture(current, out)
-            self.assertEqual(manifest['runtime_abi'], 26)
-            self.assertEqual(manifest['capture_runtime_abi'], 26)
-            self.assertIn('static_assert(abi_version == 26);', (out/'module.cpp').read_text())
+            self.assertEqual(manifest['runtime_abi'], ABI)
+            self.assertEqual(manifest['capture_runtime_abi'], ABI)
+            self.assertIn(f'static_assert(abi_version == {ABI});', (out/'module.cpp').read_text())
         self.assertEqual(current, original)
-        for value in (27, True, 26.0):
+        for value in (ABI + 1, True, float(ABI)):
             future = copy.deepcopy(current)
             future['runtime_abi'] = value
             with self.subTest(value=value), self.assertRaises(ValueError):
                 validate_capture(future)
 
     def test_legacy_observations_rebuild_for_current_runtime(self):
-        for abi in range(12, 26):
+        for abi in range(12, ABI):
             old=capture([observation()]);old['runtime_abi']=abi
             original=copy.deepcopy(old)
             with tempfile.TemporaryDirectory() as temp:
                 manifest=emit_capture(old,Path(temp)/'new')
-            self.assertEqual(manifest['runtime_abi'],26)
+            self.assertEqual(manifest['runtime_abi'],ABI)
             self.assertEqual(manifest['capture_runtime_abi'],abi)
             self.assertEqual(old,original)
 
@@ -357,7 +358,7 @@ class CaptureTests(unittest.TestCase):
 
     def test_metadata_and_boolean_rejections(self):
         valid = capture()
-        for field, value in [('schema', True), ('schema', 2), ('runtime_abi', True), ('runtime_abi', 27),
+        for field, value in [('schema', True), ('schema', 2), ('runtime_abi', True), ('runtime_abi', ABI + 1),
                              ('capacity', True), ('capacity', 0), ('capacity', 65537),
                              ('dropped_instructions', -1), ('retired_instructions', 0),
                              ('unreadable_instructions', 1<<64), ('complete', 1), ('complete', False)]:

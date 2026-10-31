@@ -6,6 +6,7 @@ import subprocess
 import tempfile
 import unittest
 
+from pcerecomp.abi import ABI
 from pcerecomp.capture import load_capture
 from scripts.dev_client import DevClient, DevError
 from test_reset_boot import authored_card
@@ -197,7 +198,7 @@ class LiveCaptureChecks:
     def test_disabled_capture_and_running_inspection_refuse_explicitly(self):
         runner = self.runner('disabled', capture=False)
         summary = self.assert_pure(runner, runner.client.capture_summary)
-        self.assertEqual(summary, {'schema':1, 'runtime_abi':26, 'enabled':False})
+        self.assertEqual(summary, {'schema':1, 'runtime_abi':ABI, 'enabled':False})
         with self.assertRaisesRegex(DevError, 'disabled'):
             runner.client.capture_history()
         with self.assertRaisesRegex(DevError, 'disabled'):

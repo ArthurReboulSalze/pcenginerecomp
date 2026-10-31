@@ -17,7 +17,7 @@ import sys
 import time
 import tomllib
 
-ABI = 26
+from .abi import ABI
 MAX_WALL_SECONDS = 86400
 MAX_MODULE_MANIFEST_BYTES = 64 * 1024 * 1024
 SOURCE_DIRS = ("pcerecomp", "runtime", "cmake")
@@ -341,7 +341,7 @@ def verify(descriptor: Path, *, allow_revision_override=False) -> dict:
     if hucard_boot and runtime['cd_unknown_status'] != 'fault':
         raise ValueError('HuCard has no CD unknown-command response profile')
     for key, values in (("tier", ("native", "hybrid")), ("video", ("snapshot", "continuous")),
-                        ("cd_unknown_status", ("fault", "gear-good")), ("joypad", (2, 6)),
+                        ("cd_unknown_status", ("fault", "gear-good", "nec-invalid")), ("joypad", (2, 6)),
                         ("region", ("usa", "japan")), ("multitap", ("off", "on"))):
         _choice(runtime[key], values, key)
     if type(runtime["joypad"]) is not int:

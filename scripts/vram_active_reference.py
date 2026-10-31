@@ -11,6 +11,7 @@ import hashlib,json,os,re,shutil,subprocess,sys
 from pathlib import Path
 ROOT=Path(__file__).resolve().parent.parent
 sys.path[:0]=[str(ROOT),str(ROOT/'tests')]
+from pcerecomp.abi import ABI
 from scripts import irq_stall_reference as shared
 from scripts import mapper_reference as infrastructure
 from scripts import hucard_reference as common
@@ -638,7 +639,7 @@ def run(args):
         bindings['authored_epoch'][str(saved)]=sha(saved)
     try:
         fixture=out/'fixture';metadata=generate(fixture)
-        require(metadata['schema']==1 and metadata['runtime_abi']==26 and
+        require(metadata['schema']==1 and metadata['runtime_abi']==ABI and
                 metadata['literal_columns']==LITERAL_COLUMNS and len(LITERAL_COLUMNS)==39,
                 'Independent authored device fixture schema required')
         require(len(metadata['cases'])==138,'All declared active-display configurations required')

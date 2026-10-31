@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
     const bool reset_boot=system_card_boot || hucard_boot;
     const int option_start=reset_boot ? 7:8;
     if(argc<option_start || argc>option_start+76 || (argc-option_start)%2) {
-        std::cerr << "usage: pce-headless IMAGE PHYSICAL_LOAD PC MPR_CSV MAX_STEPS MAX_TICKS native|hybrid [--bios RAW_256K_SYSTEM_CARD] [--bram RAW_2048_IMAGE] [--toc PCE_TOC_DESCRIPTOR] [--disc ISO_CHD_OR_CUE] [--libchdr LIBRARY] [--joypad 2|6] [--joypad-region usa|japan] [--multitap off|on] [--buttons MASK_CSV] [--frame-out NEW_PPM_FILE] [--input-script PCE_INPUT_FILE] [--cd-unknown-status fault|gear-good] [--video-output snapshot|continuous] [--vdc-access queued|immediate] [--dev-port 0..65535] [--dev-start-paused on|off] [--dev-memory-write on|off] [--wall-seconds 1..86400] [--code-capture NEW_PRIVATE_JSON] [--capture-limit 1..65536] [--code-capture-start-frame N] [--audio-output on|off] [--audio-profile raw|filtered] [--audio-rate 44100|48000] [--audio-timing gear|legacy] [--audio-out NEW_WAV] [--audio-frames 1..RATE*120]\nMAX_STEPS: 1..20000000000; tick deadlines remain active.\nDesktop only: [--window-scale 1..6] [--unthrottled on|off] [--hidden on|off] [--window-capture NEW_PPM]\n";
+        std::cerr << "usage: pce-headless IMAGE PHYSICAL_LOAD PC MPR_CSV MAX_STEPS MAX_TICKS native|hybrid [--bios RAW_256K_SYSTEM_CARD] [--bram RAW_2048_IMAGE] [--toc PCE_TOC_DESCRIPTOR] [--disc ISO_CHD_OR_CUE] [--libchdr LIBRARY] [--joypad 2|6] [--joypad-region usa|japan] [--multitap off|on] [--buttons MASK_CSV] [--frame-out NEW_PPM_FILE] [--input-script PCE_INPUT_FILE] [--cd-unknown-status fault|gear-good|nec-invalid] [--video-output snapshot|continuous] [--vdc-access queued|immediate] [--dev-port 0..65535] [--dev-start-paused on|off] [--dev-memory-write on|off] [--wall-seconds 1..86400] [--code-capture NEW_PRIVATE_JSON] [--capture-limit 1..65536] [--code-capture-start-frame N] [--audio-output on|off] [--audio-profile raw|filtered] [--audio-rate 44100|48000] [--audio-timing gear|legacy] [--audio-out NEW_WAV] [--audio-frames 1..RATE*120]\nMAX_STEPS: 1..20000000000; tick deadlines remain active.\nDesktop only: [--window-scale 1..6] [--unthrottled on|off] [--hidden on|off] [--window-capture NEW_PPM]\n";
         std::cerr << "reset boot: pce-headless --system-card-reset standard|super RAW_256K_SYSTEM_CARD MAX_STEPS MAX_TICKS native|hybrid [same options except --bios] [--arcade-card duo (super only)]\n";
         std::cerr << "BRAM snapshot: [--bram-out NEW_RAW_2048_FILE] exports existing CD backup memory only after successful finalization; never replaces a file.\n";
         std::cerr << "Optional native dispatch: [--native-span 1..256]; limits above one require an opted-in stable module. Omission preserves single-step execution.\n";
@@ -265,7 +265,8 @@ int main(int argc, char** argv) {
                 if(other && same_path(path,std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(other)))))throw pce::Fault("WAV capture aliases another input or output");
             }
         }
-        if(unknown_status && std::string(unknown_status)!="fault" && std::string(unknown_status)!="gear-good") throw pce::Fault("--cd-unknown-status requires fault or gear-good");
+        if(unknown_status && std::string(unknown_status)!="fault" && std::string(unknown_status)!="gear-good" &&
+           std::string(unknown_status)!="nec-invalid") throw pce::Fault("--cd-unknown-status requires fault, gear-good or nec-invalid");
         const std::string output_mode=video_mode ? video_mode:
 #ifdef PCE_DESKTOP
             "continuous";
@@ -413,9 +414,10 @@ int main(int argc, char** argv) {
             bus.enable_adpcm();
         }
         if(output_mode=="continuous" && !bios_path && !hucard_boot) bus.enable_continuous_video();
-        if(unknown_status && std::string(unknown_status)=="gear-good") {
+        if(unknown_status && std::string(unknown_status)!="fault") {
             if(!bus.cd.scsi.enabled) bus.enable_cd_transport();
-            bus.cd.reference_unknown_status=true;
+            bus.cd.unknown_policy=std::string(unknown_status)=="gear-good" ?
+                pce::CdUnknownPolicy::gear_good:pce::CdUnknownPolicy::nec_invalid;
         }
         if(toc_path) {
             if(!bus.cd.scsi.enabled) bus.enable_cd_transport();
@@ -751,8 +753,18 @@ int main(int argc, char** argv) {
             if(sense.failed_lba)json<<*sense.failed_lba;else json<<"null";
             json<<"}}";
         };
+        const auto unknown_policy_name=[&]() {
+            switch(bus.cd.unknown_policy) {
+            case pce::CdUnknownPolicy::fault:return "fault";
+            case pce::CdUnknownPolicy::gear_good:return "gear-good";
+            case pce::CdUnknownPolicy::nec_invalid:return "nec-invalid";
+            }
+            throw pce::Fault("invalid CD unknown-command policy");
+        };
         const auto write_unknown_status=[&](std::ostream& json) {
-            json<<"\"cd_unknown\":{\"accepted_responses\":"<<bus.cd.unknown_commands<<",\"opcodes\":[";
+            json<<"\"cd_unknown\":{\"policy\":\""<<unknown_policy_name()
+                <<"\",\"accepted_responses\":"<<bus.cd.unknown_commands
+                <<",\"invalid_responses\":"<<bus.cd.invalid_commands<<",\"opcodes\":[";
             bool first=true;
             for(unsigned i=0;i<256;++i) if(bus.cd.unknown_opcodes[i]) {
                 json<<(first ? "":",")<<"{\"opcode\":"<<i<<",\"attempts\":"<<bus.cd.unknown_opcodes[i]<<'}';
@@ -1138,7 +1150,8 @@ int main(int argc, char** argv) {
                   << ",\"load_deadline\":" << bus.cd.scsi.load_deadline << ",\"current_lba\":" << bus.cd.scsi.current_lba
                   << ",\"read_commands\":" << bus.cd.read_commands << ",\"sectors_read\":" << bus.cd.sectors_read
                   << ",\"read_retries\":" << bus.cd.read_retries << ",\"read_errors\":" << bus.cd.read_errors
-                  << ",\"reference_unknown_status\":" << (bus.cd.reference_unknown_status ? "true":"false") << ",\"unknown_commands\":" << bus.cd.unknown_commands
+                  << ",\"reference_unknown_status\":" << (bus.cd.unknown_policy==pce::CdUnknownPolicy::gear_good ? "true":"false")
+                  << ",\"unknown_commands\":" << bus.cd.unknown_commands << ",\"invalid_commands\":" << bus.cd.invalid_commands
                   << ",\"cd_audio_state\":" << bus.cd.audio.state << ",\"cd_audio_lba\":" << bus.cd.audio.current_lba << ",\"cd_audio_commands\":" << bus.cd.audio.commands
                   << ",\"command_size\":" << bus.cd.scsi.command_size << ",\"last_command\":[";
         for(unsigned i=0;i<bus.cd.scsi.last_command_size;++i) report<<(i?",":"")<<unsigned(bus.cd.scsi.last_command[i]);

@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from pcerecomp.abi import ABI
 from generate_irq_device_fixture import authored_fixture, generate, LITERAL_COLUMNS
 
 
@@ -100,7 +101,7 @@ class IrqDeviceFixtureTests(unittest.TestCase):
     def test_generated_media_and_BIOS_hashes_are_authored_and_complete(self):
         with tempfile.TemporaryDirectory()as directory:
             out=Path(directory);manifest=generate(out,emit_module=False)
-            self.assertEqual(manifest['runtime_abi'],26)
+            self.assertEqual(manifest['runtime_abi'],ABI)
             self.assertEqual((out/'authored.bin').read_bytes(),bytes(16*2048))
             self.assertEqual(manifest['cue'],'authored.cue')
             for item in manifest['media_files']:

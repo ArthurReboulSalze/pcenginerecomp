@@ -109,7 +109,7 @@ void reference_unknown_response() {
     for(unsigned opcode=0;opcode<256;++opcode) {
         if(opcode==0 || opcode==3 || opcode==8 || opcode==0xD8 || opcode==0xD9 || opcode==0xDA || opcode==0xDD || opcode==0xDE)continue;
         for(bool selected:{false,true}) {
-            auto cd=prepare();cd.reference_unknown_status=selected;
+            auto cd=prepare();cd.unknown_policy=selected ? pce::CdUnknownPolicy::gear_good:pce::CdUnknownPolicy::fault;
             cd.audio.state=0;cd.audio.seek_deadline=9999999;cd.audio.reschedule();
             cd.transport_write(0,0);cd.advance_to(75000);
             cd.transport_write(1,static_cast<std::uint8_t>(opcode));cd.transport_write(2,0xE0);
@@ -139,7 +139,7 @@ void reference_unknown_response() {
     // policy. Its fixed response and completion do not count as a quirk use.
     constexpr std::array<unsigned,18> no_error={0x70,0,0,0,0,0,0,0x0A,0,0,0,0,0,0,0,0,0,0};
     for(bool selected:{false,true}){
-        auto cd=prepare();cd.reference_unknown_status=selected;cd.transport_write(0,0);cd.advance_to(75000);
+        auto cd=prepare();cd.unknown_policy=selected ? pce::CdUnknownPolicy::gear_good:pce::CdUnknownPolicy::fault;cd.transport_write(0,0);cd.advance_to(75000);
         for(unsigned n=0;n<6;++n){
             cd.transport_write(1,n==0?3:0);cd.transport_write(2,0x80);
             cd.transport_write(2,0);

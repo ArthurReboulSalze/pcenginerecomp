@@ -5,6 +5,7 @@ import subprocess
 import unittest
 from unittest.mock import patch
 
+from pcerecomp.abi import ABI
 from pcerecomp import project
 import test_project as _project_tests
 
@@ -66,7 +67,7 @@ sha256 = "{project.sha256(self.rom)}"
             self.assertEqual(command[command.index(option)+1], value)
         self.assertNotIn('--bios', command)
         self.assertNotIn('--cartridge', command)
-        self.assertEqual(checked['config']['tool']['runtime_abi'], 26)
+        self.assertEqual(checked['config']['tool']['runtime_abi'], ABI)
 
     def test_enhanced_recipes_pin_explicit_board_and_typed_initial_metadata(self):
         for profile, size, metadata in (('sf2', 0x280000, {'mapper_latch': 0}),
@@ -130,7 +131,8 @@ sha256 = "{project.sha256(self.rom)}"
         for old, new in (('profile = "base"', 'profile = "super"'),
                          ('header = "none"', 'header = "auto"'),
                          ('encoding = "linear"', 'encoding = "usa"'),
-                         ('cd_unknown_status = "fault"', 'cd_unknown_status = "gear-good"')):
+                         ('cd_unknown_status = "fault"', 'cd_unknown_status = "gear-good"'),
+                         ('cd_unknown_status = "fault"', 'cd_unknown_status = "nec-invalid"')):
             self.descriptor.write_text(self.text.replace(old, new))
             with self.subTest(new=new), self.assertRaises(ValueError):
                 self.verify()

@@ -44,6 +44,7 @@ raster_binary=args.build.resolve() / ("pce-raster-tests.exe" if os.name=="nt" el
 subprocess.run([str(raster_binary)], cwd=root, check=True, timeout=60)
 scsi_binary=args.build.resolve() / ("pce-scsi-tests.exe" if os.name=="nt" else "pce-scsi-tests")
 subprocess.run([str(scsi_binary)], cwd=root, check=True, timeout=60)
+subprocess.run([str(args.build.resolve() / ("pce-cd-unknown-tests.exe" if os.name=="nt" else "pce-cd-unknown-tests"))],cwd=root,check=True,timeout=60)
 joypad_binary=args.build.resolve() / ("pce-joypad-tests.exe" if os.name=="nt" else "pce-joypad-tests")
 subprocess.run([str(joypad_binary)], cwd=root, check=True, timeout=60)
 

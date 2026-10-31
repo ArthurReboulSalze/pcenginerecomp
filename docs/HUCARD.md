@@ -179,8 +179,8 @@ settings remain available. Verification pins the raw file and independently
 checks typed initial metadata against the decoded vector and declared profile.
 The runtime cannot attach CD/ADPCM to any configured HuCard profile.
 
-Retained ABI-12 through ABI-25 observations remain valid offline inputs with
-their original labels. Re-emit for current ABI 26 and rebuild the module and
+Retained ABI-12 through ABI-26 observations remain valid offline inputs with
+their original labels. Re-emit for current ABI 27 and rebuild the module and
 runtime; old binary objects are incompatible with the current bus/guest-write contract. Snapshot and System
 Card recipes retain their startup contracts. No persistent save/state
 migration, live installation or owner-save discovery is introduced.

@@ -349,7 +349,11 @@ agree on undocumented hardware details:
   last captured CDB. It does not implement or execute an unknown operation.
   Hardware behavior has not been qualified. `--cd-unknown-status fault` selects
   the default strict behavior. Known commands whose semantics remain absent
-  still fault under either setting. REQUEST SENSE has a known six-byte CDB
+  still fault under either setting. ABI 27 additionally offers the explicit
+  `nec-invalid` profile: complete NEC-framed unknown packets receive CHECK
+  CONDITION and sense `$05/$20`, rather than GOOD. Raw error wire and reset
+  differences remain documented under [unknown CD profiles](CD_UNKNOWN.md).
+  REQUEST SENSE has a known six-byte CDB
   and now returns the fixed NEC payload documented separately. Geargrafx returns
   delayed GOOD without data; this runtime does not adopt that shortcut.
 - Geargrafx/Mesen send four bytes for each supported directory mode. Beetle

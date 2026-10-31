@@ -3,7 +3,8 @@
 `scripts.dev_write` validates the reported effects of an explicitly declared
 development-server RAM compare-and-write. It is a pure offline relation: it
 does not contact a host, authorize an edit, retry an uncertain request, or
-change execution policy. Runtime ABI 26 and checkpoint schema 1 are unchanged.
+change execution policy. These host-only helpers do not change the runtime ABI
+or checkpoint schema.
 
 ## Why a separate relation is needed
 

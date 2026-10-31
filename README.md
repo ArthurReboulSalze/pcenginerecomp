@@ -5,7 +5,21 @@ TurboGrafx-16 and CD-ROM²** games. The goal is a shared foundation for native
 ports with modern rendering, audio, input, debugging, and game-specific
 enhancements.
 
-**The full retained Ys III route now replays natively on ABI 26.** A fresh
+**ABI 27 adds an explicit invalid-CD-command response profile.**
+`nec-invalid` receives the complete six-, ten- or twelve-byte packet before
+returning CHECK CONDITION and illegal-command sense. The strict default and
+legacy `gear-good` response remain available. Original Geargrafx and Beetle
+are checked separately, with their wire and reset differences retained.
+Native modules require re-emission and rebuilding; old capture labels stay
+intact and checkpoints remain exact-build-only. See
+[unknown CD profiles](docs/CD_UNKNOWN.md).
+The fresh frozen SDL build passes **1,478 Python tests without skips,
+66 C++ suites and 12 fresh-process audio checkpoint cases**. Ys III's bounded
+ABI27 candidate passes ten-byte rejection → READ recovery, complete fresh
+checkpoint comparisons and paced output checks. Its qualified ABI26 Play
+selection remains unchanged.
+
+**Earlier ABI 26 qualification: the full retained Ys III route replays natively.** A fresh
 reset reaches its terminal stair room after **102,802 frames**, executing
 **3,122,661,937 native and zero interpreted instructions**. The discovery
 run's 3,433 fallback instructions, including 68 block transfers, become native;
@@ -20,8 +34,8 @@ The pure validator retains timing-dependent observations, checks finite bounds
 and exact paused frame/tick endpoints, and supports whole-instruction overshoot.
 A required TCP/checkpoint fixture requests frame 1 and correctly completes at
 frame 13. See [semantic frame steps](docs/SEMANTIC_STEPS.md).
-The fresh SDL build passes **1,461 Python tests without skips, 65 C++ suites
-and 12 fresh-process audio checkpoint cases**. Runtime ABI 26 is unchanged.
+That ABI 26 SDL build passed **1,461 Python tests without skips, 65 C++ suites
+and 12 fresh-process audio checkpoint cases**.
 
 **Ys III now adopts the paused-write validator and closed-journal archives
 through its consumer adapters.** A guarded 60-frame checkpoint continuation
@@ -242,7 +256,7 @@ The opt-in TCP host saves complete machine state to a new private `.pcec`
 file, including pending video/CD work, audio queues and filter history. A
 fresh paused run can restore it with the same executable, DLLs, source/module
 context, media and runtime profiles. Resumed receipts and code captures keep
-the imported prefix separate from newly executed work. Current ABI 26 requires
+the imported prefix separate from newly executed work. Current ABI 27 requires
 fresh exact-build checkpoints; the original introduction retained ABI 25.
 Portable saves, cross-module loading and in-process rewind remain future work.
 See [developer checkpoints](docs/DEVELOPER_CHECKPOINTS.md) for setup and limits.
@@ -387,13 +401,13 @@ Clocked VDC profiles now queue CPU VRAM transfers and model display/DMA
 contention. BUSY reflects pending work; CPU stalls advance devices and IRQ
 sampling without inventing extra instruction retirements. The shared VRAM
 read bus and fetched sprite data remain intact, and inspection stays pure.
-The current shared layout requires **runtime ABI 26**: re-emit original-labeled captures and rebuild
+The current shared layout requires **runtime ABI 27**: re-emit original-labeled captures and rebuild
 consumers together. `--vdc-access immediate` preserves the previous reference
 path; consumer projects can pin either profile. See
 [queued accesses and qualification limits](docs/VDC_ACCESS.md) and
 [retained VRAM bus behavior](docs/VRAM_BUS.md).
 
-The current SDL-enabled check passes **1,071 Python tests without skips and
+The queued-access batch's SDL check passed **1,071 Python tests without skips and
 53 C++ suites**. See [status and source pins](docs/STATUS.md).
 Independent Geargrafx checks cover 615 queued-access cases and a separate
 **54-case timer/IRQ probe during genuine VRAM stalls**. The latter matches all
@@ -474,7 +488,7 @@ uses ceiling-rational sample edges and clock-latched PSG DAC outputs, including
 register writes between PSG clocks. `--audio-timing legacy` preserves the
 previous sample timing and PCM path. Timing is independent of raw/filtered
 selection. **ABI 15** introduced the guest CDDA cursor and sample latch alongside
-the held PSG DAC state. Retained ABI-12 through ABI-25 captures can be re-emitted for current ABI 26, but
+the held PSG DAC state. Retained ABI-12 through ABI-26 captures can be re-emitted for current ABI 27, but
 modules and runtime must be rebuilt together.
 Consumer schema remains **1**. See [audio controls, evidence and limits](docs/AUDIO_OUTPUT.md).
 
@@ -498,7 +512,7 @@ and [consumer integration evidence](docs/STATUS.md#abi-16-consumer-integration).
 The base compatibility profile now includes **BRK in both execution tiers**,
 **8 KiB work-RAM mirrors across banks `$F8..$FB`**, and **VDC sprite-zero
 collision / sprite-overflow status and interrupts**, independently of host
-rendering or audio. Current runtime **ABI 26** requires regenerated modules and a
+rendering or audio. Current runtime **ABI 27** requires regenerated modules and a
 matching runtime; retained ABI-12 through ABI-23 captures remain usable as
 original compiler inputs. Bounded unknown-CD diagnostics retain opcode counts
 and the original command source context. Strict unknown-command behavior is
@@ -857,7 +871,7 @@ Geargrafx independently checks CPU/device behavior, scoped assists and normal
 SAVE/LOAD; an aligned STATUS text crop matches **2,560 pixels**. It does not
 qualify the complete boss route. The retained ABI-12 observed-code dispatch batch
 passes **78 authored Geargrafx plans**, matching CPU/MPR/latch states, instruction
-clocks and complete RAM in both tiers. Current runtime ABI is **26**; ABI-12 through ABI-25
+clocks and complete RAM in both tiers. Current runtime ABI is **27**; ABI-12 through ABI-26
 observation captures can be regenerated, but old binary modules are incompatible.
 The explicit unknown-command response profile is still required. Standard/Super
 reset-vector startup is implemented separately; complete campaign, electrical

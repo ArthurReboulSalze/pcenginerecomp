@@ -114,6 +114,24 @@ separate authored tests. No retail save flow, electrical access phases,
 power-loss durability, save-state or complete-device restoration is certified.
 See [PERSISTENCE.md](PERSISTENCE.md) for exact ownership and failure limits.
 
+## Invalid CD command framing - ABI 27
+
+`scripts/cd_unknown_reference.py --native` freshly compiles the original
+Geargrafx/Beetle cores and both toolkit tiers. All 248 unrecognized IDs plus
+four abort/lifetime cases run in each reference. The NEC domain validates
+1,784 records per engine; the legacy domain validates 520. Framing, held ACK,
+sense payload and explicit wire/reset differences remain separate assertions.
+The authored autonomous toolkit guest executes 23,241 instructions in each
+tier with zero native fallback and 893 conserved source identities; its
+reported CPU/tick vector, 44 observed RAM bytes and pending sense match.
+
+The two emulator references intentionally disagree. Gear completes one byte
+with GOOD and has no SENSE payload; Beetle frames six/ten/twelve bytes and
+rejects invalid CDBs. Toolkit error status/message remain `$02/$02` versus
+Beetle's `$01/$00`. Toolkit reset clears a partial CDB; Beetle retains its
+cursor on warm reset. No hardware or cross-core guest-cycle parity follows.
+See [profiles, exact sources and rerun command](CD_UNKNOWN.md).
+
 ## NEC CD sense and read recovery - ABI 22
 
 `scripts/sense_reference.py --native` builds separate executables around the

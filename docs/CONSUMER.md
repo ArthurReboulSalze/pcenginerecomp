@@ -14,7 +14,7 @@ selection or require unrelated work to freeze. Keep media and the explicitly
 selected test package strict and immutable.
 
 The public contract is `python -m pcerecomp.project` (Python 3.11+), consumer
-TOML schema **1**, runtime ABI **26**, and the existing `pce-dev-1` TCP protocol.
+TOML schema **1**, runtime ABI **27**, and the existing `pce-dev-1` TCP protocol.
 No Python package dependency, installation, download or save write is implicit.
 
 For finite TCP progression checks, [state-aware routes](STATE_ROUTES.md)
@@ -32,7 +32,7 @@ Explicit mutable BRAM sessions are available through `run --save-root`,
 immutable descriptor assets and qualify boot provenance before committing.
 See [persistence contracts](PERSISTENCE.md) and the
 [authored native counter example](../examples/persistent-consumer/README.md).
-Those host-only additions retained ABI 22. Current VDC state and provider interfaces require ABI 26; rebuild hosts
+Those host-only additions retained ABI 22. Current runtime interfaces require ABI 27; rebuild hosts
 from the newly pinned source to expose them.
 
 ## Start with an authored example
@@ -100,7 +100,7 @@ packaged DLL is refused by the execution receipt guard. Imported target scope,
 single/multi-configuration mappings and static SDL selection are handled
 without exporting third-party targets globally. CMake 3.20 remains the minimum.
 That packaging correction retained ABI 13 and descriptor schema 1. The current
-compatibility upgrade requires ABI 26, regenerated modules, updated revision/source
+compatibility upgrade requires ABI 27, regenerated modules, updated revision/source
 pins and a new build receipt. Keep previous immutable qualification receipts.
 
 The dependency scanner runs through CMake's script-mode
@@ -175,7 +175,7 @@ name = "my-consumer"
 path = "../pcenginerecomp"
 revision = "COMPLETE_40_CHARACTER_COMMIT"
 source_sha256 = "TOOL_SOURCE_SHA256"
-runtime_abi = 26
+runtime_abi = 27
 
 [module.source]
 path = "private/generated/module.cpp"
@@ -230,7 +230,7 @@ sha256 = "BRAM_SHA256"
 There is one initial contiguous payload, which must fit the existing standard
 CD/work RAM loader. PC is logical 16-bit; all eight MPR bytes are required.
 The module source and manifest are pinned independently. Manifest schema 1,
-runtime ABI 26 and a positive emitted native-site count are required; optional
+runtime ABI 27 and a positive emitted native-site count are required; optional
 emitter provenance fields are retained in the hash-pinned manifest. Initial
 payload identity does not identify every later overlay. Generated dispatch
 continues to guard logical PC, complete MPR mapping and exact fetched bytes.
@@ -244,17 +244,21 @@ arrays must be present if either is supplied. Names must be portable direct
 children of the manifest directory; duplicates, symlinks, missing entries and
 stale hashes are refused. Manifests are bounded to 64 MiB. Older manifests
 without either array retain the single-source contract. Descriptor schema
-remains 1. ABI 26 requires newly generated modules and a matching runtime;
-pin the new tool revision and exact source digest when upgrading. ABI-12 through ABI-25
-observation captures remain accepted for regeneration; compiled ABI-12 through ABI-25
-modules/objects are not compatible with ABI 26.
+remains 1. ABI 27 requires newly generated modules and a matching runtime;
+pin the new tool revision and exact source digest when upgrading. ABI-12 through ABI-26
+observation captures remain accepted for regeneration; compiled ABI-12 through ABI-26
+modules/objects are not compatible with ABI 27.
 
 Supported runtime values are `native|hybrid`, `snapshot|continuous`,
-`fault|gear-good`, `2|6` buttons, `usa|japan` and `off|on` multitap.
+`fault|gear-good|nec-invalid`, `2|6` buttons, `usa|japan` and `off|on` multitap.
 `gear-good` is an explicit unknown-command *response* profile; it does not
 implement the unknown command's operation. Native tier refuses uncovered
 execution rather than silently using the interpreter. Hybrid coverage is
 reported from actual native/interpreted retirements.
+`nec-invalid` receives the complete NEC-framed invalid command before CHECK
+CONDITION and sense `$05/$20`. Default `fault` remains explicit; known command
+semantics that are unsupported still fault under every profile. See
+[unknown-command profiles](CD_UNKNOWN.md) for raw wire/reset differences.
 The optional `[runtime] audio` key accepts `on|off` and passes the explicit
 runner setting. If omitted, desktop attempts SDL playback while headless keeps
 PCM disabled unless WAV capture is explicitly requested. Audio production,
@@ -281,7 +285,7 @@ Keep those contracts separate when validating an upgrade. Gear timing adds
 `audio_output.timing = "gear-v1"`; legacy timing retains the prior PCM report
 shape. Timing can legitimately change PCM and raw-source activity/hash fields;
 compare against a fresh reference with the same timing rather than demanding
-an old PCM hash. Descriptor schema remains 1. ABI 26 requires re-emitting
+an old PCM hash. Descriptor schema remains 1. Current ABI 27 requires re-emitting
 compatible captures and rebuilding modules and runtime together. Exact DSP
 history is retained by the opt-in [developer checkpoint format](DEVELOPER_CHECKPOINTS.md);
 it does not provide migration between these audio/runtime epochs.
@@ -290,7 +294,20 @@ Limits are 1..20,000,000,000 dispatcher steps, 1..(2^64 - 1) master ticks and
 1..86,400 wall seconds. A block-transfer instruction can consume many guest
 cycles; steps are not a replacement for the tick/wall bounds.
 
-## Upgrade a consumer to ABI 26
+## Upgrade a consumer to ABI 27
+
+Pin the reviewed toolkit revision and source digest, set `runtime_abi = 27`,
+re-emit the original labelled captures and rebuild every generated module and
+host. ABI27 adds a typed CD unknown-response policy and checked invalid-command
+counter to the machine state. The default remains strict; `nec-invalid` is an
+explicit recipe change. Retain the old selected build and qualification until
+the new recipe passes its own source, native-tier, device and audio checks.
+Use candidate-owned fresh checkpoints; schema 1 does not permit cross-build,
+module, ABI or response-profile imports. A short diagnostic suffix does not
+qualify the old full route under a new profile. See
+[migration qualification](NATIVE_MIGRATIONS.md) and [CD profiles](CD_UNKNOWN.md).
+
+## Historical upgrade to ABI 26
 
 Pin the reviewed toolkit revision and source digest, set `runtime_abi = 26`,
 re-emit retained observations with their original ABI labels, then rebuild
@@ -340,7 +357,7 @@ the prior timing path. See [VDC_ACCESS.md](VDC_ACCESS.md).
 The VRAM bus capability requires no new descriptor field. CPU/DMA/rendering
 reads share held VRAM data; inspection stays pure. See [VRAM_BUS.md](VRAM_BUS.md).
 The existing CD sense/recovery capability also requires no new descriptor field. Known
-REQUEST SENSE is implemented independently of `fault|gear-good` unknown-command
+REQUEST SENSE is implemented independently of `fault|gear-good|nec-invalid` unknown-command
 policy. Runs that request sense or diagnose an error add the bounded `cd_sense`
 diagnostic object; healthy routes without such activity retain their metadata
 shape. Validate that object explicitly when qualifying an error-recovery route;
@@ -369,7 +386,7 @@ is a persisted save-state format; this upgrade adds no owner-save migration.
 ## Upgrade a consumer to ABI 17
 
 This retained procedure describes the earlier System Card integration. Use
-the ABI-26 procedure above for current builds.
+the ABI-27 procedure above for current builds.
 
 Pin the new exact revision/source digest, set `runtime_abi = 17`, re-emit
 retained ABI-12/13/14/15/16 captures with their original labels, and rebuild
@@ -398,7 +415,7 @@ recipe, not a reason to modify an already qualified consumer mid-run.
 ## Upgrade a consumer to ABI 16
 
 This retained procedure describes the earlier ABI-16 integration. Use the
-ABI-26 procedure above for current builds.
+ABI-27 procedure above for current builds.
 
 Pin the new exact tool revision and source digest, set `runtime_abi = 16`,
 re-emit retained ABI-12/13/14/15 observations with their original ABI labels,
@@ -433,7 +450,7 @@ See [the actual migration results and limits](STATUS.md#abi-16-consumer-integrat
 ## Upgrade a consumer to ABI 15
 
 This retained procedure documents the earlier ABI-15 audio/latch integration.
-Use the ABI-26 procedure above for the current runtime.
+Use the ABI-27 procedure above for the current runtime.
 
 
 Preserve the previous source pin, generated module, build/run receipts and
@@ -643,7 +660,7 @@ counters. A malformed/missing capture cannot qualify; a valid incomplete
 capture explicitly retains its drop and unreadable counts. Retained hits may
 not exceed either actual execution tier; missing retirements must equal the
 recorded loss and remain `unclassified_retirements`, without an invented tier.
-Fresh host output must use ABI 26; accepting older offline observations does
+Fresh host output must use ABI 27; accepting older offline observations does
 not qualify a stale fresh capture. This is an observation set, not
 proof all reachable code was discovered. Keep capture bytes private and use
 the toolkit's `emit-capture` command to produce another guarded native module.

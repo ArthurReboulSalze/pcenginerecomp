@@ -2,11 +2,14 @@
 
 An opt-in developer checkpoint saves a paused machine for continuation in a
 **fresh run of the exact build and input recipe**. This implements the diagnostic
-checkpoint interface. The current runtime requires ABI 26; the original
+checkpoint interface. The current runtime requires ABI 27; the original
 checkpoint introduction retained ABI 25. It does not define a
 portable game-save format, an emulator-state importer, in-process rewind,
 rollback or cross-module migration. CD BRAM persistence remains a separate
 interface; see [PERSISTENCE.md](PERSISTENCE.md).
+ABI 27 additionally retains the typed unknown-CD policy and invalid-response
+counter. Policy-specific checkpoints require the exact matching recipe;
+see [CD response profiles](CD_UNKNOWN.md).
 
 The [CD READ continuation qualification](CD_READ_CHECKPOINTS.md) separately
 exercises command-generated partial buffers, ACK and event deadlines,

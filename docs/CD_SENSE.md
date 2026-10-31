@@ -5,6 +5,9 @@ through its existing bounded DATA IN handshake. It returns an actual error
 response, rather than treating the command as successful without data.
 Successful READ cadence, the selected Gear-style status/message handshake,
 unknown-command policy and CDDA playback profile remain separate contracts.
+ABI 27's explicit [invalid-command profile](CD_UNKNOWN.md) adds pending sense
+`$05/$20/$00` after a complete invalid CDB. The strict default and legacy
+GOOD-only unknown response remain selectable independently of real SENSE data.
 
 ## Fixed response and lifetime
 

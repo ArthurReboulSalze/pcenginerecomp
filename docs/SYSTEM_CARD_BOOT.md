@@ -88,8 +88,8 @@ sha256 = "REPLACE_WITH_THE_ACTUAL_IMAGE_SHA256"
 All normal tool/module/input hash pins, runtime settings and limits remain
 required. `[payload]` and `[boot]` are mutually exclusive. The positive native
 module contract remains; an unmatched module may fall back in hybrid mode,
-and that work must be reported honestly. ABI-12 through ABI-25 captures remain
-accepted as their original observations; re-emit and rebuild for current ABI 26.
+and that work must be reported honestly. ABI-12 through ABI-26 captures remain
+accepted as their original observations; re-emit and rebuild for current ABI 27.
 
 The [authored reset consumer](../examples/reset-consumer/README.md) demonstrates
 native reset entry without any game or firmware data. Standard headless and
@@ -120,7 +120,7 @@ every mapped instruction byte. An IPL-entry capture may cover later firmware
 services while missing the initial ROM-vector path entirely.
 
 1. Preserve the previous qualified recipe, capture labels, module and receipts.
-   Re-emit/rebuild for current ABI 26 and qualify that retained route separately.
+   Re-emit/rebuild for current ABI 27 and qualify that retained route separately.
 2. Create a distinct reset descriptor with the chosen hardware and pinned BIOS.
    Start a bounded hybrid run from the actual vector and record its native /
    interpreted work. Use normal guest controls and keep any assistance explicit.

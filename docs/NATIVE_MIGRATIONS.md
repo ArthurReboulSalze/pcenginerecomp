@@ -97,7 +97,7 @@ adjudication or new test must remain separate from the failed original test.
 Receipt bookkeeping errors require explicit hash-bound corrections derived
 from retained observations; a later verification is not an original check.
 
-## Current finite consumer evidence
+## Retained full-route consumer evidence (ABI 26)
 
 The Ys III ABI 26 migration's fresh native replay reaches the retained route's
 terminal stair room after **102,802 frames**, with **3,122,661,937 native and
@@ -135,8 +135,11 @@ conservation and establish fresh SDL submissions; they do not establish
 lossless listening or physical playback. The prior zero-drop-across-pause
 assertion remains failed rather than being relabeled by this new test.
 
-The runtime/compiler sources and state codec are unchanged in this toolkit
-batch. No fresh Geargrafx comparison is claimed: this milestone qualifies
+That earlier ABI 26 migration left the runtime/compiler sources and state
+codec unchanged. No fresh Geargrafx comparison was claimed for it: that milestone qualified
 consumer composition, native dispatch, semantic replay and checkpoint use
 against retained behavior; existing independent device comparisons retain
 their original scope.
+The later [ABI 27 invalid-CD profile](CD_UNKNOWN.md) has its own independent
+device matrix and bounded consumer tests; these do not promote the retained
+full route into a new ABI or response-policy qualification.

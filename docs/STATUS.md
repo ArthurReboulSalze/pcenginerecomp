@@ -12,6 +12,58 @@ across headless and SDL hosts within the documented comparison scope.
 **No complete game port is certified.**
 The public source needs no retail input to build or test. SDL is optional.
 
+## ABI 27 invalid-CD-command profile
+
+The opt-in `nec-invalid` profile receives a complete unknown CDB under the
+NEC reference's six-/ten-/twelve-byte table, then reports CHECK CONDITION and
+sense key `$05`, ASC `$20`. The default `fault` and legacy first-byte
+`gear-good` profiles remain explicit. No `$FF` firmware operation is invented.
+Known commands with unsupported semantics still fault.
+
+The typed policy and checked invalid-response counter are serialized,
+validated and configuration-bound. Native modules must be re-emitted and
+rebuilt for ABI 27; original capture labels 12–26 remain intact. Checkpoint
+schema 1 remains exact-build-only, with fresh candidate-owned states required.
+Current Python emission/build/reference contracts share the ABI constant,
+and CMake generation dependencies include it.
+
+Authored direct-device tests cover all 248 unrecognized opcodes under all
+three profiles, held ACK, prefix/completion boundaries, error/sense lifecycle,
+overflow and 200 complete-machine checkpoint cuts. These checks are separate
+from actual interpreted/native guest execution and independent core results.
+Original Gear completes an unknown first byte with GOOD; original Beetle
+frames the full packet and returns illegal-command sense. Toolkit error wire
+bytes remain `$02/$02`, versus Beetle's `$01/$00`. Toolkit reset clears a
+partial CDB; Beetle's warm-reset cursor retention is recorded as a difference.
+See [unknown CD commands](CD_UNKNOWN.md).
+
+Fresh original-core comparison covers 252 cases per core, including every
+unrecognized opcode. The autonomous authored toolkit guest separately
+executes 23,241 interpreted and then 23,241 native instructions with zero
+fallback; all 893 source identities conserve retirements. Its reported CPU/
+work vector, 44 observed RAM bytes and pending sense agree. These are
+separate proof scopes from the complete-state checkpoint cuts.
+
+The ABI27 Ys III candidate passes an unassisted cold prefix, ten-byte `$FF`
+rejection followed by READ `$08`, and candidate-owned fresh checkpoint
+restores with complete-file continuation equality. A paced 120-frame fork
+executes 3,689,416 native instructions with zero fallback and proves newly
+generated audio submission under separately counted pause/shutdown clearing.
+This cohort executes 6,816 of the retained 57,752 compiled identities. The
+selected ABI26 Play package remains protected; no full-route ABI27, campaign,
+listening or hardware qualification is inferred. See
+[the bounded consumer scope](CD_UNKNOWN.md#bounded-ys-iii-consumer-checks).
+
+Frozen code `1bac964633c624f2d6834337e621940c41c8aeb4` passes fresh SDL Release
+configure/build and the complete required checker: **1,478 Python tests with
+zero skips, 66 C++ suites and 12 fresh-process audio checkpoint cases**.
+The shared compiler/runtime/CMake closure is 80 files, SHA256
+`7c2771ff590fcd2cdfdfd51e71c8a34aab2a6a86b48d275d6071b8832647e8c4`.
+The independent matrix uses separately frozen diagnostic code `68125cf`;
+the consumer candidate pins `d71add5`. All three revisions have identical
+80-file shared source bytes. Later fixes affect diagnostic guards, authored
+examples and test expectations, without relabeling those original receipts.
+
 ## Full retained-route native migration
 
 Ys III's fresh ABI 26 native replay passes the retained route through the

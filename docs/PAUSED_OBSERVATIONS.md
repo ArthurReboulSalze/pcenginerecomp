@@ -2,7 +2,7 @@
 
 The development client can retain the evidence needed to investigate a failed
 inspection. This is independent of guest code capture and developer machine
-checkpoints. Runtime ABI 26 and checkpoint schema 1 are unchanged.
+checkpoints. These host-only helpers do not change the runtime ABI or checkpoint schema.
 
 ## Raw wire journal
 

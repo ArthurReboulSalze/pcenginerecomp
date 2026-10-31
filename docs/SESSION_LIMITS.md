@@ -50,7 +50,7 @@ unrelated to seconds.
 
 This host setting requires a rebuilt executable and a new exact source pin for
 consumer builds. This host-only setting originally retained ABI 24; the
-current shared runtime requires ABI 26 for separate device/guest-write changes.
+current shared runtime requires ABI 27 for separate device/guest-write changes.
 The wall allowance itself does not alter guest state semantics.
 Previously qualified receipts keep their original command and timeout scope.
 

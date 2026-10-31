@@ -2,7 +2,7 @@
 
 An observation profile is a private catalogue of exact instruction identities
 from one or more original capture files. Supported offline inputs retain their
-original ABI 12 through 26 labels. The generated module targets current ABI 26.
+original ABI 12 through 27 labels. The generated module targets current ABI 27.
 Composition neither changes those historical labels nor converts checkpoints,
 certifies an ABI migration, or establishes a newly executed run.
 
@@ -145,7 +145,7 @@ does not edit the caller's profile, descriptor or module.
 Existing unbound descriptors continue to work. **Opting in changes the exact
 consumer checkpoint context**, even if generated C++ bytes are unchanged.
 Create a fresh cold run and new checkpoints when adopting the binding. Runtime
-ABI 26 and checkpoint schema 1 do not change, and no checkpoint importer or
+Profile admission leaves checkpoint schema 1 unchanged, and no checkpoint importer or
 identity override is introduced. Direct CMake embedding continues to verify
 the generated module artifacts; it does not implement this optional Python
 consumer profile admission by itself.

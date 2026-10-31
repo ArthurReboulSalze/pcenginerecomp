@@ -42,7 +42,7 @@ timer. Pure native source guards continue to refuse MMIO instruction bytes.
 
 ## Compatibility and evidence
 
-Generated modules and runtime must be rebuilt together for current ABI 26.
+Generated modules and runtime must be rebuilt together for current ABI 27.
 Retained ABI-12 through ABI-25 captures remain compiler inputs with their
 original labels. ABI 21 itself introduced no save-state format. Later
 exact-build [developer checkpoints](DEVELOPER_CHECKPOINTS.md) preserve the

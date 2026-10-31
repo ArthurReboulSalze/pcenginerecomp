@@ -97,7 +97,7 @@ manifest-listed sources and headers together. The emitted source/header hashes
 are checked at configuration; changed artifacts trigger reconfiguration.
 See [PERFORMANCE.md](PERFORMANCE.md) for the authored dispatcher benchmark,
 separate compile measurements and comparison controls. Inline source peeks
-preserve exact byte identity. Current runtime requires ABI 26; regenerate
+preserve exact byte identity. Current runtime requires ABI 27; regenerate
 modules and rebuild runtime together rather than reusing earlier ABI objects.
 ABI-12 through ABI-25 observation captures remain accepted for offline regeneration.
 The retained ABI-13 builds passed all 27 expanded/SDL suites and all 254 Python tests.

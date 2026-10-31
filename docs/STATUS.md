@@ -21,6 +21,8 @@ discovery retirements; 3,433 fallback instructions, including 68 block
 transfers, become native. The composed catalogue retains all 57,545 old
 identities and adds 207; 54,610 distinct identities actually execute.
 Historical profile sums are separate from these new execution totals.
+The route retains the explicit `cd-unknown-status=gear-good` compatibility
+policy; this native migration does not resolve unknown CD command semantics.
 
 The consumer seals 5,257 semantic frame requests and compares 94,286 settled
 semantic records. Progress polls remain retained under finite bounds rather

@@ -105,6 +105,9 @@ zero interpreted instructions**. The discovery run's **3,433 interpreted
 instructions**, including **68 block transfers**, become native. The new
 catalogue preserves **57,545** old identities and adds **207**, for **57,752**
 compiled identities; this replay executes **54,610** distinct identities.
+The route retains the consumer's explicit `cd-unknown-status=gear-good`
+compatibility policy. Zero interpreted CPU instructions does not establish
+implemented semantics for those unknown CD commands.
 
 All 16 baseline/native checkpoint pairs pass an independent complete-core
 comparison. Only five named execution-tier counters change under their exact

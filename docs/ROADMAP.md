@@ -213,6 +213,12 @@ host delivery and current exact-build queue continuation keep separate scope.
 Its streaming offline reader checks retained raw journals without requiring a
 new guest run or loading the whole log. A complete raw ledger remains separate
 from client admission, process completion and a qualification decision.
+The implemented [typed paused-write relation](PAUSED_WRITES.md) accounts for
+declared data CAS effects without suppressing source generations or weakening
+strict observations. Explicit RAM topology, full backing readbacks and code
+footprint exclusions remain consumer obligations. Offline lossless gzip
+archives now preserve exact journals with separate container hashes; active
+writers and complete game qualification remain outside that archive contract.
    The [coupled CD/ADPCM matrix](CD_ADPCM_CHECKPOINTS.md) additionally covers
    selected real READ-to-DMA pending states, RAM commits, pause/reset behavior
    and sector gaps. It retains 54 original-engine timing/state differences;

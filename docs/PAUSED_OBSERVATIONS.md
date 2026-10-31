@@ -6,6 +6,46 @@ checkpoints. Runtime ABI 26 and checkpoint schema 1 are unchanged.
 
 ## Raw wire journal
 
+### Archiving a closed journal
+
+Create a new lossless gzip archive only after the writer is closed:
+
+```text
+python scripts/dev_journal_archive.py .local/wire.jsonl .local/wire.jsonl.gz --offline --sha256 ORIGINAL_JOURNAL_SHA256
+python scripts/dev_journal_audit.py .local/wire.jsonl.gz --encoding gzip --sha256 ORIGINAL_JOURNAL_SHA256 --storage-sha256 ARCHIVE_SHA256
+```
+
+`archive_wire_journal(source, destination, expected_sha256=..., offline=True)`
+from `scripts.dev_journal_archive` audits the source, writes deterministic gzip
+to an owned temporary file, flushes/fsyncs it, checks the compressed journal,
+rechecks the source and publishes exclusively. An existing destination is
+refused. The source is retained. Publication uses an atomic exclusive hard
+link; an unsupported filesystem fails rather than replacing another file.
+A crash can leave an owned temporary file or a complete destination. File
+fsync does not promise directory durability or survival of every power loss.
+
+The explicit offline declaration is a caller obligation. Schema 1 has no close
+marker, so a stable snapshot and paired replies cannot prove that a writer has
+closed. Never archive a live active journal. The helper does not delete logs,
+change their original receipts or relabel failed discovery evidence.
+Hash checks establish exact byte identity and each read checks file stability;
+they provide no filesystem lock or snapshot across separate reads. Replacing
+a source with identical bytes between those reads is not excluded.
+
+The streaming reader defaults to plain input; select `encoding="gzip"`
+explicitly for archives. `expected_sha256`, `sha256` and `bytes` always refer
+to the exact decompressed journal. `expected_storage_sha256`,
+`storage_sha256` and `storage_bytes` refer to the stored container; these
+coincide with the journal values for plain files. Raw request/reply bytes,
+record sequences and IDs retain the same validation and provisional callback
+contract. Memory remains bounded per record, without a total journal quota.
+
+Exactly one complete gzip member is admitted. CRC errors, container truncation,
+trailing bytes, padding and concatenated members are refused. An intact gzip
+member may contain an incomplete journal only with explicit `allow_incomplete`
+or `--allow-incomplete`; the receipt then retains its forensic-prefix status.
+This option never excuses damage to the gzip container or repairs journal bytes.
+
 ### Reading a retained journal
 
 Use the offline streaming reader for an existing private journal:
@@ -92,6 +132,10 @@ Journals can contain memory, image and command bytes; keep them private rather
 than committing them or using their presence as capture qualification.
 
 ## Strict reported-status comparison
+
+For the separately declared effects of a successful paused RAM CAS, use
+[typed paused writes](PAUSED_WRITES.md). The ordinary strict comparator below
+continues to require equality; its generation checks have not been relaxed.
 
 `validate_paused_observation(before, after)` requires successful status ACKs,
 a network pause without a local pause, typed IDs/frame/ticks and plain finite

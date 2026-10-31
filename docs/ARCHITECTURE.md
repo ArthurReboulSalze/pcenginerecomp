@@ -688,6 +688,12 @@ stay at whole-instruction boundaries. The optional client
 [wire journal and paused-status validator](PAUSED_OBSERVATIONS.md) retain raw
 replies before admission and use explicit presentation policies. These add
 contributor diagnostics and qualification without changing runtime semantics.
+The separate [paused-write relation](PAUSED_WRITES.md) checks exact declared
+RAM/counter/alias-generation effects while preserving fetched code and strict
+comparison of other reported state. Its profiles and supplied code footprint
+require independently bound host/consumer evidence. Closed wire journals can
+also be archived losslessly to a new gzip file; streaming admission retains
+the original exact decompressed bytes, IDs and forensic-prefix distinctions.
 
 The [guest-driven DMA/IRQ checkpoint matrix](DMA_IRQ_CHECKPOINTS.md) joins
 autonomous READ handshakes, ADPCM DMA and CPU IRQ2 entry/handler/RTI.

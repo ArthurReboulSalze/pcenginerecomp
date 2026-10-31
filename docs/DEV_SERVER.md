@@ -188,7 +188,8 @@ hex pairs, at most 256 bytes each. Uppercase input is accepted; prefixes,
 spaces and odd-length strings are rejected. The host checks the **whole**
 range and every expected byte before changing anything. A stale expected
 value or invalid bank rejects the entire operation. Changed bytes advance
-their physical bank's source generation, preserving dispatch invalidation.
+their physical bank's source generation, including corresponding alias banks
+for the configured WRAM or Populous mirrors, preserving dispatch invalidation.
 An unchanged-byte write leaves generations unchanged.
 
 The Python client provides `read_memory(address, length)` returning bytes and
@@ -214,6 +215,13 @@ subroutine. Game code can retain working copies of RAM values in other RAM
 or CPU registers and overwrite an edit when execution resumes. A title-specific
 editor must establish those invariants and any required room/event setup;
 the generic server does not infer them.
+
+The pure [typed paused-write validator](PAUSED_WRITES.md) checks retained
+request/ACK objects, full backing readbacks and exactly declared counter and
+alias-generation effects. It permits a disjoint data write while code executes
+from the same bank, while keeping fetched bytes and other reported state strict.
+Its supplied code footprint and topology require independent consumer bindings;
+it neither authorizes an edit nor relaxes the ordinary paused-status comparator.
 
 ## Paused code-capture inspection
 

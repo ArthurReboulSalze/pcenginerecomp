@@ -1,4 +1,4 @@
-# Current status — 29 October 2026
+# Current status — 31 October 2026
 
 ## Verified baseline
 
@@ -11,6 +11,70 @@ with observed damage to the enemy bar. The complete final route reproduces
 across headless and SDL hosts within the documented comparison scope.
 **No complete game port is certified.**
 The public source needs no retail input to build or test. SDL is optional.
+
+## Typed paused writes and closed journal archives — ABI 26
+
+The separate `scripts.dev_write.validate_paused_write` relation checks one
+declared successful RAM CAS against raw request/ACK objects, complete backing
+readbacks, exact counters and alias-generation arithmetic. Code bytes, logical
+PC, all eight MPRs and other reported fields remain strict. Explicit WRAM,
+linear-RAM and Populous mappings are supported; host/source/topology bindings
+and complete historical/live code-footprint authority remain caller duties.
+Predicted noncurrent bank deltas are not observed generation evidence.
+See [PAUSED_WRITES.md](PAUSED_WRITES.md).
+
+The offline gzip archive helper preserves exact original journal bytes and
+retains the source file, with separate stored-container hashes. Streaming
+admission requires one intact gzip member; CRC/truncation/trailing bytes and
+concatenated members are refused. An explicit forensic-prefix option never
+excuses container damage. Schema 1 has no connection-close marker: declaring
+the writer closed is an external obligation, not inferred from paired replies.
+See [journal archives](PAUSED_OBSERVATIONS.md#archiving-a-closed-journal).
+
+These are host diagnostic tools. They do not change guest CPU/device behavior,
+runtime ABI 26, checkpoint schema 1, native dispatch or consumer selection.
+
+Frozen code `d74e0d5ea3a65264d5ab247271a50f4311d0c7f2` passes the fresh SDL
+Release build and required checker: **1,440 Python tests without skips,
+65 C++ suites and 12 fresh-process audio checkpoint cases**. Thirty-eight
+new Python tests include 16 authored write-vector groups, 19 archive tests
+and three live TCP host tests. Runtime/compiler identity remains 79 files,
+SHA256 `d17bdc9159b53b00144a388ebe45a6f7e5e7c5767b7de1989df0e50db24e213c`.
+
+The authored headless and SDL fixtures execute WRAM-resident code; a separate
+freshly emitted/compiled native fixture executes the same operations. Each
+checks three successful writes including a no-op, one stale refusal, literal
+generation deltas, complete backing RAM and backing-boundary wrap. Immediate
+and continued complete checkpoint files match after a fresh process restore.
+Each restored two-frame suffix executes 59,605 instructions and 715,260 ticks:
+interpreted in the stock hosts, native with zero interpreted instructions in
+the generated fixture. Imported prefix work stays separately reported. Each
+fixture retains 360 raw request/reply pairs. This is authored host evidence,
+not new Geargrafx or hardware qualification of debug operations.
+
+The separate retained-build Ys III check restores the closed frame-69,891
+discovery checkpoint into an isolated muted host. It independently rechecks
+the exact literal HP 29-to-40 assist and excludes its backing aliases from
+41,985 supplied original/live source-footprint bytes. One actual paused CAS
+changes one canonical WRAM byte; the seven reported fetch generations advance
+76,303,470 to 76,303,471 while PC, all MPRs, fetched bytes and other reported
+state remain exact. Noncurrent alias generation changes are predicted effects,
+not directly observed counters.
+
+The postwrite checkpoint round-trips byte for byte in a fresh process. Writer
+and restorer then each execute one neutral frame: **31,945 native, zero
+interpreted instructions and 355,317 new ticks**. Complete endpoint files and
+their separately parsed core payloads match byte for byte. The imported
+2,117,569,044 native/614 interpreted prefix remains assisted discovery evidence;
+this is not a new runtime build, consumer adoption, route qualification or
+campaign milestone. Both owned hosts quit naturally with code 0. The original
+failed consumer preflight and selected ABI 18 launcher remain unchanged.
+
+A separate offline archive of a closed prior TCP journal preserves all
+**755 events and 377 request/reply pairs**, with exact raw replies and IDs.
+The 2,121,817-byte original becomes a new 119,868-byte gzip file; an independent
+standard-library streaming decompression reproduces the original full hash.
+This is historical-log verification, not another gameplay run.
 
 ## Active-display raster/sprite IRQ checkpoints — ABI 26
 

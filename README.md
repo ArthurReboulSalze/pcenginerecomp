@@ -5,6 +5,28 @@ TurboGrafx-16 and CD-ROM²** games. The goal is a shared foundation for native
 ports with modern rendering, audio, input, debugging, and game-specific
 enhancements.
 
+**Paused RAM writes now have a typed validation contract.** Data edits can be
+checked while code executes from the same WRAM bank: exact readbacks, alias
+generation increments and write counters are validated, while fetched code,
+PC, mappings and other reported state stay strict. The existing paused-status
+comparator is unchanged. See [typed paused writes](docs/PAUSED_WRITES.md).
+
+**Closed development journals can be archived losslessly.** The new offline
+gzip helper retains the original file and exact decompressed bytes; the
+streaming reader checks both journal and container hashes. Damaged containers
+are refused, and incomplete journals retain their forensic status.
+See [journal archives](docs/PAUSED_OBSERVATIONS.md#archiving-a-closed-journal).
+Runtime ABI 26 and checkpoint schema 1 are unchanged.
+The frozen SDL build passes **1,440 Python tests without skips, 65 C++ suites
+and 12 fresh-process audio checkpoint cases**.
+
+An isolated retained-build Ys III test now passes the exact same-WRAM data
+edit that its earlier consumer guard refused. A fresh checkpoint round trip
+and one neutral frame of continuation match complete endpoint files. Each
+suffix executes **31,945 native and zero interpreted instructions**. This is
+an assisted tooling check; the selected game build and route qualification
+are unchanged.
+
 **Active-display IRQ and checkpoint coverage now includes raster and sprite
 collision sources.** A fresh Geargrafx/native/interpreted matrix passes
 **48 recipes, 720 guest processes and 288 fresh restores**, checking IRQ1/IRQ2

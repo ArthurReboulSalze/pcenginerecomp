@@ -688,6 +688,10 @@ stay at whole-instruction boundaries. The optional client
 [wire journal and paused-status validator](PAUSED_OBSERVATIONS.md) retain raw
 replies before admission and use explicit presentation policies. These add
 contributor diagnostics and qualification without changing runtime semantics.
+The pure [semantic frame-step helper](SEMANTIC_STEPS.md) separates running
+poll cadence from actual paused endpoints. Its parsed seals retain transient
+state rather than projecting it into equality; native tier conversion and
+complete guest-state comparison remain explicit consumer contracts.
 The separate [paused-write relation](PAUSED_WRITES.md) checks exact declared
 RAM/counter/alias-generation effects while preserving fetched code and strict
 comparison of other reported state. Its profiles and supplied code footprint

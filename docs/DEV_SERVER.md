@@ -225,6 +225,13 @@ it neither authorizes an edit nor relaxes the ordinary paused-status comparator.
 
 ## Paused code-capture inspection
 
+For replay across execution tiers, use the separate
+[semantic frame-step relation](SEMANTIC_STEPS.md) to validate pending status
+polls and the exact observed paused endpoint. `advance` can complete beyond a
+requested frame when a whole instruction spans the target; intermediate poll
+count and snapshots are not deterministic replay checkpoints. Full guest-state
+and source/tier comparisons remain separate from that cadence proof.
+
 With `--code-capture NEW_FILE`, the host keeps a bounded set of retired source
 identities until orderly exit. `capture_summary` and `capture_sources` inspect
 that stored set while settled at a pause. They do not read the guest bus,

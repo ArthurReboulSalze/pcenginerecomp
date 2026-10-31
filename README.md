@@ -5,6 +5,14 @@ TurboGrafx-16 and CD-ROM²** games. The goal is a shared foundation for native
 ports with modern rendering, audio, input, debugging, and game-specific
 enhancements.
 
+**Semantic frame-step replay now separates progress polls from settled state.**
+The pure validator retains timing-dependent observations, checks finite bounds
+and exact paused frame/tick endpoints, and supports whole-instruction overshoot.
+A required TCP/checkpoint fixture requests frame 1 and correctly completes at
+frame 13. See [semantic frame steps](docs/SEMANTIC_STEPS.md).
+The fresh SDL build passes **1,461 Python tests without skips, 65 C++ suites
+and 12 fresh-process audio checkpoint cases**. Runtime ABI 26 is unchanged.
+
 **Ys III now adopts the paused-write validator and closed-journal archives
 through its consumer adapters.** A guarded 60-frame checkpoint continuation
 matches a fresh restore byte for byte; each suffix executes **1,951,472 native

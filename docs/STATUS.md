@@ -12,6 +12,46 @@ across headless and SDL hosts within the documented comparison scope.
 **No complete game port is certified.**
 The public source needs no retail input to build or test. SDL is optional.
 
+## Semantic frame steps for native replay
+
+The new standalone `scripts.dev_steps` seals a single literal `step_frames`
+operation and admits a candidate's bounded progress against its actual paused
+endpoint. Intermediate polls can differ in count and CPU/device state; their
+parsed observations remain retained, with no fabricated guest-state equality.
+Literal frame count, queued target and starting/final frame/ticks stay exact.
+Intervening requests, gaps, pause interruption, incomplete steps, invalid
+types, overflow, altered seals and bound violations are refused. Final guest,
+source, RAM, image, audio and tier comparisons remain the consumer's duty.
+See [SEMANTIC_STEPS.md](SEMANTIC_STEPS.md).
+
+Timestamp-free journals do not establish wall duration. An unmeasured baseline
+is explicitly marked; candidate admission requires a separately supplied
+elapsed measurement within a declared bound. The digest binds canonical
+parsed evidence, not raw wire bytes or process success. The caller binds the
+closed source journal and any pre-step commands separately. An explicit
+frame-zero label grants no automatic host-field allowance or reset claim.
+
+Frozen code `2c08093266162b403a545208361e045be54dc1f7` passes fresh SDL Release
+configure/build and the required checker: **1,461 Python tests without skips,
+65 C++ suites and 12 fresh-process audio checkpoint cases**. Twenty authored
+step tests include two loopback protocol/journal checks; a new required real
+headless-host test adds complete checkpoint restore/continuation coverage.
+The earlier helper-only freeze `929dcc3` separately passed 1,460 Python tests;
+the final freeze adds that host regression without changing helper semantics.
+
+The authored real host's one-frame request naturally completes at frame 13
+after a 65,536-byte identity-copy TII: six interpreted instructions, zero
+native, 4,719,000 ticks. A fresh process restores the starting checkpoint and
+produces identical complete endpoint files and core payloads. Both hosts quit
+naturally. A separate private raw audit joins 151 request/reply pairs and 128
+RAM chunks across 35 bindings. This is synthetic host evidence, not new game,
+native-emitter, Geargrafx or hardware qualification.
+
+Runtime/compiler/CMake sources remain unchanged: 79 files, SHA256
+`d17bdc9159b53b00144a388ebe45a6f7e5e7c5767b7de1989df0e50db24e213c`.
+Runtime ABI 26/checkpoint schema 1 are unchanged. The helper sits outside that
+narrower source digest and must be independently pinned as a diagnostic input.
+
 ## Consumer adoption of paused writes and archives
 
 Ys III's consumer now integrates the shared relation through its own single-use

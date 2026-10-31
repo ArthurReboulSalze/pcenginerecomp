@@ -5,6 +5,16 @@ TurboGrafx-16 and CD-ROM²** games. The goal is a shared foundation for native
 ports with modern rendering, audio, input, debugging, and game-specific
 enhancements.
 
+**The full retained Ys III route now replays natively on ABI 26.** A fresh
+reset reaches its terminal stair room after **102,802 frames**, executing
+**3,122,661,937 native and zero interpreted instructions**. The discovery
+run's 3,433 fallback instructions, including 68 block transfers, become native;
+all 54,610 executed source identities are retained. Candidate-owned fresh
+checkpoint restores also produce identical complete continued files.
+This is an assisted finite route, with 300 explicit RAM writes; complete game
+and hardware compatibility remain unqualified. See
+[native migration qualification](docs/NATIVE_MIGRATIONS.md).
+
 **Semantic frame-step replay now separates progress polls from settled state.**
 The pure validator retains timing-dependent observations, checks finite bounds
 and exact paused frame/tick endpoints, and supports whole-instruction overshoot.
@@ -16,11 +26,12 @@ and 12 fresh-process audio checkpoint cases**. Runtime ABI 26 is unchanged.
 **Ys III now adopts the paused-write validator and closed-journal archives
 through its consumer adapters.** A guarded 60-frame checkpoint continuation
 matches a fresh restore byte for byte; each suffix executes **1,951,472 native
-and zero interpreted instructions**. Diagnostics are pinned separately from
-the game runtime, and the selected game build is unchanged. See
+and zero interpreted instructions**. Diagnostics were pinned separately from
+the game runtime; that earlier integration left the selected build unchanged. See
 [consumer write adoption](docs/PAUSED_WRITES.md#adopting-the-relation-in-a-consumer)
 and [consumer journal archives](docs/PAUSED_OBSERVATIONS.md#consumer-archive-adoption).
-This is finite assisted integration coverage, not full-route migration.
+That earlier finite integration test is separate from the full-route migration
+above.
 
 **Paused RAM writes now have a typed validation contract.** Data edits can be
 checked while code executes from the same WRAM bank: exact readbacks, alias
@@ -41,8 +52,8 @@ An earlier isolated retained-build Ys III test passes the exact same-WRAM data
 edit that its earlier consumer guard refused. A fresh checkpoint round trip
 and one neutral frame of continuation match complete endpoint files. Each
 suffix executes **31,945 native and zero interpreted instructions**. This is
-an assisted tooling check; the selected game build and route qualification
-are unchanged.
+an assisted tooling check; it left the selected game build and route
+qualification unchanged at that time.
 
 **Active-display IRQ and checkpoint coverage now includes raster and sprite
 collision sources.** A fresh Geargrafx/native/interpreted matrix passes

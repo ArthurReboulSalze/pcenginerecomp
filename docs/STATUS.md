@@ -12,6 +12,46 @@ across headless and SDL hosts within the documented comparison scope.
 **No complete game port is certified.**
 The public source needs no retail input to build or test. SDL is optional.
 
+## Full retained-route native migration
+
+Ys III's fresh ABI 26 native replay passes the retained route through the
+terminal stair room: **102,802 frames, 3,122,661,937 native instructions and
+zero interpreted instructions**. Each executed source identity conserves its
+discovery retirements; 3,433 fallback instructions, including 68 block
+transfers, become native. The composed catalogue retains all 57,545 old
+identities and adds 207; 54,610 distinct identities actually execute.
+Historical profile sums are separate from these new execution totals.
+
+The consumer seals 5,257 semantic frame requests and compares 94,286 settled
+semantic records. Progress polls remain retained under finite bounds rather
+than being falsely compared as deterministic CPU snapshots. All 300 explicit
+assists use the typed RAM-write relation. Six nonempty automated semantic
+rules cover part of the 33 case boundaries; retained images and controls add
+miner dialogue, an assisted deeper-boss defeat/rewards and terminal-stair
+movement. The result is finite assisted coverage, not a completed campaign.
+
+An independent comparison of all 16 baseline/native checkpoint pairs finds
+every serialized machine-core byte equal outside five explicitly validated
+execution-tier counters. Original archives and their separate module
+fingerprints remain intact; no modified checkpoint is loaded.
+
+Candidate-owned checkpoint tests restore in fresh processes. Immediate files
+and complete continued files match; each neutral suffix executes 60 new
+frames and 1,851,616 native instructions with zero fallback. Digital synthesis
+and SDL presentation accounting remain separate. A new 120-frame paced
+suffix executes 3,703,226 native instructions with zero fallback, generates
+88,456 new PCM frames and quits naturally. All 119 active observations show
+zero host drops; planned pause clearing and shutdown draining are separately
+accounted. Device submission does not establish listening or physical
+playback parity. The earlier failed zero-drop-across-pause criterion remains
+preserved.
+
+This batch changes shared diagnostic tooling and its required host coverage;
+runtime/compiler/CMake sources, ABI 26 and checkpoint schema 1 are unchanged.
+No new Geargrafx run is claimed for the consumer migration. See
+[native migrations](NATIVE_MIGRATIONS.md) for reusable identity, replay,
+counter-conversion, checkpoint and audio qualification requirements.
+
 ## Semantic frame steps for native replay
 
 The new standalone `scripts.dev_steps` seals a single literal `step_frames`

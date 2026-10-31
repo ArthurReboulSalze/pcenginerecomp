@@ -89,6 +89,67 @@ The validator compares reported source generations only; it cannot inspect
 unreported bank counters or hidden machine state. Native and interpreted work,
 imported prefixes and newly executed suffixes must remain separately reported.
 
+## Adopting the relation in a consumer
+
+Pin diagnostic helpers separately from the game executable and its runtime.
+`project.source_identity` deliberately fingerprints the runtime/compiler
+inputs, not the development scripts. Its source count/hash alone does not
+authenticate this validator, the client, the observation helper or journal
+tools. Verify the exact reviewed diagnostic Git revision and the actual
+imported helper paths and file hashes. In a process that already imported
+another SDK, check the complete imported closure: an older cached
+`scripts.dev_observation` can otherwise satisfy the validator's import. Refuse
+the wrong module before contacting a host, or isolate the reviewed helpers in
+a clean process. Source-file hashing followed by ordinary Python imports is
+also insufficient if an existing bytecode cache can supply older code. A
+source-only loader can compile and execute the already verified bytes under
+their exact filenames; keep dependency order and imported origins explicit.
+Do not treat `-B` as disabling reads of existing bytecode caches.
+Updating diagnostics does not require relabeling the runtime
+pin or selecting an unqualified game build.
+
+The relation runs **after** the operation. Calling it cannot prevent an unsafe
+write that has already been sent. Preserve the consumer's pre-send checks:
+
+1. Bind exact edit authority and literal expected/replacement bytes; establish
+   game-specific invariants from fresh readbacks. Do not trust a success label
+   or reuse an old plan against a different imported state.
+2. Retain a strict paused status/readback/status interval and its current
+   source-summary epoch. Verify logical PC, all eight MPRs, seven fetched bytes
+   and observed generations against the current machine and backing RAM.
+3. Exclude every submitted byte through backing aliases from the complete
+   historical/live source footprint and current fetch. A different address
+   in the same bank is permitted only when these byte exclusions pass.
+   Reject stale expected bytes and known counter/generation overflow first.
+4. Persist intent before sending, mark that exact operation attempted before
+   the client call, and refuse reuse after any uncertain send, ACK, persistence
+   or validation failure. Never assume a missing ACK means rollback.
+5. Retain the actual reply and complete AFTER readbacks before invoking
+   `validate_paused_write`. Keep source-summary invariance and other consumer
+   policy checks alongside the returned typed effect proof.
+
+A checkpoint-window capture contains newly executed source, not its complete
+imported history. Bind the retained complete prefix to the exact checkpoint,
+runtime, inputs and original counters, then combine its physical code footprint
+with the lossless current window. Preserve each capture's ABI and origin. A
+fresh-reset-only source checker should continue refusing imported histories;
+add a separately reviewed checkpoint path rather than weakening it globally.
+Neither the footprint union nor a passing write qualifies that historical
+prefix or predicts source first executed later.
+
+Preserve tested source hashes when publishing. If Git normalizes line endings,
+record tested bytes and committed Git bytes separately. Verify the exact
+declared transform and, where appropriate, identical compiled code under the
+same filename. Do not silently replace an execution hash with a publication
+hash or promote arbitrary source changes through a normalization allowance.
+
+Useful adoption tests prove zero client writes for stale authority, historical/
+live/current-code aliases, missing checkpoint-prefix bindings, lossy source,
+changed source epochs, bad helper imports, malformed fetches and overflow.
+After-send failure tests must retain evidence and forbid another attempt.
+Then test a real same-bank data write and complete fresh-process checkpoint
+round-trip/continued equality through the adopted consumer adapter.
+
 ## Verification
 
 Frozen implementation `d74e0d5ea3a65264d5ab247271a50f4311d0c7f2` passes

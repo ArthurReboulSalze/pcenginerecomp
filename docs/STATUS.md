@@ -12,6 +12,65 @@ across headless and SDL hosts within the documented comparison scope.
 **No complete game port is certified.**
 The public source needs no retail input to build or test. SDL is optional.
 
+## Consumer adoption of paused writes and archives
+
+Ys III's consumer now integrates the shared relation through its own single-use
+assist adapter and adopts an explicit closed-journal archive workflow. Its
+diagnostic dependency is pinned to `1be93679c3318c667f97f55cb37af625a86ad875`,
+separately from the retained ABI 26 executable and selected ABI 18 launcher.
+Neither a runtime patch nor a native-module rebuild is needed for this step.
+
+Independent review fixed consumer integration gaps before the canonical test:
+stale Python bytecode/cached helper imports, missing live source-epoch joins,
+missing journal enforcement, ambiguous/nonfinite closure JSON and incomplete
+retained-prefix provenance checks. Diagnostic helpers execute verified source
+bytes. The prefix capture hash must match its original closed receipt and
+full-reset window; a new hash with matching totals is insufficient. These
+requirements are reusable contributor guidance under
+[consumer write adoption](PAUSED_WRITES.md#adopting-the-relation-in-a-consumer)
+and [archive adoption](PAUSED_OBSERVATIONS.md#consumer-archive-adoption).
+
+The final-source consumer test restores its closed frame-69,891 checkpoint,
+re-establishes authority for one exact living-HP data CAS and uses the adopted
+adapter while code executes from the same WRAM bank. A fresh process restores
+the postwrite checkpoint with complete immediate reserialization equality.
+Writer and restorer each run five neutral 12-frame steps, checking HP, the
+read-only maximum, actor, neutral state, source and audio-loss predicates at
+their boundaries. Each 60-frame suffix retires **1,951,472 native and zero
+interpreted instructions**, with **21,536,028 new ticks**. Complete continued
+files and separately parsed core payloads match byte for byte. Both owned
+hosts quit naturally; their closed journals are archived without removing
+or relabeling originals.
+
+The independent offline audit rehashes 1,032 artifact bindings and joins all
+544 full-RAM reply chunks to 652 raw request/reply pairs across 1,306 records.
+It reconstructs the adopted adapter's one actual CAS, checks each of the ten
+title-guard observations follows its own step before the next advance, and
+verifies retained-prefix identity plus imported/new/cumulative counter equations.
+The original 645,761-byte and 474,559-byte journals remain intact alongside
+114,740-byte and 85,014-byte gzip archives. Independent streaming decompression
+and raw-event digests preserve every request, reply and ID. Publication source
+bytes are checked separately against the consumer commit.
+
+The imported 2,117,569,044 native/614 interpreted discovery prefix remains
+separate and unqualified as a full route. This does not select a new game
+build, establish listening/hardware parity, certify future code footprints
+or prove a campaign milestone. The earlier pilot remains a separate source
+epoch. No additional guest run is inferred from offline journal audits.
+
+Independent checks pass **24 authored consumer adoption tests** and **76
+focused unchanged-toolkit checks**. The previous fresh toolkit build/check
+baseline below remains its own epoch; production/compiler/runtime sources
+are unchanged in this adoption-documentation batch.
+The consumer's full suite separately passes **547 tests without skips** and
+its public adoption is
+[`50d669e`](https://github.com/rages4calm/ys3recomp/commit/50d669e1380f69ae57607d393d0415124067176a).
+Its archive wrapper and authored test were executed with CRLF source bytes
+that Git normalizes to LF. Their raw hashes remain distinct; publication
+admission checks the exact line-ending transform and identical compiled code
+under the same filename. The diagnostic helper bytes retain their exact Git
+pins. This normalization relation does not rewrite the execution receipts.
+
 ## Typed paused writes and closed journal archives — ABI 26
 
 The separate `scripts.dev_write.validate_paused_write` relation checks one

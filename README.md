@@ -5,6 +5,15 @@ TurboGrafx-16 and CD-ROM²** games. The goal is a shared foundation for native
 ports with modern rendering, audio, input, debugging, and game-specific
 enhancements.
 
+**Ys III now adopts the paused-write validator and closed-journal archives
+through its consumer adapters.** A guarded 60-frame checkpoint continuation
+matches a fresh restore byte for byte; each suffix executes **1,951,472 native
+and zero interpreted instructions**. Diagnostics are pinned separately from
+the game runtime, and the selected game build is unchanged. See
+[consumer write adoption](docs/PAUSED_WRITES.md#adopting-the-relation-in-a-consumer)
+and [consumer journal archives](docs/PAUSED_OBSERVATIONS.md#consumer-archive-adoption).
+This is finite assisted integration coverage, not full-route migration.
+
 **Paused RAM writes now have a typed validation contract.** Data edits can be
 checked while code executes from the same WRAM bank: exact readbacks, alias
 generation increments and write counters are validated, while fetched code,
@@ -20,7 +29,7 @@ Runtime ABI 26 and checkpoint schema 1 are unchanged.
 The frozen SDL build passes **1,440 Python tests without skips, 65 C++ suites
 and 12 fresh-process audio checkpoint cases**.
 
-An isolated retained-build Ys III test now passes the exact same-WRAM data
+An earlier isolated retained-build Ys III test passes the exact same-WRAM data
 edit that its earlier consumer guard refused. A fresh checkpoint round trip
 and one neutral frame of continuation match complete endpoint files. Each
 suffix executes **31,945 native and zero interpreted instructions**. This is

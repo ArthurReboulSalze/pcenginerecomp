@@ -46,6 +46,31 @@ member may contain an incomplete journal only with explicit `allow_incomplete`
 or `--allow-incomplete`; the receipt then retains its forensic-prefix status.
 This option never excuses damage to the gzip container or repairs journal bytes.
 
+### Consumer archive adoption
+
+Keep the diagnostic-tool pin separate from the game runtime and verify the
+actual imported helper closure as described in
+[consumer write adoption](PAUSED_WRITES.md#adopting-the-relation-in-a-consumer).
+The runtime/compiler source digest does not fingerprint these Python scripts.
+
+Archive only after the client/journal writer has closed and the owned game
+process has actually exited with its output streams closed. Retain that
+closure evidence separately. A quit ACK, paired journal, boolean declaration
+or absence of a process with an old PID does not by itself prove closure.
+If the route failed, preserve its failed result; successful compression must
+not turn it into successful gameplay or trigger an input/write replay.
+
+Add archive metadata alongside the original journal binding: raw path/hash,
+archive path, `encoding="gzip"`, decompressed size/hash and stored size/hash.
+Do not substitute a compressed digest into an existing raw-file hash field,
+rewrite old receipts, or remove the original log. Audit both forms and compare
+their exact raw events, IDs and replies after each streaming audit completes.
+A forensic prefix stays a forensic prefix in either form. Keep actual process,
+source, checkpoint and client-admission evidence outside the archive claim.
+If closure is supplied as JSON, require unambiguous typed data: reject duplicate
+keys and nonfinite numbers before interpreting process/client closure fields.
+A hash authenticates exact bytes, not an ambiguous parser interpretation.
+
 ### Reading a retained journal
 
 Use the offline streaming reader for an existing private journal:

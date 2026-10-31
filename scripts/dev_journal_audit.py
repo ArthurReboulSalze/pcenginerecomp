@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 import stat
 import sys
+import zlib
 
 try:
     from scripts.dev_client import MAX_REQUEST, MAX_RESPONSE, MAX_TOKEN, _finite_float
@@ -106,7 +107,57 @@ def _signature(info):
     return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns
 
 
-def audit_wire_journal(path, *, expected_sha256=None, allow_incomplete=False, visit=None):
+class _GzipLines:
+    """Bounded single-member decoder; gzip padding/concatenation are refused."""
+
+    def __init__(self, raw):
+        self.raw = raw
+        self.decoder = zlib.decompressobj(31)
+        self.pending = b''
+        self.buffer = b''
+        self.finished = False
+        self.digest = hashlib.sha256()
+        self.bytes = 0
+
+    def _read(self, size):
+        data = self.raw.read(size)
+        self.digest.update(data)
+        self.bytes += len(data)
+        return data
+
+    def _fill(self, size):
+        while not self.buffer and not self.finished:
+            data = self.pending or self._read(65536)
+            _require(bool(data), 'truncated gzip stream')
+            try:
+                self.buffer = self.decoder.decompress(data, size)
+            except zlib.error as error:
+                raise JournalValidationError('invalid gzip stream') from error
+            self.pending = self.decoder.unconsumed_tail
+            if self.decoder.eof:
+                _require(not self.decoder.unused_data and not self._read(1),
+                         'gzip trailing bytes or concatenated members refused')
+                self.finished = True
+
+    def readline(self, size):
+        pieces = []
+        count = 0
+        while count < size:
+            self._fill(min(65536, size - count))
+            if not self.buffer:
+                break
+            end = self.buffer.find(b'\n', 0, size - count)
+            take = end + 1 if end >= 0 else min(len(self.buffer), size - count)
+            pieces.append(self.buffer[:take])
+            self.buffer = self.buffer[take:]
+            count += take
+            if end >= 0:
+                break
+        return b''.join(pieces)
+
+
+def audit_wire_journal(path, *, expected_sha256=None, allow_incomplete=False, visit=None,
+                       encoding='plain', expected_storage_sha256=None):
     """Return a small summary only after streaming and checking the entire file.
 
     ``allow_incomplete`` permits a forensic unpaired intent, an unterminated
@@ -118,11 +169,15 @@ def audit_wire_journal(path, *, expected_sha256=None, allow_incomplete=False, vi
     source identity or native execution. Those require independent evidence.
     """
     _require(type(allow_incomplete) is bool, 'allow_incomplete must be boolean')
+    _require(type(encoding) is str and encoding in ('plain', 'gzip'),
+             'encoding must be explicitly plain or gzip')
     _require(visit is None or callable(visit), 'visit must be callable or None')
-    if expected_sha256 is not None:
-        _require(type(expected_sha256) is str and len(expected_sha256) == 64
-                 and all(c in '0123456789abcdef' for c in expected_sha256),
-                 'expected_sha256 requires lowercase SHA256')
+    for name, value in (('expected_sha256', expected_sha256),
+                        ('expected_storage_sha256', expected_storage_sha256)):
+        if value is not None:
+            _require(type(value) is str and len(value) == 64
+                     and all(c in '0123456789abcdef' for c in value),
+                     name + ' requires lowercase SHA256')
     path = Path(path)
     _require(stat.S_ISREG(path.stat().st_mode), 'journal snapshot must be a regular file')
     digest = hashlib.sha256()
@@ -137,9 +192,10 @@ def audit_wire_journal(path, *, expected_sha256=None, allow_incomplete=False, vi
     ending = 'session-only'
     tail_hash = None
     partial_bytes = 0
-    with path.open('rb') as stream:
-        start = os.fstat(stream.fileno())
+    with path.open('rb') as raw_stream:
+        start = os.fstat(raw_stream.fileno())
         _require(stat.S_ISREG(start.st_mode), 'journal snapshot must be a regular file')
+        stream = _GzipLines(raw_stream) if encoding == 'gzip' else raw_stream
         while True:
             raw = stream.readline(MAX_LINE + 1)
             if not raw:
@@ -269,14 +325,19 @@ def audit_wire_journal(path, *, expected_sha256=None, allow_incomplete=False, vi
         _require(session is not None, 'journal session is missing')
         if pending is not None or (recent and recent['invalid'] and not terminal):
             _require(allow_incomplete, 'journal ends with unresolved request evidence')
-        end = os.fstat(stream.fileno())
-        _require(_signature(start) == _signature(end) == _signature(path.stat()) and total == end.st_size,
+        storage_bytes = stream.bytes if encoding == 'gzip' else total
+        storage_hash = stream.digest.hexdigest() if encoding == 'gzip' else digest.hexdigest()
+        end = os.fstat(raw_stream.fileno())
+        _require(_signature(start) == _signature(end) == _signature(path.stat()) and storage_bytes == end.st_size,
                  'journal changed during audit')
     actual_hash = digest.hexdigest()
     _require(expected_sha256 is None or actual_hash == expected_sha256, 'journal SHA256 differs')
+    _require(expected_storage_sha256 is None or storage_hash == expected_storage_sha256,
+             'journal storage SHA256 differs')
     forensic = bool(trailing or pending is not None or (recent and recent['invalid'] and not terminal))
     return dict(schema=1, format='pce-wire-journal-1', input_path=str(path.resolve()),
-                sha256=actual_hash, bytes=total,
+                sha256=actual_hash, bytes=total, storage_encoding=encoding,
+                storage_sha256=storage_hash, storage_bytes=storage_bytes,
                 session=session, records=records, request_intents=requests, response_frames=responses,
                 positive_server_replies=positive, server_rejections=rejected,
                 protocol_invalid_responses=invalid, failure_records=failures,
@@ -293,11 +354,14 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('journal', type=Path)
     parser.add_argument('--sha256', dest='expected_sha256')
+    parser.add_argument('--encoding', choices=('plain', 'gzip'), default='plain')
+    parser.add_argument('--storage-sha256', dest='expected_storage_sha256')
     parser.add_argument('--allow-incomplete', action='store_true')
     args = parser.parse_args(argv)
     try:
         result = audit_wire_journal(args.journal, expected_sha256=args.expected_sha256,
-                                    allow_incomplete=args.allow_incomplete)
+                                    allow_incomplete=args.allow_incomplete, encoding=args.encoding,
+                                    expected_storage_sha256=args.expected_storage_sha256)
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     except (OSError, JournalValidationError) as error:

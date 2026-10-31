@@ -89,8 +89,8 @@ def expected(cases, profile):
                 rows.append(row)
             elif op[0] == 'c':
                 _, automatic, _, code, *tail = op
-                data = sense.sense_bytes(pending) if code == 3 and nec else []
-                if code == 3 and nec:
+                data = sense.sense_bytes(pending) if code == 3 and profile != 'gear' else []
+                if code == 3 and profile != 'gear':
                     pending = [0, 0, 0, 0]
                 rows.append(dict(kind='reply', automatic=automatic, cdb=[code, *tail],
                                  data=data, status=0, message=0))
@@ -107,6 +107,13 @@ def strict_equal(a, b):
     if type(a) is list:
         return len(a) == len(b) and all(strict_equal(x, y) for x, y in zip(a, b))
     return a == b
+
+
+def require_preservation(report, bindings):
+    reference.record_preservation(report, bindings)
+    flags = report.get('preservation')
+    if type(flags) is not dict or not flags or any(value is not True for value in flags.values()):
+        raise ValueError('A bound source, tool, fixture or artifact changed during qualification')
 
 
 def validate_rows(rows, wanted):
@@ -265,7 +272,15 @@ def execute(label, binary, plan, arguments, out, report, bindings, wanted=None):
     return rows
 
 
+def validate_options(args):
+    if args.reference_only and (args.native or args.probe):
+        raise ValueError('Reference-only cannot claim toolkit execution')
+    if args.native and args.probe:
+        raise ValueError('Native qualification requires freshly built interpreted and native probes; external --probe is not accepted')
+
+
 def run(args):
+    validate_options(args)
     compiler = Path(shutil.which(str(args.compiler)) or '').resolve(); out = args.out.resolve(); tool = args.tool_source.resolve()
     if out.exists() or not out.is_relative_to(ROOT / '.local') or not compiler.is_file(): raise ValueError('Require compiler and NEW private output')
     if not args.reference_only:
@@ -294,6 +309,10 @@ def run(args):
         report.update(unknown_opcodes_per_reference=248, reference_cases_per_engine=252, beetle_records=len(golden), gear_records=len(legacy))
         if not args.reference_only:
             probe = args.probe.resolve() if args.probe else build_tool(args, out, report, bindings, compiler)
+            if not probe.is_file():
+                raise ValueError('Toolkit probe is unavailable')
+            bindings.setdefault('tool_binaries', {})[str(probe)] = sha(probe)
+            report['tool_probe_build_origin'] = 'externally supplied; source correspondence belongs to caller' if args.probe else 'fresh build from bound tool source'
             for profile in ('tool-nec', 'tool-gear'):
                 actual = execute(profile, probe, paths[profile], [image, 'nec-invalid' if profile == 'tool-nec' else 'gear-good'], out, report, bindings, expected(plans(profile), profile))
                 report[profile + '_records'] = len(actual)
@@ -321,7 +340,7 @@ def run(args):
                 if old.keys() != new.keys() or any(new[k]['native_hits'] != old[k]['interpreted_hits'] or new[k]['interpreted_hits'] for k in old): raise ValueError('Native per-source retirement conversion')
                 report.update(guest_native_steps=result[3], guest_interpreted_fallback=0, guest_source_identities=len(old), native_module_observation_profile=emitted.get('observation_profile'))
                 bindings['native_module'] = {str(p): sha(p) for p in module.rglob('*') if p.is_file()}
-        reference.record_preservation(report, bindings)
+        require_preservation(report, bindings)
         report['result'] = 'pass'
     finally:
         (out / 'result.json').write_text(json.dumps(report, indent=2) + '\n')
@@ -338,7 +357,6 @@ if __name__ == '__main__':
     p.add_argument('--library', type=Path, action='append', default=[])
     try:
         args = p.parse_args()
-        if args.reference_only and (args.native or args.probe): raise ValueError('Reference-only cannot claim toolkit execution')
         run(args)
     except (ValueError, RuntimeError, OSError, KeyError, subprocess.SubprocessError) as error:
         print(error, file=sys.stderr); raise SystemExit(1)

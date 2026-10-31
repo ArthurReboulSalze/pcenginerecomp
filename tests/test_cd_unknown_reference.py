@@ -1,5 +1,9 @@
 """Independent authored framing/sense expectations and strict evidence refusals."""
 import copy
+import hashlib
+from pathlib import Path
+import tempfile
+from types import SimpleNamespace
 import unittest
 from scripts import cd_unknown_reference as reference
 
@@ -49,6 +53,26 @@ class UnknownCdReferenceTests(unittest.TestCase):
         self.assertEqual((beetle['buffered_before_reset'], beetle['buffered_after_reset']), (5, 5))
         self.assertEqual((tool['buffered_before_reset'], tool['buffered_after_reset']), (5, 0))
 
+    def test_gear_unknown_policy_does_not_turn_toolkit_sense_into_gear_stub(self):
+        case = [dict(id='sense', operations=[('r', 1), reference.command(3)])]
+        self.assertEqual(reference.expected(case, 'gear')[0]['data'], [])
+        self.assertEqual(reference.expected(case, 'tool-gear')[0]['data'],
+                         [112, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
+    def test_changed_or_missing_bound_source_cannot_be_finalized_as_pass(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'authored-source'; path.write_bytes(b'bound')
+            bindings = {'authored_sources': {str(path): hashlib.sha256(b'bound').hexdigest()}}
+            report = {'result': 'incomplete'}
+            reference.require_preservation(report, bindings)
+            self.assertEqual(report['preservation'], {'authored_sources': True})
+            path.write_bytes(b'changed')
+            with self.assertRaises(ValueError): reference.require_preservation(report, bindings)
+            self.assertEqual(report['result'], 'failed-preservation')
+            self.assertEqual(report['preservation'], {'authored_sources': False})
+            path.unlink()
+            with self.assertRaises(ValueError): reference.require_preservation(report, bindings)
+
     def test_typed_rows_and_retained_edges(self):
         rows, wanted = sample()
         self.assertIs(reference.validate_rows(rows, wanted), rows)
@@ -88,6 +112,13 @@ class UnknownCdReferenceTests(unittest.TestCase):
         with self.assertRaises(ValueError): reference.plans('automatic')
         with self.assertRaises(ValueError): reference.expected([], 'automatic')
         with self.assertRaises(ValueError): reference.expected([dict(operations=[('invented',)])], 'tool-nec')
+
+    def test_external_binary_cannot_be_presented_as_fresh_native_qualification(self):
+        for reference_only, native, probe in ((True, True, None), (True, False, Path('external')), (False, True, Path('external'))):
+            with self.assertRaises(ValueError):
+                reference.validate_options(SimpleNamespace(reference_only=reference_only, native=native, probe=probe))
+        reference.validate_options(SimpleNamespace(reference_only=False, native=True, probe=None))
+        reference.validate_options(SimpleNamespace(reference_only=True, native=False, probe=None))
 
 
 if __name__ == '__main__':

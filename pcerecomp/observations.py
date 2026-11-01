@@ -6,6 +6,7 @@ distinct input files; overlapping windows cannot be identified automatically.
 import base64
 import binascii
 import hashlib
+import io
 import json
 from pathlib import Path
 
@@ -17,6 +18,7 @@ MAX_PROFILE_BYTES = 128 * 1024 * 1024
 MAX_INPUTS = 256
 MAX_TOTAL_INPUT_BYTES = 64 * 1024 * 1024
 MAX_CONTRIBUTIONS = 262144
+SERIALIZER = 'pce-observation-profile-json-pretty-v1'
 
 
 def _json(raw):
@@ -125,14 +127,14 @@ def _derive(inputs, capacity):
     return ordered, totals, sorted(metadata, key=lambda item: item['sha256'])
 
 
-def compose_observation_profile(input_paths, *, capacity=MAX_OBSERVATIONS):
+def _compose_details(input_paths, *, capacity=MAX_OBSERVATIONS):
     """Compose lossless original capture files; duplicate raw files count once.
 
     No input is edited. SHA ordering makes results independent of argument order.
     Paths are deliberately absent from the portable, private profile.
     """
     integer(capacity, MAX_OBSERVATIONS, 'profile capacity', 1)
-    sources, total = {}, 0
+    sources, total, argument_digests = {}, 0, []
     for index, path in enumerate(input_paths):
         if index >= MAX_INPUTS:
             raise ValueError(f'At most {MAX_INPUTS} input paths are accepted')
@@ -141,6 +143,7 @@ def compose_observation_profile(input_paths, *, capacity=MAX_OBSERVATIONS):
         if len(raw) > MAX_CAPTURE_BYTES:
             raise ValueError('Code capture exceeds 64 MiB')
         digest = hashlib.sha256(raw).hexdigest()
+        argument_digests.append(digest)
         if digest in sources:
             continue
         total += len(raw)
@@ -149,13 +152,178 @@ def compose_observation_profile(input_paths, *, capacity=MAX_OBSERVATIONS):
         sources[digest] = {'sha256': digest, 'size_bytes': len(raw),
                            'raw_base64': base64.b64encode(raw).decode('ascii')}
     inputs = [sources[key] for key in sorted(sources)]
-    observations, totals, _ = _derive(inputs, capacity)
+    observations, totals, metadata = _derive(inputs, capacity)
     profile = {'format': FORMAT, 'schema': 1, 'execution_evidence': False,
                'capacity': capacity, 'inputs': inputs, 'observations': observations,
                'historical_totals': totals}
     if len(_canonical(profile)) > MAX_PROFILE_BYTES:
         raise ValueError('Observation profile exceeds 128 MiB')
-    return profile
+    return profile, argument_digests, metadata
+
+
+def compose_observation_profile(input_paths, *, capacity=MAX_OBSERVATIONS):
+    """Compose original captures; duplicate bytes count once, never as execution."""
+    return _compose_details(input_paths, capacity=capacity)[0]
+
+
+def serialize_observation_profile(profile):
+    """Exact established CLI bytes, bounded before accumulating excess output.
+
+    Admission belongs to the composer/loader. This serializer does not grant
+    validity to a caller-supplied object or rewrite an existing profile file.
+    """
+    encoder = json.JSONEncoder(sort_keys=True, indent=2, allow_nan=False)
+    with io.BytesIO() as stream:
+        for chunk in encoder.iterencode(profile):
+            raw = chunk.encode('utf-8')
+            if stream.tell() + len(raw) > MAX_PROFILE_BYTES:
+                raise ValueError('Serialized observation profile exceeds its byte bound')
+            stream.write(raw)
+        if stream.tell() + 1 > MAX_PROFILE_BYTES:
+            raise ValueError('Serialized observation profile exceeds its byte bound')
+        stream.write(b'\n')
+        return stream.getvalue()
+
+
+def _plan_producer():
+    return {name: hashlib.sha256(Path(__file__).with_name(name).read_bytes()).hexdigest()
+            for name in ('observations.py', 'capture.py', 'isa.py', 'abi.py')}
+
+
+def _plan_metrics(profile=None):
+    if profile is None:
+        return dict(unique_inputs=0, union_identities=0, contributions=0,
+                    raw_bytes=0, serialized_bytes=0, serialized_sha256=None)
+    return dict(unique_inputs=len(profile['inputs']), union_identities=len(profile['observations']),
+                contributions=sum(len(row['contributions']) for row in profile['observations']),
+                raw_bytes=sum(row['size_bytes'] for row in profile['inputs']),
+                serialized_bytes=None, serialized_sha256=None)
+
+
+def _baseline_profile(profile, digests):
+    """Subset already admitted original contributions; never a raw capture."""
+    rows = []
+    for row in profile['observations']:
+        contributions = [item for item in row['contributions'] if item['input_sha256'] in digests]
+        if contributions:
+            item = {key: row[key] for key in ('pc', 'mpr', 'physical', 'data')}
+            item.update(native_hits=sum(x['native_hits'] for x in contributions),
+                        interpreted_hits=sum(x['interpreted_hits'] for x in contributions),
+                        contributions=contributions)
+            rows.append(item)
+    native = sum(row['native_hits'] for row in rows)
+    interpreted = sum(row['interpreted_hits'] for row in rows)
+    return dict(format=FORMAT, schema=1, execution_evidence=False, capacity=profile['capacity'],
+                inputs=[item for item in profile['inputs'] if item['sha256'] in digests],
+                observations=rows,
+                historical_totals=dict(native_hits=native, interpreted_hits=interpreted,
+                                       retired_instructions=native + interpreted))
+
+
+def _plan_refusal(error, capacity):
+    text = str(error)
+    if text.startswith('Profile requires one to '):
+        return dict(code='no_inputs', resource='unique_inputs', limit=MAX_INPUTS,
+                    minimum_allowed=1, exact_required=0, required_at_least=None)
+    limits = (
+        ('At most ', 'input_paths', MAX_INPUTS),
+        ('Code capture exceeds 64 MiB', 'individual_raw_bytes', MAX_CAPTURE_BYTES),
+        ('Total original capture bytes exceed profile limit', 'raw_bytes', MAX_TOTAL_INPUT_BYTES),
+        ('Observation contribution capacity exceeded', 'contributions', MAX_CONTRIBUTIONS),
+        ('Observation union capacity exceeded', 'union_identities', capacity),
+        ('Observation profile exceeds 128 MiB', 'serialized_bytes', MAX_PROFILE_BYTES),
+        ('Serialized observation profile exceeds its byte bound', 'serialized_bytes', MAX_PROFILE_BYTES),
+    )
+    for prefix, resource, limit in limits:
+        if text.startswith(prefix):
+            # No traversal beyond the admission cap merely to measure a refusal.
+            return dict(code='admission_bound', resource=resource, limit=limit,
+                        required_at_least=limit + 1, exact_required=None)
+    return dict(code='input_admission', resource=None, limit=None, required_at_least=None,
+                exact_required=None, error_type=type(error).__name__,
+                message='Inputs or options did not satisfy the existing composition contract')
+
+
+def plan_observation_profile(input_paths, *, baseline_inputs=(), capacity=MAX_OBSERVATIONS):
+    """Read-only additive plan using the real admissions and CLI serializer.
+
+    ``baseline_inputs`` explicitly names retained original captures. Positional
+    inputs are additions, including duplicates. Every reported SHA binds the
+    exact bytes read; compare the planned serialized hash with eventual output.
+    Unknown refusal metrics stay null. This is neither execution authentication
+    nor an equivalence proof and never emits code or a profile file.
+    """
+    from collections import Counter
+    from itertools import islice
+
+    unknown = {key: None for key in _plan_metrics()}
+    union_limit = capacity if type(capacity) is int and 1 <= capacity <= MAX_OBSERVATIONS else MAX_OBSERVATIONS
+    report = dict(schema=1, kind='observation-composition-plan', profile_format=FORMAT,
+                  execution_evidence=False, equivalence_evidence=False, profile_payload_included=False,
+                  serializer=dict(id=SERIALIZER, encoding='utf-8', sort_keys=True, indent=2,
+                                  ensure_ascii=True, final_newline='LF'),
+                  producer_source_sha256=None, baseline_policy='explicit original capture inputs',
+                  limits=dict(input_paths=MAX_INPUTS, unique_inputs=MAX_INPUTS,
+                              individual_raw_bytes=MAX_CAPTURE_BYTES, raw_bytes=MAX_TOTAL_INPUT_BYTES,
+                              union_identities=union_limit, contributions=MAX_CONTRIBUTIONS,
+                              serialized_bytes=MAX_PROFILE_BYTES),
+                  input_paths=None, existing_inputs=None, new_inputs=None, duplicate_shas=None,
+                  baseline=dict(unknown), combined=dict(unknown), additive=dict(unknown),
+                  headroom=None, fits=False, refusal=None,
+                  scope='Point-in-time catalogue admission and exact selected serialization only; overlapping sessions remain historical input contributions')
+    try:
+        report['producer_source_sha256'] = _plan_producer()
+        # A bounded materialization also handles lazy/infinite path iterables.
+        baseline = list(islice(iter(baseline_inputs), MAX_INPUTS + 1))
+        additions = list(islice(iter(input_paths), MAX_INPUTS + 1))
+        if len(baseline) + len(additions) > MAX_INPUTS:
+            raise ValueError(f'At most {MAX_INPUTS} input paths are accepted')
+        report['input_paths'] = len(baseline) + len(additions)
+        profile, args, metadata = _compose_details(baseline + additions, capacity=capacity)
+        base = set(args[:len(baseline)])
+        all_inputs = {item['sha256'] for item in profile['inputs']}
+        # Metadata deliberately omits code bytes, PC/MPR rows and hit payloads.
+        sources = {item['sha256']: {key: item[key] for key in
+                   ('sha256', 'size_bytes', 'runtime_abi', 'checkpoint_origin') if key in item}
+                   for item in metadata}
+        report['existing_inputs'] = [sources[key] for key in sorted(base)]
+        report['new_inputs'] = [sources[key] for key in sorted(all_inputs - base)]
+        report['duplicate_shas'] = [dict(sha256=key, argument_count=count, duplicate_arguments=count - 1)
+                                   for key, count in sorted(Counter(args).items()) if count > 1]
+        report['combined'] = _plan_metrics(profile)
+        prior = _baseline_profile(profile, base) if base else None
+        report['baseline'] = _plan_metrics(prior)
+        if prior is not None:
+            raw = serialize_observation_profile(prior)
+            report['baseline'].update(serialized_bytes=len(raw), serialized_sha256=hashlib.sha256(raw).hexdigest())
+        raw = serialize_observation_profile(profile)
+        report['combined'].update(serialized_bytes=len(raw), serialized_sha256=hashlib.sha256(raw).hexdigest())
+        report['fits'] = True
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        report['refusal'] = _plan_refusal(error, capacity)
+    finally:
+        for key in ('unique_inputs', 'union_identities', 'contributions', 'raw_bytes', 'serialized_bytes'):
+            old, new = report['baseline'][key], report['combined'][key]
+            report['additive'][key] = new - old if old is not None and new is not None else None
+        report['additive'].pop('serialized_sha256')
+        report['headroom'] = {key: (report['limits'][key] - value if value is not None else None)
+                              for key, value in report['combined'].items() if key in report['limits']}
+        report['headroom']['input_paths'] = (MAX_INPUTS - report['input_paths']
+                                           if report['input_paths'] is not None else None)
+        report['headroom']['individual_raw_bytes'] = (MAX_CAPTURE_BYTES - max(
+            (row['size_bytes'] for row in (report['existing_inputs'] or []) + (report['new_inputs'] or [])), default=0)
+            if report['new_inputs'] is not None else None)
+        if report['producer_source_sha256'] is not None:
+            try:
+                current_source = _plan_producer()
+            except OSError:
+                report['fits'] = False
+                report['refusal'] = dict(code='producer_unavailable', message='Planner source could not be rebound')
+            else:
+                if report['producer_source_sha256'] != current_source:
+                    report['fits'] = False
+                    report['refusal'] = dict(code='producer_changed', message='Planner source changed during admission')
+    return report
 
 
 def _validate(profile):

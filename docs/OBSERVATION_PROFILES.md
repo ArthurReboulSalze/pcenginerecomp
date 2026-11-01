@@ -37,6 +37,38 @@ MPR/PC/bytes, and contributions by input SHA256. There is no last-file-wins
 policy or silent truncation. An existing profile is not a composition input;
 recompose its retained original captures when adding observations.
 
+## Preflight an extension before emission or build
+
+```text
+python -m pcerecomp compose-observations .local/capture/new-window.json --baseline-input .local/capture/retained-a.json --baseline-input .local/capture/retained-b.json --dry-run --out .local/profiles/combined.json
+```
+
+`--baseline-input` repeats for the retained original captures. `--dry-run`
+reads and admits baseline plus additions without writing a profile, generating
+code or starting a host. Exit 0 means the selected composition fits; exit 2
+returns a code-free refusal report. If supplied, `--out` is also checked
+against the existing destination policy, but is never created in dry-run mode.
+Omit `--dry-run` to compose the same baseline and additions into that new path.
+
+The Python API is
+`plan_observation_profile(additions, baseline_inputs=retained, capacity=65536)`.
+An empty additions list measures the baseline alone. Its report separates
+existing/new/duplicate input SHAs, complete-key union growth, raw bytes,
+contributions and their additive costs. Exact output byte size and SHA256
+use the same sorted, indented UTF-8/LF serializer as real composition.
+Successful reports include remaining capacity under every existing bound.
+
+The planner stops at admission bounds; it does not relax them to count an
+oversized union. Uncomputed refusal metrics remain null. Source hashes and
+the serializer identifier bind the report's producer and output contract;
+inputs must still be re-admitted when composition actually occurs. A plan
+does not authenticate execution, prove equivalence, identify overlapping
+sessions or change checkpoint identity. Input payloads and opcode rows are
+excluded from the report. Profile-v1 bytes, raw provenance and limits are
+unchanged. New observations with no new identities can add historical
+contributions without requiring new translated code; callers should decide
+whether that provenance update warrants a new bound consumer build.
+
 ## Version 1 contract
 
 The `format` is `pce-observation-profile-1`, `schema` is 1, and

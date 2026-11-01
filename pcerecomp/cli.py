@@ -13,7 +13,8 @@ from .analysis import Snapshot, analyze
 from .emitter import emit, emit_capture, emit_observation_profile
 from .capture import load_capture
 from .observations import (compose_observation_profile, load_observation_profile,
-                           plan_observation_profile, serialize_observation_profile)
+                           plan_observation_profile, serialize_observation_profile,
+                           compose_additive_observation_profile, plan_additive_observation_profile)
 from .isa import Instruction, listing
 from .media import Chd, ChdReader, Ipl, IsoReader, MediaError, sha256
 from .cue import Cue
@@ -201,12 +202,17 @@ def main(argv=None):
     compose = commands.add_parser("compose-observations", help="Compose private original-ABI captures without relabeling execution evidence")
     compose.add_argument("inputs", nargs="+", type=Path)
     compose.add_argument("--out", type=Path)
-    compose.add_argument("--baseline-input", action="append", type=Path, default=[],
+    baseline = compose.add_mutually_exclusive_group()
+    baseline.add_argument("--baseline-input", action="append", type=Path, default=[],
                          help="Retained original capture; repeat for explicit additive comparisons")
+    baseline.add_argument("--baseline-profile", type=Path,
+                          help="Retained v1/v2 profile; requires --new-identities-only")
+    compose.add_argument("--new-identities-only", action="store_true",
+                         help="Compose profile v2: retain baseline contributions and select only novel full identities")
     compose.add_argument("--dry-run", action="store_true",
                          help="Report exact admission/output costs without creating a profile or directory")
-    compose.add_argument("--capacity", type=int, default=65536,
-                         help="Maximum union identities (1..65536); excess refuses without truncation")
+    compose.add_argument("--capacity", type=int, default=None,
+                         help="Maximum union identities (1..65536); additive profiles inherit the baseline capacity")
     for name in ("emit-capture", "emit-profile"):
         capture = commands.add_parser(name, help="Emit guarded native C++ from a private capture or observation profile")
         capture.add_argument("capture", type=Path)
@@ -253,9 +259,26 @@ def run_command(args):
             print(descriptor, end="")
         elif args.command == "compose-observations":
             sources = [*args.baseline_input, *args.inputs]
+            if args.baseline_profile is not None:
+                sources.append(args.baseline_profile)
+            if args.baseline_profile is not None and not args.new_identities_only:
+                raise ValueError("--baseline-profile requires --new-identities-only")
+            if args.new_identities_only:
+                compose_profile = compose_additive_observation_profile
+                plan_profile = plan_additive_observation_profile
+                options = dict(baseline_inputs=args.baseline_input,
+                               baseline_profile=args.baseline_profile, capacity=args.capacity)
+                selected_inputs = args.inputs
+            else:
+                compose_profile = compose_observation_profile
+                plan_profile = plan_observation_profile
+                options = dict(capacity=65536 if args.capacity is None else args.capacity)
+                selected_inputs = [*args.baseline_input, *args.inputs]
             if args.dry_run:
-                report = plan_observation_profile(args.inputs, baseline_inputs=args.baseline_input,
-                                                  capacity=args.capacity)
+                if args.new_identities_only:
+                    report = plan_profile(selected_inputs, **options)
+                else:
+                    report = plan_profile(args.inputs, baseline_inputs=args.baseline_input, **options)
                 if args.out is not None:
                     try:
                         if args.out.exists() or args.out.is_symlink():
@@ -274,7 +297,7 @@ def run_command(args):
                 raise ValueError("Observation composition requires a new output file")
             for source in sources:
                 protect_input(source, args.out)
-            profile = compose_observation_profile(sources, capacity=args.capacity)
+            profile = compose_profile(selected_inputs, **options)
             raw = serialize_observation_profile(profile)
             args.out.parent.mkdir(parents=True, exist_ok=True)
             with args.out.open("xb") as stream:

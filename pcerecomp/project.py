@@ -183,7 +183,7 @@ def _module_observation_profile(base, entry, files, manifest):
     """
     from .capture import U64
     from .emitter import NATIVE
-    from .observations import MAX_PROFILE_BYTES, load_observation_profile_details
+    from .observations import MAX_PROFILE_BYTES, load_observation_profile_details, _profile_accounting
 
     _table(entry, {'path', 'sha256'}, name='module.observation_profile')
     if not isinstance(entry['path'], str) or not entry['path']:
@@ -214,10 +214,12 @@ def _module_observation_profile(base, entry, files, manifest):
         'observation_profile_format': profile['format'],
         'observation_profile_schema': profile['schema'],
         'observation_inputs': provenance,
-        'historical_totals': profile['historical_totals'],
-        'historical_count_policy': 'sum of distinct raw inputs; overlapping execution windows are not deduplicated',
+        **_profile_accounting(profile),
     }.items():
         exact(key, value)
+    if profile['schema'] == 1 and any(key in manifest for key in (
+            'selection_stages', 'selected_historical_totals', 'selection_counts', 'selection_policy')):
+        raise ValueError('Version 1 profile cannot declare additive selection accounting')
     spans = manifest.get('excluded_physical_ranges')
     if not isinstance(spans, list) or len(spans) > 256:
         raise ValueError('Module profile exclusions require at most 256 ranges')

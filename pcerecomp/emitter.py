@@ -366,7 +366,7 @@ def emit_observation_profile(profile: dict, output: Path, profile_sha256: str | 
     no execution evidence, ABI migration or checkpoint compatibility proof.
     """
     import hashlib
-    from .observations import validate_observation_profile, observation_profile_provenance
+    from .observations import validate_observation_profile, observation_profile_provenance, _profile_accounting
 
     instructions = validate_observation_profile(profile)
     if profile_sha256 is None:
@@ -378,10 +378,7 @@ def emit_observation_profile(profile: dict, output: Path, profile_sha256: str | 
         'observation_profile_schema': profile['schema'],
         'observation_inputs': observation_profile_provenance(profile),
     }
-    accounting = {
-        'historical_totals': dict(profile['historical_totals']),
-        'historical_count_policy': 'sum of distinct raw inputs; overlapping execution windows are not deduplicated',
-    }
+    accounting = _profile_accounting(profile)
     extra = {
         'scope': 'observed identity union only; retain the hash-bound private profile for exact per-input contributions; not a new execution capture, save state or complete CFG',
     }

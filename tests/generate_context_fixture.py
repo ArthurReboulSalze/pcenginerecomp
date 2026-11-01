@@ -7,6 +7,7 @@ from pathlib import Path
 import hashlib
 import json
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -125,7 +126,13 @@ def generate(out, *, emit_module=True, spread=False):
         if graph['schema'] != 2 or graph['unresolved']:
             raise ValueError('Authored multi-context graph must close without unresolved semantics')
         (out/'analysis.json').write_text(json.dumps(graph,indent=2)+'\n',encoding='utf-8',newline='\n')
-        emit(graph,out)
+        # The public emitter requires fresh destinations. CMake can regenerate
+        # this owned fixture after an emitter dependency changes.
+        with tempfile.TemporaryDirectory(prefix='context-module-', dir=out) as stage:
+            staged = Path(stage)
+            emit(graph, staged)
+            for name in ('module.cpp', 'module.json'):
+                (out/name).write_bytes((staged/name).read_bytes())
     header = ['#pragma once','#include <array>','#include <algorithm>','#include <cstdint>','#include <vector>',
               'inline std::vector<std::uint8_t> context_rom() { std::vector<std::uint8_t> v(262144,0xEA);']
     for offset,data in fixture_patches(spread):

@@ -10,7 +10,8 @@ from unittest.mock import patch
 from pcerecomp import incremental, project
 from pcerecomp.abi import ABI
 from pcerecomp.emitter import emit_observation_profile
-from pcerecomp.observations import compose_observation_profile, load_observation_profile
+from pcerecomp.observations import (compose_observation_profile, load_observation_profile,
+                                    compose_additive_observation_profile)
 from tests.test_queued_persistence import isolated_environment
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -22,6 +23,12 @@ MPR = [255, 248, 128, 129, 130, 131, 132, 0]
                      'CMake/Ninja/C++ compiler required for bound-profile execution')
 class BoundProfileNativeTests(unittest.TestCase):
     def test_build_run_receipts_retain_profile_and_refuse_later_tampering(self):
+        self.build_run_profile_case(additive=False)
+
+    def test_additive_profile_build_runs_selected_direct_operations(self):
+        self.build_run_profile_case(additive=True)
+
+    def build_run_profile_case(self, *, additive):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             identity = project.source_identity(ROOT)
@@ -40,12 +47,23 @@ class BoundProfileNativeTests(unittest.TestCase):
                     retired_instructions=14, observations=observations)), encoding='utf-8')
                 sources.append(source)
             profile_path = root/'external-catalogue.json'
-            profile_path.write_text(json.dumps(compose_observation_profile(sources), sort_keys=True),
-                                    encoding='utf-8')
+            if additive:
+                # Original provenance keeps the overlap, while selection keeps
+                # only the baseline's contribution for this authored identity.
+                addition = json.loads(sources[1].read_bytes())
+                addition['observations'].append(json.loads(sources[0].read_bytes())['observations'][0])
+                addition['retired_instructions'] += 7
+                sources[1].write_text(json.dumps(addition), encoding='utf-8')
+                profile = compose_additive_observation_profile(sources[1:], baseline_inputs=sources[:1])
+                self.assertEqual(profile['selected_historical_totals']['retired_instructions'], 28)
+                self.assertEqual(profile['historical_totals']['retired_instructions'], 35)
+            else:
+                profile = compose_observation_profile(sources)
+            profile_path.write_text(json.dumps(profile, sort_keys=True), encoding='utf-8')
             profile, digest = load_observation_profile(profile_path)
             module = root/'module'
             manifest = emit_observation_profile(profile, module, digest, partition_layout='stable')
-            self.assertEqual(manifest['historical_totals']['retired_instructions'], 28)
+            self.assertEqual(manifest['historical_totals']['retired_instructions'], 35 if additive else 28)
             config = dict(schema=1, name='authored-bound-profile',
                 tool=dict(path=ROOT.as_posix(), revision=identity['revision'],
                           source_sha256=identity['source_sha256'], runtime_abi=ABI),

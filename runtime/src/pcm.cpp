@@ -301,6 +301,11 @@ struct AudioCheckpointAccess {
         if(policy>static_cast<std::uint8_t>(CdUnknownPolicy::nec_invalid))
             throw checkpoint::ArchiveError("invalid checkpoint CD unknown-command policy");
         if constexpr(reading<A>)v.unknown_policy=static_cast<CdUnknownPolicy>(policy);
+        auto drive_timing=static_cast<std::uint8_t>(v.timing_profile);
+        ar(drive_timing);
+        if(drive_timing>static_cast<std::uint8_t>(CdTimingProfile::gear_distance))
+            throw checkpoint::ArchiveError("invalid checkpoint CD timing profile");
+        if constexpr(reading<A>)v.timing_profile=static_cast<CdTimingProfile>(drive_timing);
         ar(v.unknown_commands,v.invalid_commands,v.unknown_opcodes,v.last_unknown_command,v.last_unknown_size);
         origin(ar,v.pending_origin);origin(ar,v.last_unknown_origin);
         auto& s=v.scsi;
@@ -449,6 +454,7 @@ void validate_audio(const Bus& bus) {
        s.load_lba>0x1fffff || cd.last_unknown_size>cd.last_unknown_command.size() ||
        cd.pending_sense.key>15 || cd.reset>15 || cd.interrupt_enable>127 ||
        static_cast<std::uint8_t>(cd.unknown_policy)>static_cast<std::uint8_t>(CdUnknownPolicy::nec_invalid) ||
+       static_cast<std::uint8_t>(cd.timing_profile)>static_cast<std::uint8_t>(CdTimingProfile::gear_distance) ||
        cd.pending_origin.readable>127 || cd.last_unknown_origin.readable>127)
         throw ArchiveError("checkpoint CD transport state exceeds bounds");
     if(bool(s.event)!=bool(s.deadline))throw ArchiveError("checkpoint CD event/deadline mismatch");
@@ -479,7 +485,7 @@ void validate_audio_configuration(const Bus& decoded,const Bus& configured) {
        decoded.psg.centered_dac!=configured.psg.centered_dac ||
        decoded.adpcm.enabled!=configured.adpcm.enabled || a.enabled!=b.enabled ||
        a.scsi.enabled!=b.scsi.enabled || a.audio_enabled!=b.audio_enabled ||
-       a.unknown_policy!=b.unknown_policy || bool(a.provider)!=bool(b.provider) ||
+       a.unknown_policy!=b.unknown_policy || a.timing_profile!=b.timing_profile || bool(a.provider)!=bool(b.provider) ||
        bool(a.toc)!=bool(b.toc) || (a.toc && !same_toc(*a.toc,*b.toc)) ||
        decoded.pcm.enabled!=configured.pcm.enabled || decoded.pcm.profile()!=configured.pcm.profile() ||
        decoded.pcm.output_rate()!=configured.pcm.output_rate() || decoded.pcm.timing()!=configured.pcm.timing())

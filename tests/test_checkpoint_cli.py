@@ -141,6 +141,36 @@ class CheckpointCliTests(unittest.TestCase):
             finally:
                 second.close()
 
+    def test_cd_timing_choice_binds_checkpoint_even_with_same_reviewed_context(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            opts = ['--checkpoint-dir', str(root), '--checkpoint-context', 'c'*64]
+            first = RunningSandbox(HEADLESS, root, bios=True,
+                                   extra_options=opts+['--cd-timing', 'fixed'])
+            try:
+                state = first.client.call('status')
+                self.assertEqual(state['host']['cd_timing'], {'profile': 'fixed'})
+                first.client.call('save_checkpoint', name='fixed-drive.pcec')
+                first.client.call('quit')
+                first.process.communicate(timeout=5)
+                self.assertEqual(first.process.returncode, 0)
+            finally:
+                first.close()
+            second = RunningSandbox(HEADLESS, root, bios=True,
+                                    extra_options=opts+['--cd-timing', 'gear-distance'])
+            try:
+                before = second.client.call('status')
+                self.assertEqual(before['host']['cd_timing'], {'profile': 'gear-distance'})
+                with self.assertRaisesRegex(DevError, 'identity mismatch'):
+                    second.client.call('load_checkpoint', name='fixed-drive.pcec')
+                self.assertEqual({k:v for k,v in before.items() if k!='id'},
+                                 {k:v for k,v in second.client.call('status').items() if k!='id'})
+                second.client.call('quit')
+                second.process.communicate(timeout=5)
+                self.assertEqual(second.process.returncode, 0)
+            finally:
+                second.close()
+
 
 @unittest.skipUnless(DESKTOP.is_file(), 'Build the desktop runner')
 class CheckpointDesktopCliTests(unittest.TestCase):

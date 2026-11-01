@@ -83,8 +83,9 @@ int main(int argc, char** argv) {
     const bool hucard_boot=argc>1 && std::string(argv[1])=="--hucard-reset";
     const bool reset_boot=system_card_boot || hucard_boot;
     const int option_start=reset_boot ? 7:8;
-    if(argc<option_start || argc>option_start+76 || (argc-option_start)%2) {
+    if(argc<option_start || argc>option_start+78 || (argc-option_start)%2) {
         std::cerr << "usage: pce-headless IMAGE PHYSICAL_LOAD PC MPR_CSV MAX_STEPS MAX_TICKS native|hybrid [--bios RAW_256K_SYSTEM_CARD] [--bram RAW_2048_IMAGE] [--toc PCE_TOC_DESCRIPTOR] [--disc ISO_CHD_OR_CUE] [--libchdr LIBRARY] [--joypad 2|6] [--joypad-region usa|japan] [--multitap off|on] [--buttons MASK_CSV] [--frame-out NEW_PPM_FILE] [--input-script PCE_INPUT_FILE] [--cd-unknown-status fault|gear-good|nec-invalid] [--video-output snapshot|continuous] [--vdc-access queued|immediate] [--dev-port 0..65535] [--dev-start-paused on|off] [--dev-memory-write on|off] [--wall-seconds 1..86400] [--code-capture NEW_PRIVATE_JSON] [--capture-limit 1..65536] [--code-capture-start-frame N] [--audio-output on|off] [--audio-profile raw|filtered] [--audio-rate 44100|48000] [--audio-timing gear|legacy] [--audio-out NEW_WAV] [--audio-frames 1..RATE*120]\nMAX_STEPS: 1..20000000000; tick deadlines remain active.\nDesktop only: [--window-scale 1..6] [--unthrottled on|off] [--hidden on|off] [--window-capture NEW_PPM]\n";
+        std::cerr << "CD drive timing: [--cd-timing fixed|gear-distance]; fixed is the retained default, distance timing is calibrated only for LBAs 0..333012.\n";
         std::cerr << "reset boot: pce-headless --system-card-reset standard|super RAW_256K_SYSTEM_CARD MAX_STEPS MAX_TICKS native|hybrid [same options except --bios] [--arcade-card duo (super only)]\n";
         std::cerr << "BRAM snapshot: [--bram-out NEW_RAW_2048_FILE] exports existing CD backup memory only after successful finalization; never replaces a file.\n";
         std::cerr << "Optional native dispatch: [--native-span 1..256]; limits above one require an opted-in stable module. Omission preserves single-step execution.\n";
@@ -120,6 +121,7 @@ int main(int argc, char** argv) {
 
 #endif
         const char* unknown_status=nullptr;
+        const char* cd_timing=nullptr;
         const char* input_path=nullptr;
         const char* bios_path=system_card_boot ? argv[3]:nullptr;
         const char* cartridge_path=hucard_boot ? argv[3]:nullptr;
@@ -182,6 +184,7 @@ int main(int argc, char** argv) {
 
 #endif
             else if(name=="--cd-unknown-status" && !unknown_status) unknown_status=argv[option+1];
+            else if(name=="--cd-timing" && !cd_timing) cd_timing=argv[option+1];
             else if(name=="--input-script" && !input_path) input_path=argv[option+1];
             else if(name=="--bios" && !bios_path) bios_path=argv[option+1];
             else if(name=="--bram" && !bram_path) bram_path=argv[option+1];
@@ -218,7 +221,8 @@ int main(int argc, char** argv) {
         if(rom_encoding && std::string(rom_encoding)!="linear" && std::string(rom_encoding)!="bit-reversed")
             throw pce::Fault("--rom-encoding requires linear or bit-reversed");
         if(hucard_boot && (bios_path || bram_path || bram_out_path || toc_path || disc_path || chdr_path ||
-           (unknown_status && std::string(unknown_status)!="fault")))
+           (unknown_status && std::string(unknown_status)!="fault") ||
+           (cd_timing && std::string(cd_timing)!="fixed")))
             throw pce::Fault("Base HuCard reset does not accept CD, firmware or BRAM inputs/profiles");
         if(bram_out_path) {
             const auto path=std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(bram_out_path)));
@@ -267,6 +271,8 @@ int main(int argc, char** argv) {
         }
         if(unknown_status && std::string(unknown_status)!="fault" && std::string(unknown_status)!="gear-good" &&
            std::string(unknown_status)!="nec-invalid") throw pce::Fault("--cd-unknown-status requires fault, gear-good or nec-invalid");
+        if(cd_timing && std::string(cd_timing)!="fixed" && std::string(cd_timing)!="gear-distance")
+            throw pce::Fault("--cd-timing requires fixed or gear-distance");
         const std::string output_mode=video_mode ? video_mode:
 #ifdef PCE_DESKTOP
             "continuous";
@@ -422,6 +428,10 @@ int main(int argc, char** argv) {
         if(toc_path) {
             if(!bus.cd.scsi.enabled) bus.enable_cd_transport();
             bus.cd.set_toc(pce::read_toc(toc_path));
+        }
+        if(cd_timing && std::string(cd_timing)=="gear-distance") {
+            if(!bus.cd.scsi.enabled) bus.enable_cd_transport();
+            bus.cd.timing_profile=pce::CdTimingProfile::gear_distance;
         }
         if(disc_path) {
             if(!bus.cd.scsi.enabled) bus.enable_cd_transport();
@@ -603,7 +613,7 @@ int main(int argc, char** argv) {
             // Presentation, output paths and finite execution limits are window
             // choices. Every machine/input/dispatch choice remains exact.
             for(const auto* value:{rom_header,rom_encoding,arcade_card,video_mode,vdc_access,native_span_option,
-                    unknown_status,pad_type,pad_region,pad_tap,pad_buttons,audio_mode,audio_profile,audio_rate,audio_timing}) {
+                    unknown_status,cd_timing,pad_type,pad_region,pad_tap,pad_buttons,audio_mode,audio_profile,audio_rate,audio_timing}) {
                 identity(bool(value));if(value) identity.string(value);
             }
             identity(audio_enabled,std::uint32_t(output_rate));identity.string(output_mode);
@@ -762,6 +772,13 @@ int main(int argc, char** argv) {
             throw pce::Fault("invalid CD unknown-command policy");
         };
         const auto write_unknown_status=[&](std::ostream& json) {
+            const char* drive_timing=nullptr;
+            switch(bus.cd.timing_profile) {
+            case pce::CdTimingProfile::fixed:drive_timing="fixed";break;
+            case pce::CdTimingProfile::gear_distance:drive_timing="gear-distance";break;
+            default:throw pce::Fault("invalid CD timing profile");
+            }
+            json<<"\"cd_timing\":{\"profile\":\""<<drive_timing<<"\"},";
             json<<"\"cd_unknown\":{\"policy\":\""<<unknown_policy_name()
                 <<"\",\"accepted_responses\":"<<bus.cd.unknown_commands
                 <<",\"invalid_responses\":"<<bus.cd.invalid_commands<<",\"opcodes\":[";

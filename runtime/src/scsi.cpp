@@ -70,18 +70,22 @@ void CdControl::schedule_load(std::uint64_t delay) {
 void CdControl::read_sectors() {
     if(!provider) throw Fault("CD READ $08 requires a read-only sector provider");
     const auto lba=(std::uint32_t(scsi.command[1]&31)<<16)|(unsigned(scsi.command[2])<<8)|scsi.command[3];
-    ++read_commands;
-    if(lba>=provider->toc().leadout_lba) { ++read_errors; check_condition(5,0x25,0,lba); return; }
+    if(lba>=provider->toc().leadout_lba) { ++read_commands; ++read_errors; check_condition(5,0x25,0,lba); return; }
     const auto& geometry=provider->toc();
     unsigned track=0;
     while(track<geometry.track_count && geometry.tracks[track].index1_lba<=lba)++track;
-    if(!track) {++read_errors;check_condition(5,0x25,0,lba);return;}
-    if(geometry.tracks[track-1].type!=4) {++read_errors;check_condition(3,0x1D,0,lba);return;}
+    if(!track) {++read_commands;++read_errors;check_condition(5,0x25,0,lba);return;}
+    if(geometry.tracks[track-1].type!=4) {++read_commands;++read_errors;check_condition(3,0x1D,0,lba);return;}
+    // Sample the retained head before READ cancels audio. Refuse unsupported
+    // geometry or clock overflow before modifying that active timeline.
+    const auto delay=cd_seek_ticks(timing_profile,scsi.current_lba,lba)+286363;
+    if(delay>std::numeric_limits<std::uint64_t>::max()-scsi.master_ticks)
+        throw Fault("CD sector clock overflow");
+    ++read_commands;
     scsi.load_lba=lba; scsi.load_remaining=scsi.command[4] ? scsi.command[4]:256;
     audio.stop(true);scsi.read_active=true; scsi.response_size=0; scsi.response_index=0;
-    // Deterministic 1x profile: 150 ms first-sector access plus 1/75 s.
-    // Distance-dependent seek and reset jitter are not yet modeled.
-    schedule_load(3507953); phase(data_phase);
+    // One sector at 1x follows the separately selected seek model.
+    schedule_load(delay); phase(data_phase);
 }
 void CdControl::load_sector() {
     if(scsi.response_index<scsi.response_size) {

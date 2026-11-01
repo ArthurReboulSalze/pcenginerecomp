@@ -15,6 +15,21 @@ BINARY = next((p for p in CANDIDATES if p.is_file()), None)
 
 @unittest.skipUnless(BINARY, 'Build pce-headless for protocol policy checks')
 class HeadlessScsiPolicyTests(unittest.TestCase):
+    def test_cd_timing_defaults_and_explicit_profiles_are_reported(self):
+        for extra, expected in (([], 'fixed'), (['--cd-timing', 'fixed'], 'fixed'),
+                                (['--cd-timing', 'gear-distance'], 'gear-distance')):
+            with self.subTest(profile=expected, arguments=extra):
+                result = self.run_case(['--cd-unknown-status', 'gear-good', *extra])
+                self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+                self.assertEqual(json.loads(result.stdout)['cd_timing'], {'profile': expected})
+
+    def test_cd_timing_refuses_invalid_and_duplicate_options(self):
+        for extra in (['--cd-timing', 'fast'], ['--cd-timing', 'true'],
+                      ['--cd-timing', 'fixed', '--cd-timing', 'gear-distance']):
+            with self.subTest(arguments=extra):
+                result = self.run_case(extra)
+                self.assertEqual(result.returncode, 2, result.stdout+result.stderr)
+
     def run_case(self, options, command_bytes=1):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

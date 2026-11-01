@@ -3,5 +3,5 @@
 Capture producers retain their original labels; emission targets ABI below.
 """
 
-ABI = 27
+ABI = 28
 CAPTURE_ABIS = tuple(range(12, ABI + 1))

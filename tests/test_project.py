@@ -12,6 +12,28 @@ from pcerecomp import project
 
 
 class ConsumerProjectTests(unittest.TestCase):
+    def test_cd_timing_is_explicit_forwarded_and_checkpoint_bound(self):
+        implicit = project.checkpoint_context(self.verify())
+        contexts = set()
+        for timing in ('fixed', 'gear-distance'):
+            with self.subTest(timing=timing):
+                self.replace('cd_unknown_status = "fault"',
+                             f'cd_unknown_status = "fault"\ncd_timing = "{timing}"')
+                checked = self.verify()
+                command = project.command_for(checked, Path('runner'))
+                self.assertEqual(command[command.index('--cd-timing') + 1], timing)
+                contexts.add(project.checkpoint_context(checked))
+        self.assertEqual(len(contexts), 2)
+        self.assertNotIn(implicit, contexts)
+
+    def test_cd_timing_rejects_untyped_and_unknown_profiles(self):
+        for token in ('true', '0', '"fast"', '"measured"'):
+            with self.subTest(token=token):
+                self.replace('cd_unknown_status = "fault"',
+                             f'cd_unknown_status = "fault"\ncd_timing = {token}')
+                with self.assertRaises(ValueError):
+                    self.verify()
+
     def test_unknown_cd_profiles_are_explicit_bound_and_forwarded(self):
         contexts = set()
         for policy in ('fault', 'gear-good', 'nec-invalid'):

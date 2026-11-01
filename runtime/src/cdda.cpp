@@ -7,7 +7,7 @@
 namespace pce {
 namespace {
 constexpr unsigned busy_phase=8;
-constexpr std::uint64_t seek_ticks=3221590, resume_ticks=4810909;
+constexpr std::uint64_t resume_ticks=4810909;
 std::uint64_t after(std::uint64_t now,std::uint64_t delta) {
     if(delta>std::numeric_limits<std::uint64_t>::max()-now) throw Fault("CD audio clock overflow");
     return now+delta;
@@ -94,6 +94,7 @@ double CdControl::fader_gain(bool adpcm) const {
 void CdControl::audio_command() {
     const auto op=scsi.command[0];
     std::optional<std::uint32_t> start;
+    std::uint64_t seek_end=0,playback_end=0;
     if(toc && op==0xD8) {
         start=audio_lba(*toc,scsi);
         if(*start<toc->leadout_lba) {
@@ -108,8 +109,18 @@ void CdControl::audio_command() {
                 else phase(busy_phase);
                 return;
             }
+            const auto duration=cd_seek_ticks(timing_profile,scsi.current_lba,*start);
+            const bool split=timing_profile==CdTimingProfile::gear_distance && duration>resume_ticks;
+            // Admission is transactional with respect to the active audio
+            // timeline: both deadline sums must fit before stop()/head writes.
+            seek_end=after(scsi.master_ticks,split ? duration-resume_ticks:duration);
+            if(split && scsi.command[1])playback_end=after(scsi.master_ticks,duration);
         }
     }
+    // A paused resume starts its fixed playback delay after any remaining
+    // physical seek. Validate overflow before changing the end/mode/state.
+    if(toc && op==0xD9 && scsi.command[1]>=1 && scsi.command[1]<=3 && audio.state==2)
+        playback_end=after(std::max(scsi.master_ticks,audio.seek_deadline),resume_ticks);
     ++audio.commands;
     if(!toc) {check_condition(2,0x0B);return;}
     const auto now=scsi.master_ticks;
@@ -140,14 +151,13 @@ void CdControl::audio_command() {
     }
     const auto lba=start ? *start:audio_lba(*toc,scsi);
     if(op==0xD8) {
-        // Explicit bounded drive profile; physical distance-dependent seeks
-        // and 44.1 kHz sample phase are not inferred from TOC metadata.
         if(lba>=toc->leadout_lba) {check_condition(5,0x25,0,lba);return;}
         audio.stop();audio.start_lba=audio.current_lba=lba;
         audio.seek_start_lba=scsi.current_lba;scsi.current_lba=lba;
         audio.stop_lba=toc->leadout_lba-1;audio.stop_mode=0;
         audio.state=scsi.command[1]==0 ? 2:0;
-        audio.seek_deadline=after(now,seek_ticks);audio.reschedule();phase(busy_phase);return;
+        audio.seek_deadline=seek_end;audio.playback_deadline=playback_end;
+        audio.reschedule();phase(busy_phase);return;
     }
     if(op!=0xD9) throw Fault("unsupported CD audio command");
     const auto mode=scsi.command[1];
@@ -164,7 +174,7 @@ void CdControl::audio_command() {
     audio.state=0;
     if(paused) {
         audio.sector_deadline=0;
-        audio.playback_deadline=after(std::max(now,audio.seek_deadline),resume_ticks);
+        audio.playback_deadline=playback_end;
     } else if(!audio.seek_deadline && !audio.sector_deadline && !audio.playback_deadline)
         next_sector(audio,now);
     audio.reschedule();

@@ -9,6 +9,7 @@
 #include "pce/pcm.hpp"
 #include "pce/adpcm.hpp"
 #include "pce/cdda.hpp"
+#include "pce/cd_timing.hpp"
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -17,7 +18,7 @@
 #include <string>
 
 namespace pce {
-inline constexpr unsigned abi_version = 27;
+inline constexpr unsigned abi_version = 28;
 enum Flag : std::uint8_t { C=1, Z=2, I=4, D=8, B=16, T=32, V=64, N=128 };
 enum class Exit { executed, miss, unsupported, budget };
 enum class BankKind { unmapped, ram, rom, io, bram };
@@ -119,6 +120,7 @@ struct CdControl {
     std::uint64_t sense_commands=0, sense_errors=0;
     bool audio_enabled=false;
     CdUnknownPolicy unknown_policy=CdUnknownPolicy::fault;
+    CdTimingProfile timing_profile=CdTimingProfile::fixed;
     std::uint64_t unknown_commands=0;
     std::uint64_t invalid_commands=0; // Completed NEC-profile invalid CDB responses.
     // Bounded diagnostics. Counts dispatched attempts in all profiles; unknown_commands

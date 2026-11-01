@@ -10,6 +10,16 @@ project owns its game-specific routes, patches, assets and presentation choices.
 Ys III is one regression case; compatibility evidence remains tied to the
 tested CPU, hardware, media and runtime profiles.
 
+**Interrupted builds can resume verified completed work.** Opt in before the
+first configure with `build --recoverable`, then use `project resume` after an
+interruption. The Windows x64 LLVM-MinGW/Ninja producer verifies unchanged
+inputs, configuration and durable object checkpoints, retains matching objects
+and freshly links the package. A guardian holds the directory lock until owned
+compiler processes exit. Ordinary old build directories cannot be retrofitted.
+An actual 976-object consumer passes late-interruption recovery, fresh TCP
+startup and candidate-owned checkpoint repeatability.
+See [recovery setup and limits](docs/BUILD_RECOVERY.md).
+
 **ABI28 native consumer migration now passes the retained regression route.**
 The rebuilt Ys III test consumer completes a fresh **104,745-frame reset replay
 with 3,209,517,525 native instructions and zero fallback**. Its own checkpoint
@@ -31,9 +41,9 @@ new identities, contributions and remaining capacity before a build. It
 preserves profile-v1 bytes, source provenance and all existing limits. See
 [composition planning](docs/OBSERVATION_PROFILES.md#preflight-an-extension-before-emission-or-build).
 
-The fresh ABI28 SDL check passes **1,508 Python tests without skips,
+The latest build-recovery SDL check passes **1,554 Python tests without skips,
 68 C++ suites and 12 fresh-process audio checkpoint cases**. Independent
-CD timing checks cover 12,432 seek vectors and 21 command cases at both CPU
+earlier CD timing checks cover 12,432 seek vectors and 21 command cases at both CPU
 speeds, with native and interpreted execution checked separately.
 
 The separately rebuilt **ABI27** Ys III consumer also passes a new 2,232-frame
@@ -943,7 +953,7 @@ intended public matrix and currently requires activation.
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build
-python scripts/check.py
+python scripts/check.py --python-timeout 1800
 ```
 
 The retained ABI-22 persistence/packaging SDL build passes **41 suites and all 597 Python
@@ -985,7 +995,7 @@ For the optional window, supply an SDL3 SDK compatible with your compiler:
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DPCE_BUILD_DESKTOP=ON -DSDL3_DIR=/path/to/SDL3/lib/cmake/SDL3
 cmake --build build
-python scripts/check.py
+python scripts/check.py --python-timeout 1800
 ```
 
 This adds `pce-desktop`, using the same payload/mapping/budget and optional

@@ -1,5 +1,74 @@
 # Current status — 1 November 2026
 
+## Verified interrupted consumer builds
+
+Opt-in [build recovery](BUILD_RECOVERY.md) is implemented for Windows 10/11
+x64 LLVM-MinGW/Ninja. A durable preconfigure contract and configured seal bind
+the original inputs and effective graph. Immutable object/dependency groups
+let `project resume` retain verified work, rebuild unsealed outputs and freshly
+link the package. An independent guardian holds the directory lease until
+owned compiler descendants exit; uncertain cleanup quarantines the directory.
+Ordinary old directories, incomplete configuration, changed inputs or sealed
+objects, unsafe paths and completed builds refuse recovery.
+
+Frozen revision `9d219b7a27fa67ff3f31a124e5d449b7eaf1789b`, 84 shared source
+files, SHA256
+`74b4a39c59ac5ee0fd40ea54af9b7099aa2aa0f5dbce5b3107df2bf2e6ef35ac`,
+passes the complete required SDL checker: **1,554 Python tests with zero skips,
+68 C++ suites and 12 fresh-process audio checkpoint cases**. Source identity
+is unchanged before/after the check. Thirteen process tests and 60 repeated
+cleanup stress cases separately cover hard parent termination, immediate
+lease reacquisition, descendant termination and fail-closed cleanup errors.
+
+A genuine authored 100-object build is interrupted during compilation after
+sealing 32 objects, then interrupted again after sealing 96. Its final public
+resume retains those 96 objects, rebuilds four, executes all archive/executable
+links and passes official execution with
+**200 native instructions, zero interpreted instructions and zero guard misses**.
+Independent arithmetic checks X=107, PC=$4003, 598 CPU cycles and 1,794 master
+ticks. A separate retained-artifact audit passes 530 checks. The deterministic
+temporary-file fixture is explicitly authored; an actual larger consumer
+interruption independently exposed Clang's temporary-output naming. The fix
+admits only exact audited object siblings, discards them after full admission
+and records path/target/size/hash. Rejected admission preserves those files.
+The original failed consumer attempt and canceled checker remain separate.
+
+A later full-size consumer exposed a second defect: its cumulative checkpoint
+grew to 171,930,946 bytes, beyond its own reader's 64 MiB bound. The final
+format keeps that per-record bound and writes at most 32 object updates per
+delta. Replaying the hash chain assembles the ledger. Durable admissions keep
+missing-object rebuilds unsealed across further interruptions, even when an
+attempt commits no delta or leaves bytes identical to an old object. Authored
+tests exercise aggregate history above 64 MiB. Earlier cumulative-format
+builds and their limited execution receipts retain their original source;
+they are not upgraded or relabeled as delta-format qualification.
+
+A separate 976-object native consumer is then interrupted after 416 sealed
+objects. Its 13 compact records total **73,318,494 bytes**, above the unchanged
+67,108,864-byte reader bound, while its largest record is only 5,703,823 bytes.
+Public resume validates the history, retains 416 objects, rebuilds 560 and
+freshly links the executable and project archives. Runtime DLLs are copied and
+byte-verified against their declared inputs. Original before-cut
+object hashes, timestamps and Ninja execution records are retained separately.
+
+That recovered package completes **900 fresh TCP-controlled startup frames,
+27,025,270 native instructions and zero interpreted instructions**. Two
+candidate-owned 60-frame continuations each execute **1,602,420 native and zero
+interpreted instructions**. Immediate and continued complete checkpoint files,
+CORE/HOST, RAM and pixels match. All 187 encoded identities and their counts
+match within the recorded 900-to-960 suffix; the first 900 frames have separate
+aggregate counters, not that per-key capture. No old checkpoint import or guest
+RAM write is used. The runtime PATH excludes LLVM and SDL SDK directories.
+This qualifies the recovered package and finite startup/checkpoint window;
+the consumer's new catalogue additions and expanded route remain separate
+qualification work.
+
+The complete runtime/CMake/top-level CMake/emitter closure, 61 files, remains
+byte-identical to the earlier ABI28 source. ABI 28 and guest semantics are
+unchanged. Earlier full-route, Gear and audio qualifications below retain
+their original source pins and scope; this build feature does not migrate or
+broaden those claims. Guest checkpoints remain exact-build-bound.
+
 ## Verified baseline
 
 This is an executable compiler/runtime foundation with continuous software

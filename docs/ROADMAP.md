@@ -14,7 +14,7 @@ finishing the base PC Engine/CD correctness path.
 | 4 | HuCard loader, System Card and CD transport | Authentic loader path, command/sector timing, overlay loads, failures and identity checks | Base/SF2/Populous HuCard startup, Standard/Super firmware boot, Arcade Card Duo, TOC, sense/read recovery, read-only ISO/CHD/bounded BIN-CUE providers and audio timelines implemented with bounded checks; further boards, broader commands and hardware reset/bus timing remain |
 | 5 | Reference video/audio/input/persistence | Correct frames and sound for diagnostic software and bounded real-title routes; isolated BRAM save/load | Continuous rendering, input, explicit isolated CD BRAM persistence and decoded/mixed digital audio implemented with bounded checks; broader title/hardware qualification remains |
 | 6 | First Ys III playable vertical slice | Cold boot, title, new game, field movement, scene transitions, sound and saves, with documented native/interpreted work | Finite authentic-reset town/mine/death/retry/SAVE-LOAD native routes qualified with digital audio; separate cold-save import smoke uses mixed execution. Explicit unknown-CD response profile required; no complete port/campaign claim |
-| 7 | Overlay capture/compile/cache and optimizations | Bounded capture, reproducible modules, stale-cache rejection, parity and measured performance | Retired-code capture, partitioned native emission, exact-key dispatch, shared module objects, pinned consumer builds, opt-in exact Windows package cache and managed stable-module rebuilds implemented; runtime-loaded module cache and multi-instruction blocks remain |
+| 7 | Overlay capture/compile/cache and optimizations | Bounded capture, reproducible modules, stale-cache rejection, parity and measured performance | Retired-code capture, partitioned native emission, exact-key dispatch, shared module objects, pinned consumer builds, opt-in exact Windows package cache, managed stable-module rebuilds and verified interrupted-build recovery implemented; runtime-loaded module cache and multi-instruction blocks remain |
 | 8 | Desktop/player and mod ecosystem | Reproducible packages, input picker/remapping, settings, accessibility and guarded extensions | Optional SDL/TCP development hosts and finite state-aware route client implemented; player configuration, packages and ecosystem remain |
 | 9 | Enhanced presentation and game-specific features | Each feature meets its own reference, state and gameplay gate below | Planned |
 | 10 | Additional hardware and broad library qualification | Separate profiles, dedicated fixtures, real software routes and compatibility reporting | Planned |
@@ -80,13 +80,22 @@ matrix in [IRQ_DEVICES.md](IRQ_DEVICES.md) and the blank-slot DMA/CD
 sources, further active-display/latch combinations, overlapping device combinations and interrupted
 transfers remain.
 
-Interrupted uncached builds still require a new official build directory;
-neither published-package reuse nor managed changed-unit reuse authenticates
-an arbitrary partial directory after an outage. A verified resume interface
-needs a durable pre-build source/module/toolchain/configuration contract,
-unchanged-input checks and distinct recovery receipts. Keep the supported
-[recovery procedure](CONSUMER.md#recover-an-interrupted-build) explicit until
-that interface exists.
+[Verified interrupted-build recovery](BUILD_RECOVERY.md) is implemented as a
+separate opt-in Windows x64 LLVM-MinGW/Ninja producer. It seals preconfigure
+inputs, configuration and completed object groups, proves process-tree cleanup,
+checks unchanged content and emits a new recovery-bound build receipt. Ordinary
+partial directories, incomplete configure and unsupported profiles still need
+a new build directory. Broader toolchain support and recovery of managed module
+updates need their own contracts and interruption tests.
+
+Observation-profile scaling is a separate contributor-interface gap. Long,
+overlapping captures can exhaust contribution or serialized-size bounds while
+adding only a few new identities. The next design needs explicit additive
+selection or a scalable history representation, deterministic preflight and
+independent joins back to original capture bytes, ABI labels and origins.
+Retain the current parser limits and original evidence while qualifying that
+interface; [composition planning](OBSERVATION_PROFILES.md#preflight-an-extension-before-emission-or-build)
+reports the current admission boundary.
 
 The [guest-driven CD DMA/IRQ checkpoint matrix](DMA_IRQ_CHECKPOINTS.md)
 adds autonomous READ polling, ADPCM DMA, actual IRQ2 entry/handler/RTI and

@@ -298,18 +298,21 @@ cycles; steps are not a replacement for the tick/wall bounds.
 
 ## Recover an interrupted build
 
-The official build command requires a new `--build-dir`. An interrupted
-uncached directory has no successful build receipt and cannot be resumed by
-rerunning that command into the same directory. Preserve its original logs,
-reverify the pinned descriptor/module/input identities, then build into a new
-directory. Keep any refused recovery attempt as failed evidence. A partial
-compile or an existing executable is not an official successful build.
+Opt into [verified build recovery](BUILD_RECOVERY.md) with `build --recoverable`
+before configuration. On the supported Windows x64 LLVM-MinGW/Ninja profile,
+`resume DESCRIPTOR --build-dir SAME` verifies the original input/configuration
+contract and durable object checkpoints, reuses matching sealed objects and
+rebuilds unsealed work before freshly linking the package. A process guardian
+keeps the directory locked until owned compiler descendants have exited.
+Changed inputs, configuration or sealed objects refuse recovery. Success gets
+a new build receipt; actual execution remains a separate qualification.
 
-The package cache reuses completely verified published packages; it does not
-authenticate a partially compiled directory after an outage. A future resume
-interface needs a durable pre-build identity/configuration contract, verified
-unchanged inputs and explicit recovery receipts. No runtime ABI or checkpoint
-exception follows from an interrupted host build.
+Ordinary builds still require a new `--build-dir`; their interrupted directories
+have no retrospective recovery contract. Interrupted configuration, completed
+builds and uncertain process cleanup also refuse resume. Preserve original
+logs and failed receipts. Package-cache reuse and managed module rebuilds remain
+separate producers. No runtime ABI or guest-checkpoint exception follows from
+an interrupted host build.
 
 ## Upgrade a consumer to ABI 28
 

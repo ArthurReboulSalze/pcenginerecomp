@@ -146,6 +146,18 @@ mode or `Cpu`/`Bus` layout changes are introduced. CMake enables the additive
 entry only for manifests declaring its protocol. Hosts default to the legacy
 single-step path, and performance qualification must compare against that path.
 
+The [recoverable build producer](BUILD_RECOVERY.md) seals its complete input
+contract before configure, then the effective generated CMake/Ninja model and
+actual completed object/dependency groups as bounded hash-linked deltas.
+Durable admissions keep missing-object rebuilds invalidated across interrupted
+attempts until a replacement delta commits. Resume keeps only content-verified
+sealed objects, rebuilds unsealed work and freshly links the package. On the
+supported Windows x64 LLVM-MinGW/Ninja profile, atomic process-job assignment
+and a separate lease-holding guardian prevent recovery from racing orphaned
+compilers. Unproven cleanup quarantines the directory. The resulting receipt
+proves compiled-artifact continuation, not guest execution; no runtime ABI or
+cross-build guest-checkpoint exception is introduced.
+
 The [managed rebuild producer](INCREMENTAL_BUILDS.md) owns a private module,
 normalized descriptor and same-directory build. Before reusing objects it
 checks retained build/module bytes and timestamps plus the unchanged toolkit,

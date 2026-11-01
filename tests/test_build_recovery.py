@@ -17,6 +17,30 @@ class RecoveryPrimitiveTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
 
+    def model_admission(self, outputs, *, attempt=1, sequence=0, previous=None, new=None, missing=None):
+        start=recovery._sealed(dict(schema=1,attempt=attempt,resume=attempt>1,
+                                   contract_sha256='a'*64,started_ns=attempt))
+        recovery._write_new(self.root/f'attempt-{attempt:06d}-start.json',start)
+        admission=recovery._sealed(dict(schema=1,kind=recovery._ADMISSION_KIND,attempt=attempt,
+            contract_sha256='a'*64,attempt_start_sha256=recovery._digest(start),base_sequence=sequence,
+            base_checkpoint_sha256=previous,new_objects=list(outputs if new is None else new),
+            missing_objects={} if missing is None else missing))
+        recovery._write_new(self.root/f'attempt-{attempt:06d}-admission.json',admission)
+        return admission
+
+    def model_delta(self, sequence, objects, admission, *, previous=None, operations=None):
+        value=recovery._sealed(dict(schema=2,kind=recovery._CHECKPOINT_KIND,
+            contract_sha256='a'*64,sequence=sequence,attempt=admission['attempt'],
+            previous_sha256=previous,admission_sha256=recovery._digest(admission),objects=objects,
+            operations=operations or {name:dict(kind='new',previous_record_sha256=None,origin_attempt=None)
+                                      for name in objects}))
+        recovery._write_new(self.root/f'checkpoint-{sequence:06d}.json',value)
+        return value
+
+    def model_record(self, dependencies=None):
+        return dict(artifact=dict(bytes=3,sha256='b'*64),dependencies=dependencies or {
+            'C:/authored/shared/header.hpp':dict(bytes=7,sha256='c'*64)})
+
     def test_atomic_new_publication_never_overwrites_and_requires_strict_json(self):
         path = self.root/'contract.json'
         recovery._write_new(path, {'authored':1})
@@ -93,14 +117,11 @@ class RecoveryPrimitiveTests(unittest.TestCase):
                 held()
 
     def test_checkpoint_chain_and_last_record_checksum_refuse_tampering(self):
-        objects = ['authored.obj']
-        first = recovery._sealed(dict(schema=1, contract_sha256='a'*64, sequence=1,
-            previous_sha256=None, objects={}, attempt=1))
-        recovery._write_new(self.root/'checkpoint-000001.json', first)
-        second = recovery._sealed(dict(schema=1, contract_sha256='a'*64, sequence=2,
-            previous_sha256=recovery._digest(first), objects={}, attempt=2))
+        objects = ['authored.obj','second.obj']
+        admission=self.model_admission(objects)
+        first=self.model_delta(1,{'authored.obj':self.model_record()},admission)
+        second=self.model_delta(2,{'second.obj':self.model_record()},admission,previous=recovery._digest(first))
         path = self.root/'checkpoint-000002.json'
-        recovery._write_new(path, second)
         self.assertEqual(recovery._checkpoints(self.root, 'a'*64, objects)[0], 2)
         second['attempt'] = 999
         path.write_bytes(recovery._canonical(second)+b'\n')
@@ -112,6 +133,96 @@ class RecoveryPrimitiveTests(unittest.TestCase):
         (self.root/'checkpoint-000001.json').write_bytes(recovery._canonical(first)+b'\n')
         with self.assertRaisesRegex(ValueError, 'chain'):
             recovery._checkpoints(self.root, 'a'*64, objects)
+
+    def test_writer_and_reader_share_metadata_bound_before_publication(self):
+        path=self.root/'oversized.json'
+        with patch.object(recovery,'_MAX_METADATA_BYTES',128):
+            with self.assertRaisesRegex(ValueError,'bound before publication'):
+                recovery._write_new(path,{'authored':'x'*129})
+            self.assertFalse(path.exists())
+            self.assertFalse(list(self.root.glob('.pending-*')))
+            path.write_bytes(b'x'*129)
+            with self.assertRaisesRegex(ValueError,'JSON bound'):
+                recovery._read(path)
+
+    def test_delta_schema_types_order_and_unauthorized_replacements_refuse(self):
+        outputs=['first.obj','second.obj']
+        admission=self.model_admission(outputs)
+        first=self.model_delta(1,{'first.obj':self.model_record()},admission)
+        second=self.model_delta(2,{'second.obj':self.model_record()},admission,previous=recovery._digest(first))
+        path=self.root/'checkpoint-000002.json'
+        mutations=[lambda value:value.update(schema=True),lambda value:value.update(sequence=True),
+                   lambda value:value.update(attempt=True),lambda value:value.update(admission_sha256='f'*64),
+                   lambda value:value['objects']['second.obj']['artifact'].update(bytes=True),
+                   lambda value:value['operations']['second.obj'].update(kind='rebuild-missing',
+                        previous_record_sha256=recovery._digest(first['objects']['first.obj']),origin_attempt=1),
+                   lambda value:value['operations']['second.obj'].update(origin_attempt=False)]
+        for mutate in mutations:
+            value=copy.deepcopy(second);mutate(value)
+            value=recovery._sealed({key:item for key,item in value.items() if key!='sha256'})
+            path.write_bytes(recovery._canonical(value)+b'\n')
+            with self.subTest(value=value['schema']), self.assertRaises(ValueError):
+                recovery._checkpoints(self.root,'a'*64,outputs)
+        value=copy.deepcopy(second)
+        value['objects']={'first.obj':self.model_record()}
+        value['operations']={'first.obj':dict(kind='new',previous_record_sha256=None,origin_attempt=None)}
+        value=recovery._sealed({key:item for key,item in value.items() if key!='sha256'})
+        path.write_bytes(recovery._canonical(value)+b'\n')
+        with self.assertRaisesRegex(ValueError,'duplicate|overwrite'):
+            recovery._checkpoints(self.root,'a'*64,outputs)
+
+    def test_bounded_delta_chain_replays_more_than_64mib_without_cumulative_records(self):
+        # Authored shared-header metadata, not copied SDK data. Four individually
+        # bounded groups exceed the historical 64 MiB cumulative-ledger failure.
+        outputs=[f'authored-{number:03d}.obj' for number in range(64)]
+        dependencies={f'C:/authored/shared/include/{number:05d}-'+('header_'*20)+'.hpp':
+                      dict(bytes=7,sha256='c'*64) for number in range(4500)}
+        admission=self.model_admission(outputs)
+        previous=None
+        for offset in range(0,len(outputs),16):
+            value=self.model_delta(offset//16+1,
+                {name:self.model_record(dependencies) for name in outputs[offset:offset+16]},
+                admission,previous=previous)
+            previous=recovery._digest(value)
+        sizes=[path.stat().st_size for path in self.root.glob('checkpoint-*.json')]
+        self.assertGreater(sum(sizes),64*1024*1024)
+        self.assertLess(max(sizes),64*1024*1024)
+        sequence,head,ledger,pending=recovery._checkpoints(self.root,'a'*64,outputs)
+        self.assertEqual((sequence,head,set(ledger),pending),(4,previous,set(outputs),{}))
+
+    def test_oversized_delta_and_historical_cumulative_format_are_refused(self):
+        outputs=[f'authored-{number}.obj' for number in range(33)]
+        admission=self.model_admission(outputs)
+        value=self.model_delta(1,{name:self.model_record() for name in outputs},admission)
+        with self.assertRaisesRegex(ValueError,'oversized'):
+            recovery._checkpoints(self.root,'a'*64,outputs)
+        value=dict(schema=1,contract_sha256='a'*64,sequence=1,attempt=1,
+                   previous_sha256=None,objects={'authored-0.obj':self.model_record()})
+        (self.root/'checkpoint-000001.json').write_bytes(
+            recovery._canonical(recovery._sealed(value))+b'\n')
+        with self.assertRaisesRegex(ValueError,'schema|chain'):
+            recovery._checkpoints(self.root,'a'*64,outputs)
+
+    def test_missing_replacement_requires_exact_historical_record_and_origin(self):
+        outputs=['authored.obj']
+        admission=self.model_admission(outputs)
+        record=self.model_record()
+        first=self.model_delta(1,{'authored.obj':record},admission)
+        second_admission=self.model_admission(outputs,attempt=2,sequence=1,
+            previous=recovery._digest(first),new=[],missing={'authored.obj':recovery._digest(record)})
+        second=self.model_delta(2,{'authored.obj':dict(record,artifact=dict(bytes=4,sha256='d'*64))},
+            second_admission,previous=recovery._digest(first),operations={'authored.obj':dict(
+                kind='rebuild-missing',previous_record_sha256=recovery._digest(record),origin_attempt=2)})
+        path=self.root/'checkpoint-000002.json'
+        for replacement in (dict(origin_attempt=True),dict(origin_attempt=1),
+                            dict(previous_record_sha256='e'*64),dict(kind='new')):
+            value=copy.deepcopy(second);value['operations']['authored.obj'].update(replacement)
+            value=recovery._sealed({key:item for key,item in value.items() if key!='sha256'})
+            path.write_bytes(recovery._canonical(value)+b'\n')
+            with self.subTest(replacement=replacement), self.assertRaises(ValueError):
+                recovery._checkpoints(self.root,'a'*64,outputs)
+        path.write_bytes(recovery._canonical(second)+b'\n')
+        self.assertEqual(recovery._checkpoints(self.root,'a'*64,outputs)[3],{})
 
     def test_actual_compdb_must_cover_actual_cxx_graph_and_confine_outputs(self):
         source = self.root/'source.cpp';source.write_text('/* authored */')
@@ -324,6 +435,46 @@ class RecoveryProtocolTests(unittest.TestCase):
         receipt=recovery.build(self.descriptor,self.root,resume=True)
         self.assertEqual(receipt['recovery']['missing_sealed_objects_rebuilt'], ['first.obj'])
         self.assertEqual(receipt['recovery']['verified_retained_objects'], [])
+        meta=self.root/'.pce-recovery'
+        delta=recovery._read(meta/'checkpoint-000002.json')
+        self.assertEqual(set(delta['objects']),{'first.obj'})
+        self.assertEqual(delta['operations']['first.obj']['kind'],'rebuild-missing')
+        self.assertEqual(delta['operations']['first.obj']['origin_attempt'],2)
+
+    def exercise_interrupted_missing_rebuild(self, same_bytes):
+        self.start_interrupted()
+        first=self.root/'build/first.obj'
+        original=first.read_bytes();first.unlink()
+        meta=self.root/'.pce-recovery'
+        def interrupted(command,*,env,cwd):
+            self.invocations.append(list(command))
+            self.assertEqual(command[-1],'first.obj')
+            first.write_bytes(original if same_bytes else b'authored unsealed rebuilt object')
+            raise KeyboardInterrupt('authored interruption before replacement delta')
+        with patch('pcerecomp.build_process.run',side_effect=interrupted), self.assertRaises(KeyboardInterrupt):
+            recovery.build(self.descriptor,self.root,resume=True)
+        self.assertFalse((meta/'checkpoint-000002.json').exists())
+        admission=recovery._read(meta/'attempt-000002-admission.json')
+        self.assertEqual(set(admission['missing_objects']),{'first.obj'})
+        sequence,head,ledger,pending=recovery._checkpoints(meta,
+            recovery._digest(recovery._read(meta/'contract.json')),self.graph['objects'])
+        self.assertEqual(sequence,1)
+        self.assertEqual(set(pending),{'first.obj'})
+        self.invocations.clear()
+        receipt=recovery.build(self.descriptor,self.root,resume=True)
+        self.assertEqual(receipt['recovery']['verified_retained_objects'],[])
+        self.assertEqual(receipt['recovery']['continued_unsealed_rebuild_objects'],['first.obj'])
+        self.assertEqual([row[-1] for row in self.invocations if row[0]=='ninja'],['first.obj','second.obj'])
+        delta=recovery._read(meta/'checkpoint-000002.json')
+        self.assertEqual(delta['attempt'],3)
+        self.assertEqual(delta['operations']['first.obj']['origin_attempt'],2)
+        self.assertEqual(recovery._read(meta/'attempt-000003-admission.json')['missing_objects'],{})
+
+    def test_interrupted_missing_rebuild_remains_unsealed_when_bytes_differ(self):
+        self.exercise_interrupted_missing_rebuild(False)
+
+    def test_interrupted_missing_rebuild_remains_unsealed_even_if_old_bytes_match(self):
+        self.exercise_interrupted_missing_rebuild(True)
 
     def test_source_header_configuration_and_foreign_package_changes_fail_closed(self):
         for name in ('source','header','configuration','foreign','foreign-dir','foreign-file','hardlink'):

@@ -25,6 +25,9 @@ from .build_cache import _canonical, _json
 _META = '.pce-recovery'
 _LOCK = '.pce-recovery.lock'
 _CHUNK = 32
+_MAX_METADATA_BYTES = 64 * 1024 * 1024
+_CHECKPOINT_KIND = 'pce-object-checkpoint-delta-v1'
+_ADMISSION_KIND = 'pce-object-attempt-admission-v1'
 
 
 def _require(condition, message):
@@ -99,6 +102,7 @@ def _write_new(path, value):
     """Flush complete bytes before atomically publishing a create-new name."""
     _directory(path.parent)
     data = _canonical(value) + b'\n'
+    _require(len(data) <= _MAX_METADATA_BYTES, 'metadata exceeds JSON bound before publication')
     descriptor, temporary = tempfile.mkstemp(prefix='.pending-', dir=path.parent)
     temporary = Path(temporary)
     try:
@@ -126,7 +130,7 @@ def _write_new(path, value):
 
 
 def _read(path):
-    _require(_regular(path).st_size <= 64*1024*1024, 'metadata exceeds JSON bound')
+    _require(_regular(path).st_size <= _MAX_METADATA_BYTES, 'metadata exceeds JSON bound')
     raw = path.read_bytes()
     value = _json(raw)
     _require(raw == _canonical(value) + b'\n', 'metadata bytes differ from canonical durable format')
@@ -403,7 +407,7 @@ def _ownership(root, seal, package_outputs, dll_names=()):
             leaf = path.name
             _require('/' not in name[len(_META)+1:] and
                      (leaf in ('contract.json','configured.json') or
-                      re.fullmatch(r'(?:checkpoint-\d{6}|attempt-\d{6}-(?:start|result))\.json',leaf) or
+                      re.fullmatch(r'(?:checkpoint-\d{6}|attempt-\d{6}-(?:start|result|admission))\.json',leaf) or
                       leaf.startswith('.pending-')), 'foreign recovery metadata path: ' + name)
             continue
         if name.startswith('.pending-') and '/' not in name and path.is_file():
@@ -418,31 +422,104 @@ def _ownership(root, seal, package_outputs, dll_names=()):
         raise ValueError('Build recovery: foreign build path: '+name)
 
 
+def _fingerprint(item):
+    return (type(item) is dict and set(item) == {'bytes','sha256'} and
+            type(item['bytes']) is int and item['bytes'] >= 0 and
+            type(item['sha256']) is str and re.fullmatch(r'[0-9a-f]{64}',item['sha256']))
+
+
+def _object_record(record):
+    return (type(record) is dict and set(record) == {'artifact','dependencies'} and
+            _fingerprint(record['artifact']) and type(record['dependencies']) is dict and
+            bool(record['dependencies']) and all(type(path) is str and _fingerprint(identity)
+                for path, identity in record['dependencies'].items()))
+
+
 def _checkpoints(meta, contract_sha, outputs):
-    previous, ledger, sequence = None, {}, 0
-    paths = sorted(meta.glob('checkpoint-*.json'))
-    for path in paths:
-        sequence += 1
-        _require(path.name == f'checkpoint-{sequence:06d}.json', 'checkpoint sequence is incomplete')
-        value = _check_seal(_read(path))
-        _require(type(value.get('schema')) is int and value.get('schema') == 1 and
-                 value.get('contract_sha256') == contract_sha and type(value.get('sequence')) is int and
-                 value.get('sequence') == sequence and value.get('previous_sha256') == previous,
-                 'checkpoint provenance or chain differs')
-        ledger = value.get('objects')
-        _require(type(ledger) is dict and set(ledger) <= set(outputs), 'foreign checkpoint artifact')
-        def fingerprint(item):
-            return (type(item) is dict and set(item) == {'bytes','sha256'} and
-                    type(item['bytes']) is int and item['bytes'] >= 0 and
-                    type(item['sha256']) is str and re.fullmatch(r'[0-9a-f]{64}',item['sha256']))
-        for record in ledger.values():
-            _require(type(record) is dict and set(record) == {'artifact','dependencies'} and
-                     fingerprint(record['artifact']) and type(record['dependencies']) is dict and
-                     record['dependencies'] and all(type(path) is str and fingerprint(identity)
-                         for path, identity in record['dependencies'].items()),
-                     'invalid typed object checkpoint record')
-        previous = _digest(value)
-    return sequence, previous, ledger
+    """Replay bounded deltas and durable missing-object invalidations.
+
+    Admissions with no completed compilation still invalidate a missing seal.
+    A later attempt must rebuild its unsealed output even if that output happens
+    to equal the historical record; it cannot be retained under the old seal.
+    """
+    previous, ledger, sequence, pending = None, {}, 0, {}
+    outputs = set(outputs)
+    paths = iter(sorted(meta.glob('checkpoint-*.json')))
+    next_path = next(paths, None)
+    next_value = _check_seal(_read(next_path)) if next_path else None
+    for admission_path in sorted(meta.glob('attempt-*-admission.json')):
+        admission = _check_seal(_read(admission_path))
+        number = admission.get('attempt')
+        _require(set(admission) == {'schema','kind','attempt','contract_sha256','attempt_start_sha256',
+                 'base_sequence','base_checkpoint_sha256','new_objects','missing_objects','sha256'} and
+                 type(admission['schema']) is int and admission['schema'] == 1 and
+                 admission['kind'] == _ADMISSION_KIND and type(number) is int and number > 0 and
+                 admission_path.name == f'attempt-{number:06d}-admission.json' and
+                 admission['contract_sha256'] == contract_sha and type(admission['base_sequence']) is int and
+                 admission['base_sequence'] == sequence and admission['base_checkpoint_sha256'] == previous,
+                 'attempt admission provenance or base chain differs')
+        start = _check_seal(_read(meta/f'attempt-{number:06d}-start.json'))
+        _require(type(start.get('schema')) is int and start['schema'] == 1 and
+                 type(start.get('attempt')) is int and start['attempt'] == number and
+                 type(start.get('resume')) is bool and type(start.get('started_ns')) is int and
+                 start.get('contract_sha256') == contract_sha and
+                 _digest(start) == admission['attempt_start_sha256'], 'admission attempt start differs')
+        new, missing = admission['new_objects'], admission['missing_objects']
+        _require(type(new) is list and all(type(name) is str for name in new) and
+                 len(new) == len(set(new)) and set(new) == outputs-set(ledger) and
+                 type(missing) is dict and set(missing) <= set(ledger)-set(pending),
+                 'invalid new/missing object admission')
+        admission_sha = _digest(admission)
+        for name, old_digest in missing.items():
+            _require(type(old_digest) is str and old_digest == _digest(ledger[name]),
+                     'missing-object admission differs from historical seal')
+            pending[name] = dict(previous_record_sha256=old_digest, origin_attempt=number,
+                                 admission_sha256=admission_sha)
+        updated = set()
+        while next_value is not None and next_value.get('attempt') == number:
+            value = next_value
+            sequence += 1
+            _require(next_path.name == f'checkpoint-{sequence:06d}.json' and
+                     set(value) == {'schema','kind','contract_sha256','sequence','attempt',
+                                    'previous_sha256','admission_sha256','objects','operations','sha256'} and
+                     type(value['schema']) is int and value['schema'] == 2 and
+                     value['kind'] == _CHECKPOINT_KIND and value['contract_sha256'] == contract_sha and
+                     type(value['sequence']) is int and value['sequence'] == sequence and
+                     type(value['attempt']) is int and value['attempt'] == number and
+                     value['previous_sha256'] == previous and value['admission_sha256'] == admission_sha,
+                     'checkpoint provenance, schema or chain differs')
+            objects, operations = value['objects'], value['operations']
+            _require(type(objects) is dict and 1 <= len(objects) <= _CHUNK and
+                     set(objects) <= outputs and type(operations) is dict and
+                     set(operations) == set(objects) and not (set(objects) & updated),
+                     'invalid, duplicate or oversized checkpoint delta')
+            for name, record in objects.items():
+                operation = operations[name]
+                _require(_object_record(record) and type(operation) is dict and
+                         set(operation) == {'kind','previous_record_sha256','origin_attempt'},
+                         'invalid typed object checkpoint update')
+                if operation['kind'] == 'new':
+                    _require(name in new and name not in ledger and name not in pending and
+                             operation['previous_record_sha256'] is None and operation['origin_attempt'] is None,
+                             'new update would overwrite a historical object seal')
+                else:
+                    _require(operation['kind'] == 'rebuild-missing' and name in pending and
+                             type(operation['origin_attempt']) is int and
+                             operation['origin_attempt'] == pending[name]['origin_attempt'] and
+                             operation['previous_record_sha256'] == pending[name]['previous_record_sha256'] and
+                             operation['previous_record_sha256'] == _digest(ledger[name]),
+                             'object replacement lacks matching missing-object admission')
+                    del pending[name]
+                ledger[name] = record
+                updated.add(name)
+            previous = _digest(value)
+            next_path = next(paths, None)
+            next_value = _check_seal(_read(next_path)) if next_path else None
+        if next_value is not None:
+            _require(type(next_value.get('attempt')) is int and next_value['attempt'] > number,
+                     'checkpoint attempt has no matching ordered admission')
+    _require(next_value is None, 'checkpoint has no matching attempt admission')
+    return sequence, previous, ledger, pending
 
 
 def _dll_inputs(context):
@@ -597,6 +674,8 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
             initial = _sealed(dict(schema=1, kind='pce-recoverable-build-v1', build_dir=str(root),
                 descriptor=str(descriptor), root_identity=[root.stat().st_dev, root.stat().st_ino],
                 options=options, binding=binding, input_contract=context['contract'],
+                checkpoint_policy=dict(kind=_CHECKPOINT_KIND, schema=2, maximum_updates=_CHUNK,
+                                       maximum_metadata_bytes=_MAX_METADATA_BYTES),
                 environment=context['environment']))
             if resume:
                 _require(_same(initial, pre), 'source, module, SDK, toolchain, environment or options changed')
@@ -623,9 +702,9 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
                          value.get('status') in ('complete','failed') and
                          path.name == f'attempt-{number:06d}-result.json', 'foreign attempt result')
                 _require(value['status'] != 'complete', 'completed attempt cannot be resumed')
-            _write_new(meta/f'attempt-{next_attempt:06d}-start.json',
-                       _sealed(dict(schema=1, attempt=next_attempt, resume=resume, contract_sha256=contract_sha,
-                            started_ns=time.time_ns())))
+            attempt_start = _sealed(dict(schema=1, attempt=next_attempt, resume=resume,
+                                         contract_sha256=contract_sha, started_ns=time.time_ns()))
+            _write_new(meta/f'attempt-{next_attempt:06d}-start.json', attempt_start)
             attempt = next_attempt
             def runner(command, **kwargs):
                 commands.append(list(map(str, command)))
@@ -666,11 +745,14 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
                 _ownership(root, seal, _package_outputs(context, root/'build', graph), _dll_inputs(context))
             unchanged()
             binary = root/'build'
-            sequence, previous, ledger = _checkpoints(meta, contract_sha, graph['objects'])
+            sequence, previous, ledger, invalidated = _checkpoints(meta, contract_sha, graph['objects'])
+            continued_rebuilds = sorted(invalidated)
             retained, missing, removed, removed_temporaries = [], [], [], []
             for output in graph['objects']:
                 path = _relative(binary, output)
                 if output in ledger:
+                    if output in invalidated:
+                        continue
                     if not path.exists():
                         missing.append(output)
                         continue
@@ -684,6 +766,18 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
             owned_links = _package_outputs(context, binary, graph)
             temporary_objects = _temporary_objects(binary, graph)
             pending = [output for output in graph['objects'] if output not in retained]
+            admission = _sealed(dict(schema=1, kind=_ADMISSION_KIND, attempt=attempt,
+                contract_sha256=contract_sha, attempt_start_sha256=_digest(attempt_start),
+                base_sequence=sequence, base_checkpoint_sha256=previous,
+                new_objects=sorted(set(graph['objects'])-set(ledger)),
+                missing_objects={name:_digest(ledger[name]) for name in missing}))
+            admission_name = f'attempt-{attempt:06d}-admission.json'
+            _write_new(meta/admission_name, admission)
+            metadata_hashes[admission_name] = _hash(meta/admission_name)
+            admission_sha = _digest(admission)
+            for name in missing:
+                invalidated[name] = dict(previous_record_sha256=_digest(ledger[name]),
+                                        origin_attempt=attempt, admission_sha256=admission_sha)
             for name, target in temporary_objects.items():
                 path = _relative(binary, name)
                 record = dict(path=name, target=target, **_hash(path))
@@ -694,7 +788,6 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
                 if path.exists():
                     path.unlink()
                     removed.append(output)
-            ledger = {name:ledger[name] for name in retained}
             for offset in range(0, len(pending), _CHUNK):
                 unchanged()
                 chunk = pending[offset:offset+_CHUNK]
@@ -702,15 +795,29 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
                 runner(command)
                 unchanged()
                 dependencies = _dependency_inventory(context, binary, chunk)
+                objects, operations = {}, {}
                 for output in chunk:
-                    ledger[output] = dict(artifact=_hash(_relative(binary, output)),
-                                          dependencies=dependencies[output])
+                    objects[output] = dict(artifact=_hash(_relative(binary, output)),
+                                           dependencies=dependencies[output])
+                    if output in invalidated:
+                        operations[output] = dict(kind='rebuild-missing',
+                            previous_record_sha256=invalidated[output]['previous_record_sha256'],
+                            origin_attempt=invalidated[output]['origin_attempt'])
+                    else:
+                        _require(output not in ledger, 'refusing an unadmitted sealed-object overwrite')
+                        operations[output] = dict(kind='new', previous_record_sha256=None, origin_attempt=None)
                 sequence += 1
-                checkpoint = _sealed(dict(schema=1, sequence=sequence, attempt=attempt,
-                    contract_sha256=contract_sha, previous_sha256=previous, objects=ledger.copy()))
+                checkpoint = _sealed(dict(schema=2, kind=_CHECKPOINT_KIND, sequence=sequence, attempt=attempt,
+                    contract_sha256=contract_sha, previous_sha256=previous, admission_sha256=admission_sha,
+                    objects=objects, operations=operations))
                 _write_new(meta/f'checkpoint-{sequence:06d}.json', checkpoint)
                 metadata_hashes[f'checkpoint-{sequence:06d}.json'] = _hash(meta/f'checkpoint-{sequence:06d}.json')
+                ledger.update(objects)
+                for output in objects:
+                    invalidated.pop(output, None)
                 previous = _digest(checkpoint)
+            _require(not invalidated and set(ledger) == set(graph['objects']),
+                     'final build lacks a complete committed object ledger')
             unchanged()
             # Unsealed archives/executable/DLLs must never survive into final link.
             for output in _package_outputs(context, binary, graph):
@@ -733,7 +840,10 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
             receipt['recovery'] = dict(schema=1, resumed=resume, attempt=attempt,
                 contract_sha256=contract_sha, configured_sha256=_digest(seal),
                 checkpoint_sha256=previous, checkpoint_sequence=sequence,
-                verified_retained_objects=retained, missing_sealed_objects_rebuilt=missing,
+                checkpoint_format=_CHECKPOINT_KIND,
+                verified_retained_objects=retained,
+                missing_sealed_objects_rebuilt=sorted(set(missing)|set(continued_rebuilds)),
+                continued_unsealed_rebuild_objects=continued_rebuilds,
                 recompiled_unsealed_objects=pending, removed_unsealed_outputs=removed,
                 removed_temporary_objects=removed_temporaries,
                 input_contract=pre, configured=seal, input_audit=audit,

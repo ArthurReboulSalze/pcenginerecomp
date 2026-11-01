@@ -224,6 +224,97 @@ class NativeBuildRecoveryTests(unittest.TestCase):
             unsealed_before = {name: self._artifact(build/'build'/name) for name in objects
                                if name not in sealed and (build/'build'/name).is_file()}
             self.assertTrue(unsealed_before)
+            self.assertEqual(len(objects), 100)
+            initial_sealed_before = dict(sealed_before)
+            initial_unsealed = set(unsealed_before)
+            initial_ninja_before = (build/'build/.ninja_log').read_bytes()
+            (root/'ninja-before-first-resume.log').write_bytes(initial_ninja_before)
+            (root/'first-interruption-before-resume.json').write_text(json.dumps(dict(
+                objects=initial_sealed_before, unsealed_objects=sorted(initial_unsealed))), encoding='utf-8')
+            initial_checkpoint_bytes = (meta/'checkpoint-000001.json').read_bytes()
+            resume_command = prefix + ['resume', *common]
+
+            # Replay a real three-record delta chain. Capture the third group's
+            # completed 96 objects while the producer is between chunks, then
+            # interrupt only when later C++ work is actually alive. The final
+            # four units include VDC/video sources, rather than tiny fake work.
+            middle_log = root/'middle-resume.log'
+            with middle_log.open('wb') as output:
+                middle = subprocess.Popen(resume_command, cwd=tool, env=env,
+                                          stdout=output, stderr=subprocess.STDOUT)
+                try:
+                    deadline = time.monotonic()+600
+                    third_before, third_ledger = None, None
+                    while time.monotonic() < deadline:
+                        self.assertIsNone(middle.poll(), middle_log.read_text(errors='replace'))
+                        if (meta/'checkpoint-000003.json').exists():
+                            if third_before is None:
+                                points = [json.loads((meta/f'checkpoint-{index:06d}.json').read_text())
+                                          for index in range(1, 4)]
+                                third_ledger = {}
+                                for point in points:
+                                    self.assertEqual(point['schema'], 2)
+                                    self.assertEqual(point['kind'], 'pce-object-checkpoint-delta-v1')
+                                    self.assertEqual(len(point['objects']), 32)
+                                    self.assertFalse(set(third_ledger) & set(point['objects']))
+                                    third_ledger.update(point['objects'])
+                                self.assertEqual(len(third_ledger), 96)
+                                third_before = {name:self._artifact(build/'build'/name) for name in third_ledger}
+                                (root/'third-group-before-second-kill.json').write_text(
+                                    json.dumps(dict(objects=third_before, checkpoint_sequence=3)), encoding='utf-8')
+                                (root/'ninja-at-third-group.log').write_bytes((build/'build/.ninja_log').read_bytes())
+                            remaining = set(objects)-set(third_ledger)
+                            later = [name for name in remaining if (build/'build'/name).is_file()]
+                            live = _job_processes(kernel, build)
+                            if later and len(later) < len(remaining) and len(live) >= 2:
+                                handles = [kernel.OpenProcess(0x100000, False, pid) for pid in live]
+                                handles = [handle for handle in handles if handle]
+                                if handles:
+                                    break
+                        time.sleep(.01)
+                    else:
+                        self.fail('No third durable delta group followed by live final compilation: '+
+                                  middle_log.read_text(errors='replace'))
+                    middle.kill()
+                    middle.wait(timeout=20)
+                    try:
+                        with _changed(module/'module.cpp'):
+                            immediate = subprocess.run(resume_command, cwd=tool, env=env,
+                                capture_output=True, text=True, timeout=30)
+                        (root/'immediate-second-resume-refusal.log').write_text(
+                            immediate.stdout+immediate.stderr, encoding='utf-8')
+                        self.assertEqual(immediate.returncode, 2, immediate.stdout+immediate.stderr)
+                        self.assertIn('module.source SHA256', immediate.stderr)
+                        termination = [kernel.WaitForSingleObject(handle, 10000) for handle in handles]
+                        self.assertTrue(all(status == 0 for status in termination))
+                        (root/'second-interruption.json').write_text(json.dumps(dict(
+                            schema=1, parent_pid=middle.pid, parent_returncode=middle.returncode,
+                            observed_job_members=live, observed_process_handles=len(handles),
+                            process_wait_statuses=termination, sealed_objects=96,
+                            checkpoint_sequence=3, partial_object_outputs=later,
+                            execution_evidence=False)), encoding='utf-8')
+                    finally:
+                        for handle in handles:
+                            kernel.CloseHandle(handle)
+                finally:
+                    if middle.poll() is None:
+                        middle.kill()
+                        middle.wait(timeout=20)
+            self.assertFalse((build/'build-receipt.json').exists())
+            self.assertEqual((meta/'checkpoint-000001.json').read_bytes(), initial_checkpoint_bytes)
+            self.assertEqual({name:self._artifact(build/'build'/name) for name in initial_sealed_before},
+                             initial_sealed_before)
+            self.assertEqual({name:self._artifact(build/'build'/name) for name in third_ledger}, third_before)
+            middle_admission = json.loads((meta/'attempt-000002-admission.json').read_text())
+            self.assertEqual(middle_admission['base_sequence'], 1)
+            self.assertEqual(len(middle_admission['new_objects']), 68)
+            self.assertFalse(middle_admission['missing_objects'])
+            self.assertFalse((meta/'attempt-000002-result.json').exists())
+            sealed, sealed_before = third_ledger, third_before
+            unsealed_before = {name:self._artifact(build/'build'/name) for name in objects
+                               if name not in sealed and (build/'build'/name).is_file()}
+            self.assertTrue(unsealed_before)
+            checkpoint_files = {p.name:p.read_bytes() for p in sorted(meta.glob('checkpoint-*.json'))}
             # Deterministically exercise temporary-output admission. These
             # bytes are authored here, never claimed as observed Clang output;
             # the real parent interruption and compiled objects remain above.
@@ -241,7 +332,6 @@ class NativeBuildRecoveryTests(unittest.TestCase):
                 producer='authored fixture; not observed Clang output', artifact=temporary_record)),
                 encoding='utf-8')
             ninja_before = (build/'build/.ninja_log').read_bytes()
-            resume_command = prefix + ['resume', *common]
 
             def refused(label, expected=None):
                 completed = subprocess.run(resume_command, cwd=tool, env=env,
@@ -312,6 +402,11 @@ class NativeBuildRecoveryTests(unittest.TestCase):
             self.assertGreater(recovery['attempt'], 1)
             self.assertFalse(receipt['execution_evidence'])
             self.assertEqual(set(recovery['verified_retained_objects']), set(sealed))
+            self.assertEqual(len(recovery['verified_retained_objects']), 96)
+            self.assertEqual(len(recovery['recompiled_unsealed_objects']), 4)
+            final_admission = json.loads((meta/f"attempt-{recovery['attempt']:06d}-admission.json").read_text())
+            self.assertEqual(final_admission['base_sequence'], 3)
+            self.assertEqual(len(final_admission['new_objects']), 4)
             self.assertTrue(set(unsealed_before) <= set(recovery['recompiled_unsealed_objects']))
             self.assertTrue(set(unsealed_before) <= set(recovery['removed_unsealed_outputs']))
             self.assertFalse(authored_temporary.exists())
@@ -325,6 +420,13 @@ class NativeBuildRecoveryTests(unittest.TestCase):
                 self.assertEqual(counts(after).get(name, 0), counts(ninja_before).get(name, 0), name)
             for name in unsealed_before:
                 self.assertGreater(counts(after).get(name, 0), counts(ninja_before).get(name, 0), name)
+            for name in initial_unsealed:
+                self.assertGreater(counts(after).get(name, 0), counts(initial_ninja_before).get(name, 0), name)
+            for name in initial_sealed_before:
+                self.assertEqual(counts(after).get(name, 0), counts(initial_ninja_before).get(name, 0), name)
+            points = [json.loads(p.read_text()) for p in sorted(meta.glob('checkpoint-*.json'))]
+            self.assertEqual(len(points), 4)
+            self.assertTrue(all(point['schema'] == 2 and 1 <= len(point['objects']) <= 32 for point in points))
             for name in configured['graph']['links']:
                 self.assertGreater(counts(after).get(name, 0), counts(ninja_before).get(name, 0),
                                    'Actual archive/executable link was not executed: '+name)

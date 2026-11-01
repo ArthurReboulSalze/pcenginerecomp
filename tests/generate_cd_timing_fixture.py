@@ -5,8 +5,8 @@ from pcerecomp.analysis import Snapshot,analyze
 from pcerecomp.emitter import emit
 
 def make_fixture():
-    original,sites=original_fixture();memory=dict(original.memory);sites=[*sites,(0x2b00,0xad,0x1805),(0x2b08,0xad,0x1806)]
-    for pc,op,address in sites[-2:]:
+    original,sites=original_fixture();memory=dict(original.memory);sites=[*sites,(0x2b00,0xad,0x1805),(0x2b08,0xad,0x1806),(0x2b10,0x8d,0x1805)]
+    for pc,op,address in sites[-3:]:
         for i,value in enumerate((op,address&255,address>>8,0x80,0xfe)):memory[0x1f0000+(pc&8191)+i]=value
     return Snapshot(original.mpr,memory,tuple(pc for pc,_,_ in sites),'authored-distance-cd-ports-v1'),sites
 

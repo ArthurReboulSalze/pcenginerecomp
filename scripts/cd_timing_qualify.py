@@ -53,6 +53,12 @@ def validate_initial_error(states,tier):
     expected=[3 if tier=='gear'else 1]+[0]*10
     require(all(state['logical']==expected and state['seek']==state['play']==state['load']==0 for state in states),'Invalid initial READ must preserve each engine original reset audio/head/deadline state')
 
+def validate_latch(point):
+    require(set(point)=={'kind','label','ticks','strobe_ticks','interval_ticks','value'},'Exact latch strobe/read observation fields')
+    for key in('ticks','strobe_ticks','interval_ticks','value'):integer(point[key])
+    require(point['interval_ticks']>=700 and point['ticks']>point['strobe_ticks'],'Actual latch strobe interval/read order differs')
+    require(point['value']==0 if point['label']=='before-playback'else point['value']in(0x1234,0xedcc),'Actual source DAC did not preserve silent/new playback gate')
+
 def validate_one(rows,tier):
     groups=split_rows(rows);checks=0
     for definition in cases():
@@ -66,9 +72,8 @@ def validate_one(rows,tier):
         require(all(a['ticks']<=b['ticks']for a,b in zip(states,states[1:])),'Within-case clocks regressed')
         admissions=[v for v in items if v['kind']=='admission'];replies=[v for v in items if v['kind']=='reply'];cps=[v for v in items if v['kind']=='checkpoint']
         latches=[v for v in items if v['kind']=='latch'];require([v['label']for v in latches]==[s.split()[1]for s in definition['steps']if s.startswith('L ')],'Every authored CDDA latch read must be retained')
-        for point in latches:
-            require(set(point)=={'kind','label','ticks','value'},'Exact latch observation fields');integer(point['ticks']);integer(point['value'])
-            require(point['value']==0 if point['label']=='before-playback'else point['value']in(0x1234,0xedcc),'Actual source DAC did not preserve silent/new playback gate')
+        for point in latches:validate_latch(point)
+        require(all(b['strobe_ticks']-a['strobe_ticks']==b['interval_ticks']for a,b in zip(latches,latches[1:])),'Actual consecutive latch strobe interval differs')
         require(len(admissions)==sum(s.startswith('S ')for s in definition['steps'])and len(replies)==sum(s.startswith('D ')for s in definition['steps'])and len(cps)==definition['steps'].count('K'),'Every authored operation needs retained evidence')
         for point in cps:require(set(point)=={'kind','whole_core_roundtrip'}and point['whole_core_roundtrip']is(tier!='gear'),'Explicit original/tool checkpoint scope differs')
         for reply in replies:

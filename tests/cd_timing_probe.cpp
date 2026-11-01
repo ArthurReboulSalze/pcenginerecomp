@@ -91,8 +91,14 @@ int main(int argc,char**argv){try{
 #else
     if(argc==2&&std::string(argv[1])=="--math"){unsigned from,to;while(std::cin>>from>>to)std::cout<<from<<' '<<to<<" -1 "<<pce::cd_seek_ticks(pce::CdTimingProfile::gear_distance,from,to)<<'\n';need(std::cin.eof(),"Malformed seek vector");return 0;}
 #endif
-    need(argc==8,"timing PLAN ROM CUE TIER DIVISOR CAPTURE REPORT");const auto rom=reset_probe::rom(argv[2]);const std::string tier=argv[4];const unsigned divisor=std::stoul(argv[5]);need(divisor==3||divisor==12,"Timing speed");TimingAdapter a(rom,argv[3],tier,divisor,argv[6]);std::ifstream plan(argv[1]);need(bool(plan),"Timing plan missing");std::string op,id;unsigned cases=0,records=0;
-    while(plan>>op){if(op=="R"){std::string profile;plan>>id>>profile;need(profile=="fixed"||profile=="gear-distance","Timing profile");a.reset(profile=="gear-distance");std::cout<<"{\"kind\":\"case\",\"id\":\""<<id<<"\",\"profile\":\""<<profile<<"\"}\n";++cases;}
+    need(argc==8,"timing PLAN ROM CUE TIER DIVISOR CAPTURE REPORT");const auto rom=reset_probe::rom(argv[2]);const std::string tier=argv[4];const unsigned divisor=std::stoul(argv[5]);need(divisor==3||divisor==12,"Timing speed");
+#ifdef PCE_TIMING_GEAR
+    need(tier=="gear","Original Gear execution tier required");
+#else
+    need(tier=="native"||tier=="interpreter","Explicit toolkit execution tier required");
+#endif
+    TimingAdapter a(rom,argv[3],tier,divisor,argv[6]);std::ifstream plan(argv[1]);need(bool(plan),"Timing plan missing");std::string op,id;unsigned cases=0,records=0;std::uint64_t last_strobe=0;
+    while(plan>>op){need(op=="R"||cases,"Timing operation before reset");if(op=="R"){std::string profile;plan>>id>>profile;need(profile=="fixed"||profile=="gear-distance","Timing profile");a.reset(profile=="gear-distance");last_strobe=0;std::cout<<"{\"kind\":\"case\",\"id\":\""<<id<<"\",\"profile\":\""<<profile<<"\"}\n";++cases;}
         else if(op=="S"){unsigned code,mode,lba,count;plan>>code>>mode>>lba>>count;start(a,code,mode,lba,count);}
         else if(op=="D"){unsigned automatic;plan>>automatic;need(automatic<=1,"ACK profile");drain(a,automatic);}
         else if(op=="P"){std::string label;plan>>label;observe(label,a);++records;}
@@ -100,7 +106,7 @@ int main(int argc,char**argv){try{
         else if(op=="A"){unsigned n;plan>>n;need(n<=60000000,"Timing bounded wait");a.advance(n);}
         else if(op=="W"){a.write(0x1804,2);a.advance(1);a.write(0x1804,0);a.advance(1);}
         else if(op=="K"){std::cout<<"{\"kind\":\"checkpoint\",\"whole_core_roundtrip\":"<<(a.checkpoint()?"true":"false")<<"}\n";}
-        else if(op=="L"){std::string label;plan>>label;const auto lo=a.read_port(0x1805),hi=a.read_port(0x1806);std::cout<<"{\"kind\":\"latch\",\"label\":\""<<label<<"\",\"ticks\":"<<a.now()<<",\"value\":"<<(lo|(hi<<8))<<"}\n";}
+        else if(op=="L"){std::string label;plan>>label;const auto strobe=a.now(),interval=strobe-last_strobe;need(interval>=700,"Authored latch strobe violates700tick interval");a.write(0x1805,0);last_strobe=strobe;const auto lo=a.read_port(0x1805),hi=a.read_port(0x1806);std::cout<<"{\"kind\":\"latch\",\"label\":\""<<label<<"\",\"ticks\":"<<a.now()<<",\"strobe_ticks\":"<<strobe<<",\"interval_ticks\":"<<interval<<",\"value\":"<<(lo|(hi<<8))<<"}\n";}
         else throw std::runtime_error("Unknown authored timing operation");need(bool(plan),"Malformed timing operation");}
     a.finish();need(!std::filesystem::exists(argv[7]),"New timing report required");std::ofstream report(argv[7]);report<<"{\"schema\":1,\"tier\":\""<<tier<<"\",\"divisor\":"<<divisor<<",\"cases\":"<<cases<<",\"states\":"<<records<<",\"calls\":"<<a.calls<<",\"checkpoints\":"<<a.checkpoints<<"}\n";return 0;
 }catch(const std::exception&e){std::cerr<<e.what()<<'\n';return 1;}}

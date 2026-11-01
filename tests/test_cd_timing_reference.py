@@ -2,7 +2,7 @@
 import copy
 import unittest
 from scripts.cd_timing_reference import seek_ms,seek_ticks,math_vectors,cases,GROUPS
-from scripts.cd_timing_qualify import integer,validate_admission,validate_reset,validate_initial_error
+from scripts.cd_timing_qualify import integer,validate_admission,validate_reset,validate_initial_error,validate_latch
 
 class CdTimingReferenceTests(unittest.TestCase):
     def test_literal_seek_boundaries(self):
@@ -54,5 +54,13 @@ class CdTimingReferenceTests(unittest.TestCase):
         validate_initial_error([point(3)],'gear');validate_initial_error([point(1)],'native')
         with self.assertRaises(ValueError):validate_initial_error([point(1)],'gear')
         with self.assertRaises(ValueError):validate_initial_error([point(3)],'native')
+    def test_source_latch_needs_real_strobe_interval_and_new_sample(self):
+        p=dict(kind='latch',label='after-playback',ticks=1700,strobe_ticks=1655,interval_ticks=700,value=0x1234);validate_latch(p)
+        for key,value in(('interval_ticks',699),('value',0),('ticks',1655),('value',False)):
+            changed=dict(p);changed[key]=value
+            with self.subTest(key=key,value=value),self.assertRaises(ValueError):validate_latch(changed)
+        p.update(label='before-playback',value=0);validate_latch(p)
+        p['value']=0x1234
+        with self.assertRaises(ValueError):validate_latch(p)
 
 if __name__=='__main__':unittest.main()

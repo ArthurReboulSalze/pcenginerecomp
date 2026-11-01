@@ -34,8 +34,72 @@ separate provenance inputs and contribute their own historical hits.
 
 Input order does not affect the profile. Inputs sort by SHA256, identities by
 MPR/PC/bytes, and contributions by input SHA256. There is no last-file-wins
-policy or silent truncation. An existing profile is not a composition input;
-recompose its retained original captures when adding observations.
+policy or silent truncation. Version 1 composition accepts original captures;
+version 2 below can explicitly extend an admitted retained profile.
+
+## Add identities without duplicating overlapping contributions
+
+```text
+python -m pcerecomp compose-observations .local/capture/new-window.json --baseline-profile .local/profiles/retained.json --new-identities-only --dry-run
+python -m pcerecomp compose-observations .local/capture/new-window.json --baseline-profile .local/profiles/retained.json --new-identities-only --out .local/profiles/extended.json
+python -m pcerecomp emit-profile .local/profiles/extended.json --out .local/native/extended --partition-layout stable
+```
+
+This explicit selection produces `pce-observation-profile-2`, schema 2. It
+retains every original raw capture byte and revalidates each input, including
+its ABI, origin, physical mapping and loss/completeness metadata. It selects
+contributions for compilation rather than rewriting captures or raising limits.
+Original inputs remain execution claims from their respective producers; a
+profile is still not evidence of a new execution.
+
+The `selection_stages` ledger contains SHA-sorted input stages. Stage zero
+retains all original baseline contributions. Each later stage contributes only
+full instruction identities absent from previous stages; the lowest input SHA
+in that stage wins when several new inputs contain the same new identity.
+Extending a version 2 profile preserves all its prior stages and their winners.
+Argument order within an extension cannot select a different winner. Exact
+duplicate raw input SHAs add no stage; a distinct input containing no new keys
+still consumes raw-byte/input capacity and is retained with no selected rows.
+
+`historical_totals` continues to describe **all original input hits**, including
+overlap. `selected_historical_totals` describes the retained contribution rows.
+`selection_counts` separates original, selected and omitted contributions.
+Omission is a declared catalogue policy, not execution deduplication. Original
+per-input metadata stays separate. The loader independently reconstructs the
+stage ledger's selected rows and totals from the hash-verified originals;
+caller-supplied row lists, changed totals or incomplete ledgers refuse.
+
+All version 1 bounds remain: 256 provenance inputs, 64 MiB distinct original
+bytes, 65,536 union identities and 128 MiB serialized output. The 262,144
+contribution bound applies to the selected rows in version 2. Every original
+capture is validated even when its rows are omitted. Raw bytes and complete
+original history still impose finite bounds; this is not unlimited history.
+
+`--baseline-profile` requires `--new-identities-only` and is mutually exclusive
+with `--baseline-input`. Repeated `--baseline-input` can instead establish a
+raw baseline stage. Without `--capacity`, a retained profile's capacity is
+inherited; a raw baseline uses 65,536. A smaller explicit capacity never prunes
+retained keys. The Python entry points are
+`compose_additive_observation_profile` and `plan_additive_observation_profile`,
+with `baseline_profile=path` or `baseline_inputs=paths`.
+
+Dry-run binds the exact retained profile bytes and producer source, reports
+the selected and original contribution costs, and predicts exact output
+bytes/hash without creating files or generating code. Real composition must
+readmit inputs. Emission and bound consumer verification preserve the
+selection ledger/policy/counts and distinguish original from selected totals.
+Version 1 serialization and manifests retain their original contract. New
+bound profiles require their own consumer build and exact-build checkpoints;
+this feature does not migrate an existing checkpoint.
+
+Planner `duplicate_shas` describes repeated explicit capture path arguments.
+Raw SHAs already embedded in `--baseline-profile` are instead distinguished
+through `existing_inputs` and `new_inputs`; the profile itself counts as one
+operation path. An exact duplicate extension preserves canonical output bytes;
+an independently reserialized profile has its own artifact SHA. Selection history
+is declared provenance, not authenticated execution or proof that a particular
+parent operation occurred; retain the exact baseline artifact and operation
+receipt when that relationship matters.
 
 ## Preflight an extension before emission or build
 
@@ -216,6 +280,27 @@ must identify the caller's actual artifact; the in-memory API cannot verify a
 file it was not given.
 
 ## Verification scope
+
+Staged profile-v2 implementation
+`cd5bff67b323098979345f76d5b87075fc628e72` passes the complete required SDL
+checker: **1,583 Python tests with no skips, 68 C++ suites and 12 fresh-process
+audio checkpoint cases**. The source84 hash remains
+`16679df8f6758cbac67e97dc2a3cb20d327ee80631e3cce25601dc0672b0734a`
+before/after. Twenty-nine added public tests include independent literal
+accounting, strict malformed/omitted-input refusal, stage-winner conservation,
+unchanged bounds, exact planning/CLI bytes, consumer manifest admission and an
+actually compiled/executed authored v2 consumer.
+
+Independent checks retain 26 v1 artifacts across six configurations. A real
+two-stage extension retains 58,035 existing identities and adds four, with
+260,563 selected versus 264,174 original contributions. All original bytes,
+ABI labels and origins remain; final serialization is 129,648,072 bytes within
+the unchanged limit. Its 948 baseline code files reproduce exactly; only two
+extended C++ partitions change, containing four added direct LDA cases.
+Compilation and finite retail startup/checkpoint tests retain their separate
+[current status](STATUS.md#staged-additive-observation-composition) scope;
+the four later game identities and complete route are not execution-qualified
+by those startup tests. ABI 28 and runtime/layout source remain unchanged.
 
 The additive consumer-binding freeze
 `40f44c843e29c72a39dc982ed59a2af2e7de5e6b` passes a fresh SDL Release build and

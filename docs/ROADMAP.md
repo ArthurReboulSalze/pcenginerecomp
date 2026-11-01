@@ -88,14 +88,13 @@ partial directories, incomplete configure and unsupported profiles still need
 a new build directory. Broader toolchain support and recovery of managed module
 updates need their own contracts and interruption tests.
 
-Observation-profile scaling is a separate contributor-interface gap. Long,
-overlapping captures can exhaust contribution or serialized-size bounds while
-adding only a few new identities. The next design needs explicit additive
-selection or a scalable history representation, deterministic preflight and
-independent joins back to original capture bytes, ABI labels and origins.
-Retain the current parser limits and original evidence while qualifying that
-interface; [composition planning](OBSERVATION_PROFILES.md#preflight-an-extension-before-emission-or-build)
-reports the current admission boundary.
+Opt-in [additive observation composition](OBSERVATION_PROFILES.md#add-identities-without-duplicating-overlapping-contributions)
+uses a version 2 stage ledger to retain original captures while selecting only
+new identities from each extension. It separates selected contributions from
+full historical totals and preserves earlier selections when extending a
+retained profile. Deterministic preflight and original-byte/ABI/origin joins
+remain mandatory. The existing input/raw-byte/identity/serialization bounds
+still apply; a scalable external history representation remains future work.
 
 The [guest-driven CD DMA/IRQ checkpoint matrix](DMA_IRQ_CHECKPOINTS.md)
 adds autonomous READ polling, ADPCM DMA, actual IRQ2 entry/handler/RTI and

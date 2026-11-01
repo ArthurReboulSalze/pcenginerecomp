@@ -189,6 +189,17 @@ independently loaded native overlays are not implemented yet.
 
 ## Compiler frontend and IR
 
+[Observation profiles](OBSERVATION_PROFILES.md) retain hash-verified original
+captures with their ABI/origin metadata. Version 1 sums every original
+contribution. Opt-in version 2 preserves that full historical accounting while
+a deterministic stage ledger selects baseline contributions and later new
+identities for translation. Existing stage winners survive further extensions.
+Selected totals and omission counts stay separate from original history.
+Every omitted input row still undergoes complete admission, and the existing
+raw-byte/input/identity/serialized bounds remain. Emission and consumer binding
+reconstruct the selected catalogue; composition does not assert execution or
+introduce a runtime module/checkpoint migration.
+
 | Component | Current contract |
 |---|---|
 | `media.py` | CHDv5 metadata, bounded hunk reads, MODE1/RAW user sectors, ISO and supported IPL extraction |

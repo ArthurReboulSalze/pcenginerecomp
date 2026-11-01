@@ -10,6 +10,16 @@ project owns its game-specific routes, patches, assets and presentation choices.
 Ys III is one regression case; compatibility evidence remains tied to the
 tested CPU, hardware, media and runtime profiles.
 
+**Observation catalogues can grow without counting every overlap again.**
+Opt-in `compose-observations --baseline-profile ... --new-identities-only`
+preserves the original captures, ABI labels and origins while selecting only
+new instruction identities from each extension. A versioned stage ledger keeps
+earlier selections stable; dry-run reports exact output costs before emission.
+Parser limits remain unchanged, and original historical hits stay separate
+from selected contribution counts. A separately built v2 consumer passes fresh
+TCP startup and exact-build checkpoint continuation; execution of its four late
+additions remains unqualified. See [additive composition](docs/OBSERVATION_PROFILES.md#add-identities-without-duplicating-overlapping-contributions).
+
 **Interrupted builds can resume verified completed work.** Opt in before the
 first configure with `build --recoverable`, then use `project resume` after an
 interruption. The Windows x64 LLVM-MinGW/Ninja producer verifies unchanged
@@ -41,7 +51,7 @@ new identities, contributions and remaining capacity before a build. It
 preserves profile-v1 bytes, source provenance and all existing limits. See
 [composition planning](docs/OBSERVATION_PROFILES.md#preflight-an-extension-before-emission-or-build).
 
-The latest build-recovery SDL check passes **1,554 Python tests without skips,
+The latest additive-composition SDL check passes **1,583 Python tests without skips,
 68 C++ suites and 12 fresh-process audio checkpoint cases**. Independent
 earlier CD timing checks cover 12,432 seek vectors and 21 command cases at both CPU
 speeds, with native and interpreted execution checked separately.

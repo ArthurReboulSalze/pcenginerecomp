@@ -1,5 +1,65 @@
 # Current status — 1 November 2026
 
+## Staged additive observation composition
+
+Opt-in [profile-v2 composition](OBSERVATION_PROFILES.md#add-identities-without-duplicating-overlapping-contributions)
+retains complete original captures while selecting only new full instruction
+identities from each extension. Its stage ledger preserves earlier selected
+contributions; original historical totals, selected totals and omitted overlap
+are independently reconstructed. Profile-v1 bytes/manifests and existing
+input/raw-byte/identity/serialization bounds remain unchanged.
+
+The real consumer's four authentic micro-captures add four identities but
+3,615 original rows. Ordinary full composition would require 264,174
+contributions, beyond the unchanged 262,144 limit. The official two-stage
+extension retains all 58,035 original rows exactly, produces 58,039 identities
+and 260,563 selected contributions, and preserves all 16 original raw inputs
+(46,869,819 bytes). Exact dry-run bytes/hash match both actual outputs; the
+final profile is 129,648,072 bytes, below 128 MiB. Repeating the same extension
+preserves the exact profile hash. Original input ABI/origin labels remain.
+
+Re-emitting the retained profile reproduces all 948 C++/header files exactly.
+The four new direct translations change only two existing stable partitions.
+An independent authored comparison also preserves 26 version-1 artifacts
+across six emission configurations. These composition/emission checks do not
+establish execution of the four new identities.
+
+Frozen implementation `cd5bff67b323098979345f76d5b87075fc628e72` has 84 shared
+source files, SHA256
+`16679df8f6758cbac67e97dc2a3cb20d327ee80631e3cce25601dc0672b0734a`.
+All 60 runtime/CMake source files retain the earlier exact bytes. Emitter
+metadata changes preserve the translation core and ABI 28. Existing Gear
+reference checks keep their original source pins; this interface milestone
+does not broaden hardware/device compatibility.
+
+That frozen source passes the complete required SDL checker: **1,583 Python
+tests with zero skips, 68 C++ suites and 12 fresh-process audio checkpoint
+cases**, with identical shared source before/after. An authored profile-v2
+consumer actually compiles and runs six direct native instructions with zero
+interpretation, independently expected A=41, X=43 and PC=$4003. Its profile
+binding and later tamper refusal are checked separately from game execution.
+
+An ordinary fresh v2-bound retail consumer compiles all 976 objects and three
+archive/executable links. It completes **900 fresh startup frames, 27,025,270
+native instructions and zero interpreted instructions**, then two candidate-owned
+60-frame continuations of **1,602,420 native and zero interpreted instructions**
+each. Immediate and continued whole checkpoint files, CORE/HOST, full RAM,
+pixels and all 187 encoded identities/counts in the 900-to-960 suffix match.
+The first 900 frames retain separate aggregate counters. Its runtime PATH
+contains Git and Windows directories; the actual adjacent SDL library is
+verified. No old-build checkpoint is imported and no guest RAM write is used.
+This candidate remains unselected: startup/checkpoint qualification does not
+establish that the four later identities execute or qualify the full route.
+
+Separately, the existing selected consumer's new 84-frame checkpoint route
+executes **2,666,212 native and one interpreted instruction**, exposing the first
+pending identity. Its own 60-frame cut followed by direct/restored 24-frame
+suffixes matches complete files, RAM, pixels and 3,860 encoded identities;
+each suffix records 762,336 native and one interpreted instruction. These are
+current-build hybrid evidence, with original source and prefix provenance kept
+separate from the new v2 candidate. No selection or checkpoint migration is
+implied.
+
 ## Verified interrupted consumer builds
 
 Opt-in [build recovery](BUILD_RECOVERY.md) is implemented for Windows 10/11

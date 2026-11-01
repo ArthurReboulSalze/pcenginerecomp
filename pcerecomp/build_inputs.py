@@ -70,7 +70,7 @@ def tree_identity(path: Path) -> dict:
 
 
 def prepare(project, *, generator, desktop, cmake_args, toolchain_root, dependency_roots,
-            build_dir, cache_root):
+            build_dir, cache_root=None):
     """Return a content contract, controlled environment and audited roots."""
     if os.name != 'nt' or platform.machine().lower() not in ('amd64', 'x86_64') or struct.calcsize('P') != 8:
         raise ValueError('Verified package-cache producer currently requires Windows x64 LLVM-MinGW')
@@ -117,7 +117,10 @@ def prepare(project, *, generator, desktop, cmake_args, toolchain_root, dependen
     tool_root = project['tool_root'].resolve()
     compile_roots = [tool_root/'runtime', tool_root/'cmake']
     hashed_roots = [bundle, *roots, module_root, *compile_roots]
-    for output in (Path(build_dir).resolve(), Path(cache_root).resolve()):
+    outputs = [Path(build_dir).resolve()]
+    if cache_root is not None:
+        outputs.append(Path(cache_root).resolve())
+    for output in outputs:
         if any(output.is_relative_to(root) or root.is_relative_to(output) for root in hashed_roots):
             raise ValueError('Cache/build outputs must be separate from hashed input trees')
     system = Path(os.environ['SystemRoot']).resolve(strict=True)

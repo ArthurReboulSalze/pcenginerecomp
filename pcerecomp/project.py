@@ -437,7 +437,23 @@ def _cmake_path(path):
 
 def build(descriptor: Path, build_dir: Path, *, allow_revision_override=False,
           generator=None, desktop=False, cmake_args=(), cache_root=None,
-          cache_toolchain_root=None, cache_dependency_roots=()) -> dict:
+          cache_toolchain_root=None, cache_dependency_roots=(), recoverable=False,
+          recovery_toolchain_root=None, recovery_dependency_roots=()) -> dict:
+    if type(recoverable) is not bool:
+        raise ValueError('recoverable must be boolean')
+    if recoverable:
+        if cache_root is not None or cache_toolchain_root is not None or cache_dependency_roots:
+            raise ValueError('Recoverable builds and package-cache builds are separate producers')
+        for argument in cmake_args:
+            if not isinstance(argument, str) or not re.fullmatch(
+                    r'-D(CMAKE_CXX_COMPILER|CMAKE_MAKE_PROGRAM|SDL3_DIR)=[^\r\n\x00]+', argument):
+                raise ValueError('Unsupported recovery CMake argument')
+        from .build_recovery import build as recovery_build
+        return recovery_build(descriptor, build_dir, allow_revision_override=allow_revision_override,
+            generator=generator, desktop=desktop, cmake_args=cmake_args,
+            toolchain_root=recovery_toolchain_root, dependency_roots=recovery_dependency_roots)
+    if recovery_toolchain_root is not None or recovery_dependency_roots:
+        raise ValueError('Recovery input roots require --recoverable')
     project = verify(descriptor, allow_revision_override=allow_revision_override)
     build_dir = build_dir.resolve()
     if build_dir.exists():
@@ -458,6 +474,13 @@ def build(descriptor: Path, build_dir: Path, *, allow_revision_override=False,
             cache_toolchain_root=cache_toolchain_root, cache_dependency_roots=cache_dependency_roots)
     return _compile_build(project, build_dir, allow_revision_override=allow_revision_override,
                           generator=generator, desktop=desktop, cmake_args=cmake_args)
+
+
+def resume(descriptor: Path, build_dir: Path, *, allow_revision_override=False) -> dict:
+    """Resume only a pre-existing, verified recoverable-build contract."""
+    from .build_recovery import build as recovery_build
+    return recovery_build(descriptor, build_dir, resume=True,
+                          allow_revision_override=allow_revision_override)
 
 
 def _compile_build(project, build_dir, *, allow_revision_override, generator, desktop,
@@ -494,23 +517,27 @@ def _configure_build(project, build_dir, *, generator, desktop, cmake_args, cach
                       '-DCMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY=OFF',
                       '-DCMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH=OFF',
                       '-DCMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH=OFF']
+        if cache_context.get('recovery'):
+            configure.append('-DCMAKE_SUPPRESS_REGENERATION=ON')
         query = binary_dir/'.cmake/api/v1/query'
         query.mkdir(parents=True)
         for name in ('codemodel-v2', 'toolchains-v1', 'cmakeFiles-v1'):
             (query/name).touch()
     options = {'env':cache_context['environment']} if cache_context else {}
-    subprocess.run(configure, check=True, shell=False, **options)
+    runner = (cache_context or {}).get('runner', subprocess.run)
+    runner(configure, check=True, shell=False, **options)
     return [configure]
 
 
 def _compile_configured(project, build_dir, *, allow_revision_override, desktop, commands,
-                        cache_context=None):
+                        cache_context=None, runner=None):
     descriptor = project['descriptor']
     binary_dir = build_dir / 'build'
     cmake = str(cache_context['tools']['cmake']) if cache_context else 'cmake'
     compile_command = [cmake, "--build", str(binary_dir), "--config", "Release", "--target", "pce-consumer", "--parallel", "2"]
     options = {'env':cache_context['environment']} if cache_context else {}
-    subprocess.run(compile_command, check=True, shell=False, **options)
+    execute = runner or (cache_context or {}).get('runner', subprocess.run)
+    execute(compile_command, check=True, shell=False, **options)
     # The build may have raced a source modification: refuse to bless it.
     after = verify(descriptor, allow_revision_override=allow_revision_override)
     if _binding(after) != _binding(project):
@@ -1026,11 +1053,11 @@ def main(argv=None):
     commands = parser.add_subparsers(dest="command", required=True)
     identity_parser = commands.add_parser("identity")
     identity_parser.add_argument("tool_root", type=Path)
-    for name in ("verify", "build", "run"):
+    for name in ("verify", "build", "resume", "run"):
         sub = commands.add_parser(name)
         sub.add_argument("descriptor", type=Path)
         sub.add_argument("--allow-revision-override", action="store_true")
-        if name in ("build", "run"):
+        if name in ("build", "resume", "run"):
             sub.add_argument("--build-dir", type=Path, required=True)
         if name == "build":
             sub.add_argument("--generator")
@@ -1039,6 +1066,9 @@ def main(argv=None):
             sub.add_argument('--cache-root', type=Path)
             sub.add_argument('--cache-toolchain-root', type=Path)
             sub.add_argument('--cache-dependency-root', type=Path, action='append', default=[])
+            sub.add_argument('--recoverable', action='store_true')
+            sub.add_argument('--recovery-toolchain-root', type=Path)
+            sub.add_argument('--recovery-dependency-root', type=Path, action='append', default=[])
         if name == "run":
             sub.add_argument("--receipt", type=Path, required=True)
             sub.add_argument("--dev-port", type=int)
@@ -1062,7 +1092,12 @@ def main(argv=None):
             result = build(args.descriptor, args.build_dir, allow_revision_override=args.allow_revision_override,
                            generator=args.generator, desktop=args.desktop, cmake_args=args.cmake_arg,
                            cache_root=args.cache_root, cache_toolchain_root=args.cache_toolchain_root,
-                           cache_dependency_roots=args.cache_dependency_root)
+                           cache_dependency_roots=args.cache_dependency_root, recoverable=args.recoverable,
+                           recovery_toolchain_root=args.recovery_toolchain_root,
+                           recovery_dependency_roots=args.recovery_dependency_root)
+        elif args.command == 'resume':
+            result = resume(args.descriptor, args.build_dir,
+                            allow_revision_override=args.allow_revision_override)
         else:
             result = run(args.descriptor, args.build_dir, args.receipt, allow_revision_override=args.allow_revision_override,
                          dev_port=args.dev_port, start_paused=args.start_paused, memory_write=args.memory_write,

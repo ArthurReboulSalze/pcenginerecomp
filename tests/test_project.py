@@ -12,6 +12,34 @@ from pcerecomp import project
 
 
 class ConsumerProjectTests(unittest.TestCase):
+    def test_recoverable_build_forwards_explicit_options_to_separate_producer(self):
+        with patch('pcerecomp.build_recovery.build', return_value={'recovery': True}) as produce:
+            result = project.build(Path('project.toml'), Path('fresh'), recoverable=True,
+                generator='Ninja', desktop=True, recovery_toolchain_root=Path('llvm'),
+                recovery_dependency_roots=[Path('sdl')],
+                cmake_args=['-DSDL3_DIR=sdl/cmake'])
+            self.assertEqual(result, {'recovery': True})
+            self.assertEqual(produce.call_args.kwargs['toolchain_root'], Path('llvm'))
+            self.assertEqual(produce.call_args.kwargs['dependency_roots'], [Path('sdl')])
+            self.assertTrue(produce.call_args.kwargs['desktop'])
+        with patch('pcerecomp.build_recovery.build', return_value={}) as produce:
+            project.resume(Path('project.toml'), Path('existing'))
+            self.assertTrue(produce.call_args.kwargs['resume'])
+
+    def test_recovery_options_refuse_cache_mix_and_malformed_arguments_before_production(self):
+        cases = [dict(recoverable=1), dict(recovery_toolchain_root=Path('llvm')),
+                 dict(recoverable=True, cache_root=Path('cache')),
+                 dict(recoverable=True, cache_toolchain_root=Path('llvm')),
+                 dict(recoverable=True, cache_dependency_roots=[Path('sdl')])]
+        cases.extend(dict(recoverable=True, cmake_args=[argument]) for argument in
+            (None, '-DCMAKE_TOOLCHAIN_FILE=outside.cmake', 'XXCMAKE_CXX_COMPILER=clang',
+             '-DCMAKE_CXX_COMPILER=clang\nnext', '-DSDL3_DIR=bad\x00path'))
+        with patch('pcerecomp.build_recovery.build') as produce:
+            for options in cases:
+                with self.subTest(options=options), self.assertRaises(ValueError):
+                    project.build(Path('project.toml'), Path('new'), **options)
+            produce.assert_not_called()
+
     def test_cd_timing_is_explicit_forwarded_and_checkpoint_bound(self):
         implicit = project.checkpoint_context(self.verify())
         contexts = set()

@@ -347,11 +347,38 @@ def _verify_snapshot(root, files):
         _require(path.exists() and _hash(path) == expected, 'immutable configuration changed: ' + name)
 
 
+def _temporary_objects(binary, graph):
+    """Recognize Clang atomic-output siblings of exact audited object targets.
+
+    Clang derives its model from the destination stem, an eight-hex unique
+    suffix, the destination extension and .tmp. Discovery is confined to the
+    audited destination directories; neither a tree wildcard nor a source/RSP
+    filename authorizes removal. Returned paths still require full immutable,
+    checkpoint and retained-dependency verification before cleanup.
+
+    Naming reference (LLVM 22.1.8 VirtualOutputBackends.cpp, lines 275-295):
+    https://github.com/llvm/llvm-project/blob/llvmorg-22.1.8/llvm/lib/Support/VirtualOutputBackends.cpp
+    """
+    directories = {}
+    for output in graph['objects']:
+        target = _relative(binary, output)
+        directories.setdefault(target.parent, {})[target.name[:-4]] = output
+    result = {}
+    for directory, stems in directories.items():
+        for path in directory.iterdir():
+            match = re.fullmatch(r'(.+)-[0-9a-f]{8}\.obj\.tmp', path.name)
+            if match and match[1] in stems:
+                _regular(path)
+                result[path.relative_to(binary).as_posix()] = stems[match[1]]
+    return dict(sorted(result.items()))
+
+
 def _ownership(root, seal, package_outputs, dll_names=()):
     """Reject foreign paths before executing Ninja or removing owned outputs."""
     files = set(seal['files']) | {_LOCK}
     files.update('build/'+name for name in seal['graph']['objects'] + package_outputs)
     files.update('build/'+name for name in seal['graph'].get('response_files', []))
+    files.update('build/'+name for name in _temporary_objects(root/'build', seal['graph']))
     for name in seal['graph']['objects']:
         files.update(('build/'+name+'.d', 'build/'+name+'.rsp'))
     files.update(('build/.ninja_log', 'build/.ninja_deps', 'build/.ninja_lock'))
@@ -640,7 +667,7 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
             unchanged()
             binary = root/'build'
             sequence, previous, ledger = _checkpoints(meta, contract_sha, graph['objects'])
-            retained, missing, removed = [], [], []
+            retained, missing, removed, removed_temporaries = [], [], [], []
             for output in graph['objects']:
                 path = _relative(binary, output)
                 if output in ledger:
@@ -655,7 +682,13 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
                          'sealed object dependency record changed: ' + output)
             # Complete all verification before removing any unsealed output.
             owned_links = _package_outputs(context, binary, graph)
+            temporary_objects = _temporary_objects(binary, graph)
             pending = [output for output in graph['objects'] if output not in retained]
+            for name, target in temporary_objects.items():
+                path = _relative(binary, name)
+                record = dict(path=name, target=target, **_hash(path))
+                path.unlink()
+                removed_temporaries.append(record)
             for output in pending + owned_links:
                 path = _relative(binary, output)
                 if path.exists():
@@ -702,6 +735,7 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
                 checkpoint_sha256=previous, checkpoint_sequence=sequence,
                 verified_retained_objects=retained, missing_sealed_objects_rebuilt=missing,
                 recompiled_unsealed_objects=pending, removed_unsealed_outputs=removed,
+                removed_temporary_objects=removed_temporaries,
                 input_contract=pre, configured=seal, input_audit=audit,
                 scope='Verified compiled-artifact continuation; no guest execution evidence')
             receipt['execution_evidence'] = False

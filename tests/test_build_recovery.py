@@ -163,6 +163,24 @@ class RecoveryPrimitiveTests(unittest.TestCase):
         self.assertEqual(capture.call_count, 1)
         self.assertEqual(hashed.call_count, 1)
 
+    def test_clang_temporary_objects_derive_exact_audited_parent_stem_and_extension(self):
+        directory=self.root/'CMakeFiles/module.dir/0123456789abcdef'
+        directory.mkdir(parents=True)
+        target='CMakeFiles/module.dir/0123456789abcdef/authored.cpp.obj'
+        genuine=directory/'authored.cpp-50b67b21.obj.tmp'
+        genuine.write_bytes(b'authored incomplete Clang output')
+        for name in ('unknown.cpp-50b67b21.obj.tmp','authored.cpp-50b67b2.obj.tmp',
+                     'authored.cpp-50b67b210.obj.tmp','authored.cpp-50b67b21.obj',
+                     'authored.cpp-50b67b21.rsp.tmp','authored.cpp-50b67b21.cpp.tmp'):
+            (directory/name).write_bytes(b'unrelated authored fixture')
+        other=self.root/'other';other.mkdir()
+        (other/genuine.name).write_bytes(b'wrong parent')
+        self.assertEqual(recovery._temporary_objects(self.root,{'objects':[target]}),
+                         {genuine.relative_to(self.root).as_posix():target})
+        os.link(genuine,directory/'extra-hardlink')
+        with self.assertRaisesRegex(ValueError,'hardlink'):
+            recovery._temporary_objects(self.root,{'objects':[target]})
+
 
 class RecoveryProtocolTests(unittest.TestCase):
     """Mock the compiler, never the durable state or artifact hashing protocol."""
@@ -262,10 +280,43 @@ class RecoveryProtocolTests(unittest.TestCase):
         first.write_bytes(bytes([data[0]^1])+data[1:])
         os.utime(first,ns=(stamp.st_atime_ns,stamp.st_mtime_ns))
         partial = self.root/'build/second.obj';before=partial.read_bytes()
+        temporary=self.root/'build/second-50b67b21.obj.tmp'
+        temporary.write_bytes(b'authored interrupted temporary')
         with self.assertRaisesRegex(ValueError, 'integrity'):
             recovery.build(self.descriptor,self.root,resume=True)
         self.assertEqual(self.invocations, [])
         self.assertEqual(partial.read_bytes(),before)
+        self.assertEqual(temporary.read_bytes(),b'authored interrupted temporary')
+
+    def test_clang_temporaries_for_sealed_and_unsealed_objects_are_discarded_after_verification(self):
+        self.start_interrupted()
+        expected=[]
+        for stem in ('first','second'):
+            path=self.root/f'build/{stem}-50b67b21.obj.tmp'
+            path.write_bytes(b'authored partial output '+stem.encode())
+            expected.append(dict(path=path.relative_to(self.root/'build').as_posix(),
+                                 target=stem+'.obj',**recovery._hash(path)))
+        original=(self.root/'build/first.obj').read_bytes()
+        receipt=recovery.build(self.descriptor,self.root,resume=True)
+        self.assertEqual(receipt['recovery']['removed_temporary_objects'],expected)
+        self.assertEqual((self.root/'build/first.obj').read_bytes(),original)
+        for record in expected:
+            self.assertFalse((self.root/'build'/record['path']).exists())
+        self.assertEqual([row[-1] for row in self.invocations if row[0]=='ninja'],['second.obj'])
+
+    def test_foreign_temporary_names_refuse_without_deleting_recognized_temporary(self):
+        self.start_interrupted()
+        genuine=self.root/'build/second-50b67b21.obj.tmp'
+        genuine.write_bytes(b'authored partial output')
+        for name in ('unknown-50b67b21.obj.tmp','second-50b67b21.rsp.tmp',
+                     'second-50b67b21.cpp.tmp','second-50b67b2.obj.tmp'):
+            path=self.root/'build'/name
+            path.write_bytes(b'foreign authored fixture')
+            with self.subTest(name=name), self.assertRaisesRegex(ValueError,'foreign build path'):
+                recovery.build(self.descriptor,self.root,resume=True)
+            self.assertEqual(genuine.read_bytes(),b'authored partial output')
+            self.assertEqual(self.invocations,[])
+            path.unlink()
 
     def test_missing_sealed_object_is_explicitly_rebuilt(self):
         self.start_interrupted()

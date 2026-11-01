@@ -224,6 +224,22 @@ class NativeBuildRecoveryTests(unittest.TestCase):
             unsealed_before = {name: self._artifact(build/'build'/name) for name in objects
                                if name not in sealed and (build/'build'/name).is_file()}
             self.assertTrue(unsealed_before)
+            # Deterministically exercise temporary-output admission. These
+            # bytes are authored here, never claimed as observed Clang output;
+            # the real parent interruption and compiled objects remain above.
+            temporary_target = next(iter(unsealed_before))
+            target_path = build/'build'/temporary_target
+            authored_temporary = target_path.with_name(target_path.stem+'-facecafe.obj.tmp')
+            with authored_temporary.open('xb') as stream:
+                stream.write(b'authored incomplete compiler temporary fixture\n')
+            temporary_before = self._artifact(authored_temporary)
+            temporary_record = dict(
+                path=authored_temporary.relative_to(build/'build').as_posix(),
+                target=temporary_target, bytes=authored_temporary.stat().st_size,
+                sha256=temporary_before[0])
+            (root/'authored-temporary-fixture.json').write_text(json.dumps(dict(
+                producer='authored fixture; not observed Clang output', artifact=temporary_record)),
+                encoding='utf-8')
             ninja_before = (build/'build/.ninja_log').read_bytes()
             resume_command = prefix + ['resume', *common]
 
@@ -240,6 +256,8 @@ class NativeBuildRecoveryTests(unittest.TestCase):
                 for name, before in unsealed_before.items():
                     self.assertEqual(self._artifact(build/'build'/name), before,
                                      'Refusal cleaned an unsealed object before admission')
+                self.assertEqual(self._artifact(authored_temporary), temporary_before,
+                                 'Refusal cleaned an authored temporary before full admission')
 
             # Content changes keep both length and mtime; timestamps alone
             # cannot authorize a reused object. No checkpoint is regenerated.
@@ -296,6 +314,8 @@ class NativeBuildRecoveryTests(unittest.TestCase):
             self.assertEqual(set(recovery['verified_retained_objects']), set(sealed))
             self.assertTrue(set(unsealed_before) <= set(recovery['recompiled_unsealed_objects']))
             self.assertTrue(set(unsealed_before) <= set(recovery['removed_unsealed_outputs']))
+            self.assertFalse(authored_temporary.exists())
+            self.assertIn(temporary_record, recovery['removed_temporary_objects'])
             self.assertEqual({name: self._artifact(build/'build'/name) for name in sealed}, sealed_before)
             # The actual Ninja log records each executed output, independently
             # of the recovery receipt's declared retained/rebuilt lists.

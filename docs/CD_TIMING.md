@@ -148,6 +148,12 @@ Each profile passes two pending-READ checkpoint round trips with fresh-process
 execute **zero native instructions**; they do not qualify a full native game
 route or import checkpoints from ABI27 or the other timing profile.
 
+The later [native ABI28 consumer migration](NATIVE_MIGRATIONS.md#abi-28-fixed-timing-native-migration)
+qualifies the retained reset route, own checkpoint extensions and paced digital
+audio under explicit `fixed` timing. It preserves this optional distance
+profile's separate authored and interpreted-startup evidence rather than
+claiming a complete native distance-timing game route.
+
 Model agreement and finite game regressions do not establish electrical bus
 timing, per-drive jitter, analog audio, physical seek conformance or complete
 game compatibility. The fixed reference path and its earlier qualifications

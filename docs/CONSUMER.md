@@ -296,6 +296,21 @@ Limits are 1..20,000,000,000 dispatcher steps, 1..(2^64 - 1) master ticks and
 1..86,400 wall seconds. A block-transfer instruction can consume many guest
 cycles; steps are not a replacement for the tick/wall bounds.
 
+## Recover an interrupted build
+
+The official build command requires a new `--build-dir`. An interrupted
+uncached directory has no successful build receipt and cannot be resumed by
+rerunning that command into the same directory. Preserve its original logs,
+reverify the pinned descriptor/module/input identities, then build into a new
+directory. Keep any refused recovery attempt as failed evidence. A partial
+compile or an existing executable is not an official successful build.
+
+The package cache reuses completely verified published packages; it does not
+authenticate a partially compiled directory after an outage. A future resume
+interface needs a durable pre-build identity/configuration contract, verified
+unchanged inputs and explicit recovery receipts. No runtime ABI or checkpoint
+exception follows from an interrupted host build.
+
 ## Upgrade a consumer to ABI 28
 
 Pin the reviewed toolkit revision and source digest, set `runtime_abi = 28`,

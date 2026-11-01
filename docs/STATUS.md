@@ -12,6 +12,62 @@ across headless and SDL hosts within the documented comparison scope.
 **No complete game port is certified.**
 The public source needs no retail input to build or test. SDL is optional.
 
+## ABI28 native consumer migration
+
+The fixed-timing ABI28 consumer completes a fresh reset replay of **104,745
+frames, 3,209,517,525 native instructions and zero interpreted instructions or
+guard misses**. Independent audits join every one of its 53,516 executed
+encoded identities, all 108,460 semantic records, 147,100 raw request/reply pairs,
+309 typed assists and 26 complete-state comparisons. Historical reference
+prefix and tail processes retain their separate provenance; the candidate
+actually starts from reset.
+
+Its own checkpoint lineage then passes the retained 432-frame suffix,
+2,232-frame combat extension and new 960-frame lower-waterfall window. The four
+separate processes execute **3,325,153,884 native and zero interpreted
+instructions across 108,369 contiguous route frames**. All 7,238 source
+fallback retirements become native. The catalogue preserves 58,031 identities
+and adds one, for 58,032; 53,576 actually execute, leaving 4,456 unexercised.
+All nine source files retain exact bytes, original ABI labels and declared
+provenance, including the earlier derived catalogue. The 127,924,412-byte
+profile remains within unchanged parser limits.
+
+Each assisted extension compares all three raw source/native checkpoint cuts,
+with only the fixed timing insertion and exact lifetime tier equations allowed
+in CORE; all 60 HOST bytes are strict. The two main link/final comparisons
+retain their separate, exact ACK-backed WAV scalar relation. Every file binds
+its own producer package, context, fingerprint and actual save reply. No ABI27
+checkpoint is loaded into the candidate.
+
+Two further fresh continuations each execute **60 frames and 1,836,171 native
+instructions with zero fallback**; immediate own-cut and complete continued
+files, RAM, pixels and source-hit counts match. The direct/restored audio
+origins are separately ACK-bound to `{40, 441000}` and `{40, 0}`. A paced
+120-frame fork executes **3,672,293 native and zero interpreted instructions**,
+generates 88,457 new PCM frames and proves at least 87,719 newly accepted SDL
+frames. Its 728-frame planned pause clear and ten-frame shutdown drain stay
+separate from active observations, which show zero drops or unplanned clears.
+These digital checks do not establish listening or physical hardware parity.
+
+Fresh verification uses unchanged shared source at
+`a96e7891c33690d41f6fe12ce1904fe160a0c9a2`, 82 files, SHA256
+`995ecfa893ee74ea046b758cbccfe0ab1baa57ecbec21c8a4c7313f06aca533a`.
+The complete required SDL checker passes **1,508 Python tests with zero skips,
+68 C++ suites and 12 fresh-process audio checkpoint cases**. A separate fresh
+Gear command comparison covers seven authored cases at both CPU speeds,
+with 25,162 native and separately 25,162 interpreted toolkit retirements.
+It reuses explicitly sealed compilations; retained original-core supervision
+and known reset/leadout differences keep their documented scope.
+
+The first native attempt remains failed after an inherited capture-summary
+comparison rejected the actual ABI28 tag. New versioned diagnostic adapters
+keep original labels, strict reply types, source-only imports and all other
+state comparisons intact. The interrupted build and refused same-directory
+recovery also remain distinct receipts. General runtime/emitter semantics are
+unchanged in this migration; title-specific routes and assistance remain in
+the consumer. See [complete migration scope](NATIVE_MIGRATIONS.md#abi-28-fixed-timing-native-migration)
+and [build recovery](CONSUMER.md#recover-an-interrupted-build).
+
 ## ABI 28 CD drive timing and composition planning
 
 The optional `gear-distance` timing profile adds distance-sensitive READ and

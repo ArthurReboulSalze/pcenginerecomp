@@ -5,6 +5,20 @@ TurboGrafx-16 and CD-ROM²** games. The goal is a shared foundation for native
 ports with modern rendering, audio, input, debugging, and game-specific
 enhancements.
 
+The toolkit serves independent PC Engine/TurboGrafx consumer projects. Each
+project owns its game-specific routes, patches, assets and presentation choices.
+Ys III is one regression case; compatibility evidence remains tied to the
+tested CPU, hardware, media and runtime profiles.
+
+**ABI28 native consumer migration now passes the retained regression route.**
+The rebuilt Ys III test consumer completes a fresh **104,745-frame reset replay
+with 3,209,517,525 native instructions and zero fallback**. Its own checkpoint
+continuations also pass combat, the lower waterfall, complete-state repeatability
+and paced digital audio checks. Independent audits verify source provenance,
+per-identity retirements and device state. This qualification uses explicit
+`fixed` CD timing; the optional distance profile keeps its separate scope. See
+[ABI28 migration qualification](docs/NATIVE_MIGRATIONS.md#abi-28-fixed-timing-native-migration).
+
 **ABI 28 adds optional distance-aware CD timing.** `--cd-timing gear-distance`
 models READ and CDDA seek distance, physical-seek completion and later audio
 readiness. The existing `fixed` profile stays the default. Native modules need
@@ -17,7 +31,7 @@ new identities, contributions and remaining capacity before a build. It
 preserves profile-v1 bytes, source provenance and all existing limits. See
 [composition planning](docs/OBSERVATION_PROFILES.md#preflight-an-extension-before-emission-or-build).
 
-The frozen ABI28 SDL build passes **1,508 Python tests without skips,
+The fresh ABI28 SDL check passes **1,508 Python tests without skips,
 68 C++ suites and 12 fresh-process audio checkpoint cases**. Independent
 CD timing checks cover 12,432 seek vectors and 21 command cases at both CPU
 speeds, with native and interpreted execution checked separately.

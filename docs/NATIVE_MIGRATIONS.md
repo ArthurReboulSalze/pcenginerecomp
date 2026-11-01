@@ -6,6 +6,44 @@ runtime ABI, a changed observation catalogue, or promotion of interpreted
 source identities into native code. It does not certify complete game or
 hardware compatibility.
 
+## ABI 28 migration contract
+
+First qualify the rebuilt native consumer with the explicit `fixed` CD timing
+profile if its retained reference used the previous fixed deadlines. Moving
+to ABI28 and selecting `gear-distance` are separate changes. The optional
+distance profile changes guest deadlines and needs its own behavioral
+baseline; an older input sequence is not evidence that its resulting states
+must match. See [CD timing](CD_TIMING.md).
+
+Regenerate every retained module under ABI28 while preserving each original
+capture's ABI label, exact bytes and checkpoint origin. Use the exact
+[composition preflight](OBSERVATION_PROFILES.md#preflight-an-extension-before-emission-or-build)
+before adding a closed discovery window. Previously unseen execution alone
+does not require another compiler input if all its identities already exist
+in the retained catalogue.
+
+Create checkpoints through the candidate's own startup. Offline comparisons
+between historical and new files need separately authenticated envelopes and
+source-derived layouts for each ABI. ABI28 serializes a validated CD timing
+enum after the unknown-command policy; selecting `fixed` does not make that
+new byte disappear. A diagnostic relation may account for that exact field
+while retaining the strict device bytes and independently verified native-tier
+counter equations. It must not modify a historical file for loading.
+
+Host package fingerprints also change: ABI28 binds the CD timing option and
+reports its profile in paused status. Recompute identity from the actual
+package and startup recipe, validate the new field explicitly, and retain
+all other strict fields. Keep the inherited checkpoint lifetime counters
+separate from new suffix retirements. An interpreted startup diagnostic or
+a successful build alone does not qualify the full native migration.
+
+Live capture summaries and source pages also retain their actual producer
+ABI. Exercise these reply branches during migration preflight. A typed offline
+27-to-28 comparison can account for that declared metadata change while keeping
+all other fields and retirement equations strict. Preserve the raw replies and
+capture files under their original labels; changing a diagnostic comparison
+does not relabel historical execution.
+
 ## Keep the identities separate
 
 Bind the original runtime, diagnostic helpers, original captures, composed
@@ -13,6 +51,13 @@ profile, emitted module, descriptor, executable and adjacent libraries to
 their exact reviewed bytes. Diagnostic scripts can be independently pinned
 without changing the runtime ABI. A runtime/compiler digest does not cover
 every diagnostic script; record those additional bindings explicitly.
+
+Python's `-B` and `PYTHONDONTWRITEBYTECODE` prevent cache writes; they do not
+establish that imports executed the verified source bytes instead of an
+existing bytecode cache. A qualification harness using a source-only import
+closure must apply it before imports in every verifier subprocess too. Freeze
+the actual closure manifest and loader consumed by that process, including
+deferred helper branches, rather than only an older parent manifest.
 
 Relocating a harness can change deferred sibling-helper paths. Exercise the
 actual planning branches during preflight, bind their nested dependencies,
@@ -344,3 +389,118 @@ own checkpoint; it does not rerun or relabel the original prefix. Independent
 audits admit the new combat and checkpoint/audio evidence. This is finite
 assisted compatibility coverage, not campaign completion, listening parity,
 physical hardware qualification or an ABI28 game migration.
+
+## ABI 28 fixed-timing native migration
+
+The ABI28 consumer uses the explicit `fixed` CD timing profile and retains
+the `nec-invalid` response policy. Its compiler/runtime source is revision
+`a96e7891c33690d41f6fe12ce1904fe160a0c9a2`, the 82-file closure SHA256
+`995ecfa893ee74ea046b758cbccfe0ab1baa57ecbec21c8a4c7313f06aca533a`.
+The optional distance profile has a separate qualification scope.
+
+Exact preflight and actual composition agree on **127,924,412 bytes**,
+257,485 contributions and 58,032 compiled identities. All 58,031 earlier
+identities remain; one genuine original read-only source window contributes
+the new variant. The nine historical source files keep their exact bytes,
+ABI labels and provenance, including the earlier explicitly derived catalogue.
+The longer waterfall reference remains execution evidence rather than a
+redundant overlapping compiler input. Existing parser limits are unchanged.
+Independent re-emission matches all 947 translation units, their header and
+manifest; the emitted guards and direct translated bodies are checked separately.
+
+A fresh ABI28 reset completes **104,745 frames and 3,209,517,525 native
+instructions with zero interpreted instructions or guard misses**. Every one
+of its 53,516 executed encoded identities conserves the original source's
+retirements; 6,899 interpreted retirements become native. This main window
+does not exercise the new waterfall variant. Its source reference remains the
+admitted historical prefix plus checkpoint tail, while the candidate actually
+starts from reset. The failed original discovery and reconstruction keep
+their original status and scope.
+
+Independent raw admission joins 147,100 request/reply pairs to all 108,460
+semantic records, 5,523 steps, 38,637 progress polls and 309 typed assisted
+writes. All 26 source/native checkpoint comparisons pass. Each file authenticates
+against its own actual build fingerprint and save ACK. The source-derived
+comparison accounts for exactly the new fixed timing byte and the five native
+tier fields; all other CORE bytes remain strict. Twenty-four comparisons keep
+all 60 HOST bytes strict. The link and final comparisons allow only the exact
+ACK-backed WAV scalar difference, retaining the other 52 bytes.
+
+The first native attempt stopped after 27,603 frames on an inherited capture
+summary comparison that expected ABI27 metadata. Its failed receipt remains
+failed. A new typed diagnostic relation admits only original ABI27 and actual
+ABI28 replies, preserves raw labels and delegates every other field and tier
+equation to the strict comparator. The corrected qualification starts from
+reset; the failed attempt's retirements are not added to its totals. Source-only
+import closures and actual producer dependencies are bound before execution.
+
+Three subsequent processes import only the preceding candidate-owned ABI28
+checkpoint. Their freshly executed work stays separate from imported lifetime
+counters:
+
+| Qualified route window | New frames | Native instructions | Interpreted |
+|---|---:|---:|---:|
+| Fresh reset main | 104,745 | 3,209,517,525 | 0 |
+| Retained read-only extension | 432 | 13,795,134 | 0 |
+| Retained combat extension | 2,232 | 70,860,852 | 0 |
+| New lower-waterfall window | 960 | 30,980,373 | 0 |
+
+This contiguous checkpoint lineage covers 108,369 route frames and
+3,325,153,884 native retirements across separate processes. Only the first
+window is the uninterrupted reset run. The union executes 53,576 identities:
+53,575 retained identities and the sole new compiled variant, which executes
+once. Another 4,456 compiled identities remain unexercised. The total 7,238
+promoted source retirements excludes the failed attempt, reconstruction and
+all checkpoint/audio forks.
+
+The 432-frame extension conserves all 7,799 encoded identities and promotes
+seven new interpreted retirements; its source lifetime interpreted count is
+6,906, including 6,899 inherited retirements. Its complete CORE comparison
+keeps all 60 HOST bytes strict. The combat window conserves 13,152 identities,
+promotes 331 retirements, and checks 195 controls and 200 complete RAM/image
+observations. Its one verified living-HP assist changes 29 to 60.
+The waterfall window conserves 7,784 identities, promotes one retirement,
+and checks 89 controls and 94 complete RAM/image observations. The earlier
+unassisted cut has HP 34; the actual later safe write observes 28 and changes
+it to 60. Those explicit debug assists edit only observed living HP;
+program and progression data remain excluded from the debug writes.
+
+Each assisted window compares all three source/native checkpoint cuts:
+unassisted, before the assist and final. Original files authenticate against
+their own fingerprints and ACKs; the fixed timing insertion and exact lifetime
+tier equations are the only CORE differences, with all 60 HOST bytes strict.
+Independent raw audits retain every control, full RAM readback, rendered image,
+live source epoch and alias-exclusion check. These are finite assisted route
+qualifications, without a campaign, listening or physical hardware claim.
+
+Two further fresh-process checkpoint continuations each execute 60 frames,
+1,836,171 native instructions and zero fallback across the same 1,912 encoded
+identities. Immediate own-cut round trips and complete continued files match,
+including CORE, RAM, rendered pixels and source-hit counts. The direct process
+imports 40 queued PCM frames and a source WAV marker of 441,000 from the main
+checkpoint. Its own cut has the same CORE and only the declared HOST WAV scalar
+changes to zero because this window has no WAV writer. The restored process
+therefore imports the actual own-cut markers `{40, 0}`. Each origin is joined
+to its own save ACK; the original main file is not claimed byte-identical to
+that new cut. Both child processes exit naturally.
+
+A separate paced 120-frame fork executes 3,672,293 native instructions with
+zero fallback and 2,211 encoded identities. Its guest accounting is
+`40 imported + 88,457 new = 88,487 submitted + 10 pending`.
+All 119 active observations report zero drops and no unplanned clear or pause.
+The planned pause clears 728 presentation frames, leaving 87,759 accepted
+frames: at least 87,719 are newly generated, including 86,701 nonzero frames.
+Shutdown separately submits and drops the remaining ten queued guest frames,
+without new synthesis. The 88,200-frame bounded WAV contains 40 imported and
+88,160 fresh frames; its intentionally truncated tail is separate from SDL
+acceptance and guest synthesis. Actual adjacent SDL loading and a packaged
+environment without an SDK path workaround are verified per process.
+
+The fresh full SDK check passes 1,508 Python tests without skips, 68 C++ suites
+and 12 fresh-process audio checkpoint cases. Seven selected authored CD command
+cases also execute freshly at both CPU speeds against the sealed original
+Gear build: 25,162 native and separately 25,162 interpreted toolkit retirements,
+plus 12 internal CORE round trips. These original-core supervised port checks
+are separate from the consumer route; no full Gear game trace or hardware
+qualification follows from them. Shared runtime/compiler bytes remain unchanged
+from the reviewed ABI28 source. No title-specific runtime workaround is added.

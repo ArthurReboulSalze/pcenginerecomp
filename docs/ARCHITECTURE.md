@@ -681,6 +681,14 @@ module binaries and checkpoints require fresh builds and states. The default
 fault and legacy Gear response remain explicit. See [CD_UNKNOWN.md](CD_UNKNOWN.md)
 for independent wire/reset differences and separate device/guest proof.
 
+ABI 28 additionally serializes a validated CD drive timing enum after the
+unknown-command policy. Configuration admission requires the same independently
+selected timing profile. Package identity includes the timing option; paused
+status reports it explicitly. The default fixed deadlines remain available,
+but neither that default nor an offline ABI comparison permits cross-build
+checkpoint loading. See [CD timing](CD_TIMING.md) and
+[native migration contracts](NATIVE_MIGRATIONS.md#abi-28-migration-contract).
+
 ## Validation and optimization order
 
 The [VDC/ADPCM IRQ overlap matrix](VDC_ADPCM_IRQ.md) additionally checks IRQ1

@@ -79,6 +79,15 @@ matrix in [IRQ_DEVICES.md](IRQ_DEVICES.md) and the blank-slot DMA/CD
 [dynamic-stall matrix](IRQ_STALLS.md): further raster/sprite and ADPCM
 sources, further active-display/latch combinations, overlapping device combinations and interrupted
 transfers remain.
+
+Interrupted uncached builds still require a new official build directory;
+neither published-package reuse nor managed changed-unit reuse authenticates
+an arbitrary partial directory after an outage. A verified resume interface
+needs a durable pre-build source/module/toolchain/configuration contract,
+unchanged-input checks and distinct recovery receipts. Keep the supported
+[recovery procedure](CONSUMER.md#recover-an-interrupted-build) explicit until
+that interface exists.
+
 The [guest-driven CD DMA/IRQ checkpoint matrix](DMA_IRQ_CHECKPOINTS.md)
 adds autonomous READ polling, ADPCM DMA, actual IRQ2 entry/handler/RTI and
 natural-boundary restoration. Raw original-core clock differences remain

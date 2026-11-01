@@ -1,4 +1,4 @@
-# Current status — 31 October 2026
+# Current status — 1 November 2026
 
 ## Verified baseline
 
@@ -11,6 +11,50 @@ with observed damage to the enemy bar. The complete final route reproduces
 across headless and SDL hosts within the documented comparison scope.
 **No complete game port is certified.**
 The public source needs no retail input to build or test. SDL is optional.
+
+## ABI 28 CD drive timing and composition planning
+
+The optional `gear-distance` timing profile adds distance-sensitive READ and
+CDDA deadlines using a bounded integer model with published measurement
+provenance. Physical seek completion and playback readiness are distinct.
+`fixed` remains the default with its original deadlines; unknown-command
+response policies are independent. The profile is serialized, configuration
+checked, recipe-bound and reported by both hosts. Native modules require
+regeneration/rebuilding for ABI28; exact-build checkpoints are not migrated.
+See [CD timing and reference scope](CD_TIMING.md).
+
+Read-only `compose-observations --dry-run` shares real composition admissions
+and exact profile-v1 serialization. Explicit retained baseline inputs let it
+report new keys, raw bytes, contributions, exact output bytes/hash and headroom
+without writing or building. Existing limits and original bytes/ABI/origin
+provenance are unchanged. The real seven-input baseline reproduces exactly;
+the separate consumer's eight-input extension also matches its planned bytes
+and hash. See [composition planning](OBSERVATION_PROFILES.md#preflight-an-extension-before-emission-or-build).
+
+The qualifications below remain tied to their original ABI/source epochs;
+an existing ABI27 game package is not automatically an ABI28 qualification.
+
+Frozen diagnostic revision `ea6382a774bbe9846a12c61a2818487c3fa70e0a`
+passes the complete required checker: **1,508 Python tests, zero skips,
+68 C++ suites and 12 fresh-process audio checkpoint cases**. Its shared
+compiler/runtime/CMake closure is 82 files, SHA256
+`995ecfa893ee74ea046b758cbccfe0ab1baa57ecbec21c8a4c7313f06aca533a`.
+Independent frozen-source comparison passes 12,432 seek vectors per model
+and 21 command cases at both CPU speeds. Toolkit guest runs execute
+112,536 native and, separately, 112,536 interpreted instructions across ten
+executed encoded identities. Original Gear command-port supervision and
+Mesen calculation comparisons retain their separate scopes and declared
+reset/leadout differences. See [qualification details](CD_TIMING.md#verification-scopes).
+
+The separate ABI27 consumer extension retains all 58,002 compiled identities
+and adds 29. Its real eight-input profile exactly matches the preflight's
+126,156,528 bytes and hash. A fresh native reset repeats the 104,745-frame
+main route, followed by its own checkpoint-linked extensions. The new
+2,232-frame combat window executes **70,860,852 native and zero interpreted
+instructions**, promoting all 331 discovery retirements. All 29 additions
+execute; the main/extension union is 53,568 executed identities, with 4,463
+compiled identities still unexercised. Candidate-owned checkpoint and paced
+audio tests pass separately. See [native combat extension](NATIVE_MIGRATIONS.md#abi-27-checkpoint-combat-extension).
 
 ## ABI 27 invalid-CD-command profile
 
@@ -4244,7 +4288,7 @@ CI pass is claimed. Enable it using the instructions in the developer guide.
   indirect destinations remain unresolved in static discovery.
 - RMB/SMB, push/pop, BIT/TSB/TRB/TST, BBR/BBS and BSR are supported.
 - TAM/TMA cover all masks and the persistent transfer latch. I/O open bus is
-  separate and retained by the IRQ/PSG profile. Current native ABI is 24; regenerate incompatible older modules.
+  separate and retained by the IRQ/PSG profile. Current native ABI is 28; regenerate incompatible older modules.
 - CSL/CSH use two cycles at entry speed and one at selected speed.
   Geargrafx's live transition timestamps differ; see CPU_SEMANTICS.md.
 - Idle CD-control/BRAM routing and opt-in clocked selection/REQ/ACK transport
@@ -4257,7 +4301,9 @@ CI pass is claimed. Enable it using the instructions in the developer guide.
   functional control/position responses and separately enabled digital PCM output. READ `$08` requires a separately
   attached read-only provider. Metadata-only attachment does not verify an image;
   `--disc` hashes/derives geometry and enforces exact descriptor agreement.
-  The deterministic 1x profile omits seek distance, reset jitter and accelerated speeds.
+  The default fixed 1x profile omits seek distance; opt-in `gear-distance`
+  covers calibrated READ/CDDA seeks. Reset jitter and accelerated speeds
+  remain unmodeled. See [CD timing](CD_TIMING.md).
 - Opt-in joypad I/O routes all `$1000..$13FF` mirrors, with two/six-button
   pads, a five-port TurboTap, region/CD bits and guest-write-sampled output.
   Headless flags provide held button snapshots and bounded tick-scripted input;

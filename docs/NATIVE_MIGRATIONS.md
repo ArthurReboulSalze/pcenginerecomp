@@ -298,3 +298,49 @@ checkpoint repeatability and fresh digital output submission. They do not
 establish listening parity, physical device timing or complete hardware
 compatibility. No additional shared runtime/compiler or state-codec change
 was needed for this consumer migration.
+
+## ABI 27 checkpoint combat extension
+
+A later consumer expansion retains all 58,002 identities and adds 29, for
+58,031 compiled identities. The exact read-only preflight and actual
+composition agree: eight original inputs, 252,498 contributions and
+126,156,528 output bytes. Raw inputs, ABI labels, checkpoint origins and
+contributions remain intact, with no parser-limit increase. The compiler
+and runtime remain the qualified ABI27 source; using a newer composer does
+not silently change native emission or checkpoint identity.
+
+The candidate repeats the fresh 104,745-frame main native route, then uses
+its own final checkpoint for the 432-frame retained extension and its new
+2,232-frame combat window. The new window executes **70,860,852 native and
+zero interpreted instructions** across 13,152 encoded identities, converting
+all 331 discovery retirements. All 29 additions execute; eleven other
+retained identities execute for the first time in this cohort. The union
+with the main and earlier extension is 53,568 executed identities; 4,463
+compiled identities remain unexercised.
+
+The combat window checks 195 controls and 200 complete RAM/image observations,
+including one explicitly assisted typed HP write. Source-footprint guards
+cover all executable aliases. Three source/native complete-core comparisons
+retain their lifetime conversion equations and keep all host bytes strict.
+Its final owned checkpoint reaches frame 107,409 with lifetime
+3,294,173,511 native and zero interpreted instructions. Checkpoint-linked
+extensions are not relabeled as part of the uninterrupted reset run.
+
+Two new candidate-owned continuations each execute 60 frames and
+1,836,171 native instructions with zero fallback; immediate and continued
+whole checkpoint files match. The separate 120-frame paced test executes
+3,672,293 native instructions with zero fallback. Its accounting remains
+`40 imported + 88,457 new = 88,487 submitted + 10 pending`, but the observed
+planned pause clears **728** presentation frames in this new cohort.
+At least 87,719 newly generated frames are accepted, including 86,701
+nonzero frames. Active observations show no unexpected loss or clearing;
+shutdown accounts for the ten remaining frames separately. The earlier
+cohort's pause value of 687 remains historical evidence.
+
+The first outer extension controller failed on missing adapter metadata
+before launching the combat test. That receipt remains failed. A new
+adapter follows the genuine main/extension receipt lineage to the candidate's
+own checkpoint; it does not rerun or relabel the original prefix. Independent
+audits admit the new combat and checkpoint/audio evidence. This is finite
+assisted compatibility coverage, not campaign completion, listening parity,
+physical hardware qualification or an ABI28 game migration.

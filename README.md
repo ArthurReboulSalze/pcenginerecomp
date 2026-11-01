@@ -5,7 +5,30 @@ TurboGrafx-16 and CD-ROM²** games. The goal is a shared foundation for native
 ports with modern rendering, audio, input, debugging, and game-specific
 enhancements.
 
-**ABI 27 adds an explicit invalid-CD-command response profile.**
+**ABI 28 adds optional distance-aware CD timing.** `--cd-timing gear-distance`
+models READ and CDDA seek distance, physical-seek completion and later audio
+readiness. The existing `fixed` profile stays the default. Native modules need
+regeneration/rebuilding; checkpoints remain exact-build-only. See
+[CD timing profiles](docs/CD_TIMING.md).
+
+**Composition now has a read-only preflight.** `compose-observations --dry-run`
+with explicit `--baseline-input` files reports exact output bytes/hash,
+new identities, contributions and remaining capacity before a build. It
+preserves profile-v1 bytes, source provenance and all existing limits. See
+[composition planning](docs/OBSERVATION_PROFILES.md#preflight-an-extension-before-emission-or-build).
+
+The frozen ABI28 SDL build passes **1,508 Python tests without skips,
+68 C++ suites and 12 fresh-process audio checkpoint cases**. Independent
+CD timing checks cover 12,432 seek vectors and 21 command cases at both CPU
+speeds, with native and interpreted execution checked separately.
+
+The separately rebuilt **ABI27** Ys III consumer also passes a new 2,232-frame
+checkpoint combat extension: **70,860,852 native instructions, zero fallback**.
+Its 29 newly compiled identities all execute; checkpoint continuation and
+paced audio pass. This does not migrate that game to ABI28. See
+[the extension's scope](docs/NATIVE_MIGRATIONS.md#abi-27-checkpoint-combat-extension).
+
+**Earlier ABI 27 introduced an explicit invalid-CD-command response profile.**
 `nec-invalid` receives the complete six-, ten- or twelve-byte packet before
 returning CHECK CONDITION and illegal-command sense. The strict default and
 legacy `gear-good` response remain available. Original Geargrafx and Beetle
@@ -16,7 +39,7 @@ across 893 source identities**, interpreted to native with zero fallback.
 Native modules require re-emission and rebuilding; old capture labels stay
 intact and checkpoints remain exact-build-only. See
 [unknown CD profiles](docs/CD_UNKNOWN.md).
-The fresh frozen SDL build passes **1,478 Python tests without skips,
+That earlier frozen SDL build passes **1,478 Python tests without skips,
 66 C++ suites and 12 fresh-process audio checkpoint cases**.
 
 **ABI 27: a fresh Ys III route now runs entirely natively under `nec-invalid`.**
@@ -233,7 +256,7 @@ advance pending base clocks before updating the sound chip. Shortening CD
 playback with `$D9` preserves the active sector's remaining samples before
 looping or stopping. Authored checkpoint tests cover exact source/queue/filter
 continuation. See [audio bus timing](docs/AUDIO_BUS_TIMING.md) and
-[migration](docs/CONSUMER.md#upgrade-a-consumer-to-abi-26).
+[migration](docs/CONSUMER.md#historical-upgrade-to-abi-26).
 Independent Gear checks pass 72 PSG timing cases and 72 CD end-change cases;
 later PSG sample differences remain documented. Two fresh Ys III checkpoint
 resumes each execute **48,335,394 new native instructions with zero fallback**
@@ -266,7 +289,7 @@ The opt-in TCP host saves complete machine state to a new private `.pcec`
 file, including pending video/CD work, audio queues and filter history. A
 fresh paused run can restore it with the same executable, DLLs, source/module
 context, media and runtime profiles. Resumed receipts and code captures keep
-the imported prefix separate from newly executed work. Current ABI 27 requires
+the imported prefix separate from newly executed work. Current ABI 28 requires
 fresh exact-build checkpoints; the original introduction retained ABI 25.
 Portable saves, cross-module loading and in-process rewind remain future work.
 See [developer checkpoints](docs/DEVELOPER_CHECKPOINTS.md) for setup and limits.
@@ -411,7 +434,7 @@ Clocked VDC profiles now queue CPU VRAM transfers and model display/DMA
 contention. BUSY reflects pending work; CPU stalls advance devices and IRQ
 sampling without inventing extra instruction retirements. The shared VRAM
 read bus and fetched sprite data remain intact, and inspection stays pure.
-The current shared layout requires **runtime ABI 27**: re-emit original-labeled captures and rebuild
+The current shared layout requires **runtime ABI 28**: re-emit original-labeled captures and rebuild
 consumers together. `--vdc-access immediate` preserves the previous reference
 path; consumer projects can pin either profile. See
 [queued accesses and qualification limits](docs/VDC_ACCESS.md) and
@@ -498,7 +521,7 @@ uses ceiling-rational sample edges and clock-latched PSG DAC outputs, including
 register writes between PSG clocks. `--audio-timing legacy` preserves the
 previous sample timing and PCM path. Timing is independent of raw/filtered
 selection. **ABI 15** introduced the guest CDDA cursor and sample latch alongside
-the held PSG DAC state. Retained ABI-12 through ABI-26 captures can be re-emitted for current ABI 27, but
+the held PSG DAC state. Retained ABI-12 through ABI-27 captures can be re-emitted for current ABI 28, but
 modules and runtime must be rebuilt together.
 Consumer schema remains **1**. See [audio controls, evidence and limits](docs/AUDIO_OUTPUT.md).
 
@@ -516,13 +539,13 @@ desktop runs reproduce the **94,800-frame, 39-checkpoint assisted route** in
 all three modes; fresh headless comparisons match guest state and PCM/WAV
 within each audio timing profile.
 Regeneration retains the existing native coverage; it adds no new gameplay
-milestone. See the [upgrade guide](docs/CONSUMER.md#upgrade-a-consumer-to-abi-23)
+milestone. See the [current upgrade guide](docs/CONSUMER.md#upgrade-a-consumer-to-abi-28)
 and [consumer integration evidence](docs/STATUS.md#abi-16-consumer-integration).
 
 The base compatibility profile now includes **BRK in both execution tiers**,
 **8 KiB work-RAM mirrors across banks `$F8..$FB`**, and **VDC sprite-zero
 collision / sprite-overflow status and interrupts**, independently of host
-rendering or audio. Current runtime **ABI 27** requires regenerated modules and a
+rendering or audio. Current runtime **ABI 28** requires regenerated modules and a
 matching runtime; retained ABI-12 through ABI-23 captures remain usable as
 original compiler inputs. Bounded unknown-CD diagnostics retain opcode counts
 and the original command source context. Strict unknown-command behavior is
@@ -700,8 +723,9 @@ especially welcome.
   `pce-headless --disc` attaches a read-only ISO/CHD/BIN-CUE provider with actual-image
   SHA256 binding, bounded CHD caching and no extraction. CUE identities cover all
   referenced files. CHD requires an explicitly
-  selected optional libchdr library. The deterministic 1x access profile does
-  not model distance-dependent seeks or initial jitter. Geargrafx checks pass
+  selected optional libchdr library. The default fixed 1x access profile omits
+  seek distance; opt-in [distance timing](docs/CD_TIMING.md) covers calibrated
+  READ/CDDA seeks. Neither models initial jitter. The earlier Geargrafx checks pass
   **seven plans, 201 settled CPU/device checkpoints and seven complete sectors
   (14,336 payload bytes) per tier**. Local READ/provider expectations pass
   **621,096 / 22,568 checks**; see [CD semantics](docs/CD_CONTROL.md).

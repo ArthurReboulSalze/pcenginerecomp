@@ -14,7 +14,7 @@ selection or require unrelated work to freeze. Keep media and the explicitly
 selected test package strict and immutable.
 
 The public contract is `python -m pcerecomp.project` (Python 3.11+), consumer
-TOML schema **1**, runtime ABI **27**, and the existing `pce-dev-1` TCP protocol.
+TOML schema **1**, runtime ABI **28**, and the existing `pce-dev-1` TCP protocol.
 No Python package dependency, installation, download or save write is implicit.
 
 For finite TCP progression checks, [state-aware routes](STATE_ROUTES.md)
@@ -32,7 +32,7 @@ Explicit mutable BRAM sessions are available through `run --save-root`,
 immutable descriptor assets and qualify boot provenance before committing.
 See [persistence contracts](PERSISTENCE.md) and the
 [authored native counter example](../examples/persistent-consumer/README.md).
-Those host-only additions retained ABI 22. Current runtime interfaces require ABI 27; rebuild hosts
+Those host-only additions retained ABI 22. Current runtime interfaces require ABI 28; rebuild hosts
 from the newly pinned source to expose them.
 
 ## Start with an authored example
@@ -175,7 +175,7 @@ name = "my-consumer"
 path = "../pcenginerecomp"
 revision = "COMPLETE_40_CHARACTER_COMMIT"
 source_sha256 = "TOOL_SOURCE_SHA256"
-runtime_abi = 27
+runtime_abi = 28
 
 [module.source]
 path = "private/generated/module.cpp"
@@ -196,6 +196,8 @@ mpr = [255,248,128,129,130,131,132,0]
 tier = "hybrid"
 video = "continuous"
 cd_unknown_status = "fault"
+# Optional CD profile; omit to keep fixed deadlines. HuCard refuses gear-distance.
+cd_timing = "fixed"
 joypad = 2
 region = "usa"
 multitap = "off"
@@ -230,7 +232,7 @@ sha256 = "BRAM_SHA256"
 There is one initial contiguous payload, which must fit the existing standard
 CD/work RAM loader. PC is logical 16-bit; all eight MPR bytes are required.
 The module source and manifest are pinned independently. Manifest schema 1,
-runtime ABI 27 and a positive emitted native-site count are required; optional
+runtime ABI 28 and a positive emitted native-site count are required; optional
 emitter provenance fields are retained in the hash-pinned manifest. Initial
 payload identity does not identify every later overlay. Generated dispatch
 continues to guard logical PC, complete MPR mapping and exact fetched bytes.
@@ -285,7 +287,7 @@ Keep those contracts separate when validating an upgrade. Gear timing adds
 `audio_output.timing = "gear-v1"`; legacy timing retains the prior PCM report
 shape. Timing can legitimately change PCM and raw-source activity/hash fields;
 compare against a fresh reference with the same timing rather than demanding
-an old PCM hash. Descriptor schema remains 1. Current ABI 27 requires re-emitting
+an old PCM hash. Descriptor schema remains 1. Current ABI 28 requires re-emitting
 compatible captures and rebuilding modules and runtime together. Exact DSP
 history is retained by the opt-in [developer checkpoint format](DEVELOPER_CHECKPOINTS.md);
 it does not provide migration between these audio/runtime epochs.
@@ -294,7 +296,23 @@ Limits are 1..20,000,000,000 dispatcher steps, 1..(2^64 - 1) master ticks and
 1..86,400 wall seconds. A block-transfer instruction can consume many guest
 cycles; steps are not a replacement for the tick/wall bounds.
 
+## Upgrade a consumer to ABI 28
+
+Pin the reviewed toolkit revision and source digest, set `runtime_abi = 28`,
+re-emit original-labelled captures and rebuild all generated modules and hosts.
+ABI28 serializes the selected CD timing profile; existing `fixed` deadlines
+remain the default. Optional `runtime.cd_timing = "gear-distance"` changes
+READ/CDDA timing and needs its own qualification. See [CD timing](CD_TIMING.md).
+Preserve the previously qualified package until the new candidate passes its
+own source, native execution, device and audio checks. Create checkpoints
+through that candidate's own startup; cross-build, cross-ABI and cross-profile
+imports remain refused. A no-module interpreted startup test does not qualify
+a native consumer migration. Original capture ABI labels and profile-v1
+provenance remain intact.
+
 ## Upgrade a consumer to ABI 27
+
+This earlier migration applies to consumers pinned to the ABI27 toolkit.
 
 Pin the reviewed toolkit revision and source digest, set `runtime_abi = 27`,
 re-emit the original labelled captures and rebuild every generated module and

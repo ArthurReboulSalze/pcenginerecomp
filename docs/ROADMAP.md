@@ -164,7 +164,10 @@ still track broader work; the current finite probes do not close those gates.
    D8 start admission at known program gaps is now implemented with its own
    [state/handshake contract](CD_AUDIO_GAPS.md). It preserves existing audio
    and does not create a replacement seek. Unknown-metadata approximations,
-   raw subchannels, drive-distance timing and hardware consensus remain open.
+   raw subchannels and hardware consensus remain open. The optional
+   [distance timing profile](CD_TIMING.md) now covers bounded READ/CDDA seeks
+   and playback readiness while retaining the fixed default. Further measured
+   drive models and addresses outside its calibration need separate work.
 5. **Capture inspection and trace coverage.** Paused, bounded read-only TCP
    summaries and retired source-span pages are implemented, including exact
    native/interpreted counts, completeness/loss and deferred-window metadata.
@@ -239,7 +242,7 @@ bounds refuse excess rather than truncate. Current
 capture identity capacity is 65,536; input sizes cannot simply be added or
 assumed to fit before deduplication. A composed set remains source evidence,
 not a combined execution receipt or new current-ABI retirement count.
-Emission distinguishes original capture epochs from generated-code ABI 26,
+Emission distinguishes original capture epochs from generated-code ABI 28,
 with per-input imported work kept separate. Consumer adoption still needs a
 fresh cold run, newly created exact-module checkpoints and its own route checks;
 profile composition does not migrate checkpoints or qualify a campaign.
@@ -251,6 +254,13 @@ bytes. Existing unbound descriptors remain supported. Strengthening identity
 requires new checkpoints; a bound managed workspace refuses an unbound update.
 Independent execution authentication, portable checkpoints and automatic
 historical-session deduplication remain outside this interface.
+
+Read-only [composition preflight](OBSERVATION_PROFILES.md#preflight-an-extension-before-emission-or-build)
+now reports exact serialized bytes/hash, additive identity/contribution costs
+and remaining capacity before emission or build. It shares real composition
+admission and serialization; refusal stops at existing bounds with unknown
+metrics left explicit. It preserves profile-v1 provenance and does not turn
+historical captures into newly executed evidence.
 
 The first playable release needs a clearly scoped qualification record. It
 does not need every enhancement, but must accurately report what executes

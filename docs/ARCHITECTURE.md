@@ -55,6 +55,13 @@ media, analysis, bus, or validation interfaces.
 
 ## Cartridge and System Card startup
 
+ABI 28 adds an explicit CD drive timing selection to the shared transport.
+`fixed` retains the existing deterministic deadlines; opt-in `gear-distance`
+uses bounded rational seek geometry and separates physical seek from playback
+readiness. The profile participates in recipe identity and checkpoint
+configuration. It changes guest deadlines, not host presentation cadence.
+See [CD timing](CD_TIMING.md) for the calibrated domain and reference limits.
+
 ABI 18 adds an explicit base HuCard profile and ROM-bank map to the bus.
 `--hucard-reset base ROM STEPS TICKS tier` decodes only the declared header and
 byte order, configures ROM/WRAM/base devices without CD/ADPCM/BRAM, then reads
@@ -122,7 +129,7 @@ The manifest pins every translation unit and generated header. The consumer
 interface verifies these files in build/run bindings, and CMake rechecks their
 hashes on configuration and tracks them as configuration dependencies.
 Legacy single-source manifests remain accepted. Source/runtime rebuilds are
-required after a tool update; current ABI 27 does not accept ABI-12 through ABI-26 binary objects.
+required after a tool update; current ABI 28 does not accept ABI-12 through ABI-27 binary objects.
 
 Opt-in [stable emission](STABLE_EMISSION.md) uses one part per full eight-MPR
 mapping and fixed 256-byte logical-PC range, with local deterministic names.
@@ -210,7 +217,7 @@ original captures from supported ABI epochs without manufacturing a combined
 execution capture. Exact raw inputs are embedded and hash-verified; union
 identities retain PC, all eight MPRs and instruction bytes, with checked
 per-input contributions. A shared guarded emitter translates this catalogue
-for current ABI 27 while recording original input ABI/origin metadata separately.
+for current ABI 28 while recording original input ABI/origin metadata separately.
 Profile validation reconstructs the union; historical hit sums are not fresh
 retirement evidence. The single-capture interface remains available.
 
@@ -225,7 +232,7 @@ checkpoint schema or runtime/CMake change is involved.
 
 ## Consumer interface
 
-Consumer TOML schema 1 pins ABI 27, a complete tool revision and exact relevant
+Consumer TOML schema 1 pins ABI 28, a complete tool revision and exact relevant
 source-tree digest, module source/manifest hashes, input hashes, the initial
 load/MPR recipe and explicit runtime profiles and execution limits.
 `python -m pcerecomp.project` verifies these identities, builds through
@@ -318,8 +325,9 @@ separate audio reads convert 2,352-byte AUDIO payloads to signed stereo samples.
 Stored-pregap playback classification is distinct from raw payload access.
 Decode errors and changed sources fault; no full-disc extraction is retained.
 Sector loading has an independent guest deadline and one 2 KiB buffer, separate
-from command/status and auto-ACK events. The deterministic 1x first-sector
-latency omits seek distance and reset jitter; see CD_CONTROL.md.
+from command/status and auto-ACK events. The default fixed 1x first-sector
+latency omits seek distance; optional `gear-distance` covers calibrated
+READ/CDDA seeks. Neither models reset jitter; see [CD timing](CD_TIMING.md).
 GOOD status does not establish that a disc is mounted or readable. The
 unknown-command policy remains a fault. Explicit `--cd-unknown-status gear-good`
 selects the pinned reference emulators' GOOD-response quirk for unrecognized
@@ -561,7 +569,7 @@ BIOS initialization are not reconstructed. See [FIRMWARE.md](FIRMWARE.md).
 | Scheduler / IRQ | Implemented aggregate boundary delivery, RTI, timer and priority; finer access phases remain | Independent Gear CPU/RAM/sequence-clock checks; timer-edge and MMIO phase qualification still needed |
 | Video | Implemented VDC ports/raster, VCE palette, VRAM/SATB DMA, state inspection and continuous line-history output | Local historical pixel expectations and full-frame Geargrafx comparisons; physical fetch/contention and fine latch windows still needed |
 | Sound | Implemented opt-in digital PSG synthesis, MSM5205 ADPCM decode, raw CHD CDDA, bounded 44.1 kHz stereo mixing and SDL/WAV output, alongside existing control/DMA state | Authored digital expectations; 56 raw CDDA stereo pairs and 24 PSG phase points match Gear; mixed/resampled/analog output and physical device qualification remain |
-| CD | Implemented control, TOC, read-only READ streaming and TOC-based audio position responses; distance seeks/raw subchannels remain planned | Authored full-sector Gear checks, provider identity/failure expectations and bounded private CHD execution; no hardware or gameplay qualification |
+| CD | Implemented control, TOC, read-only READ streaming, TOC-based audio position responses and optional calibrated distance seeks; raw subchannels remain planned | Authored full-sector and distance/command Gear checks, provider identity/failure expectations and bounded private CHD execution; no hardware qualification |
 | Input | Implemented two/six-button pads, five-port TurboTap, guest-write-sampled reference profile and optional SDL slot-zero mapping | Independent protocol checks and synthetic host/virtual-device tests; physical-controller qualification still required |
 | Persistence | Implemented opt-in 2 KiB CD BRAM export and isolated checked consumer sessions; migration and other persistent RAM remain planned | Authored save/reload, damaged/foreign files, concurrency and failure tests; per-title real save flows require separate qualification |
 | Host | Implemented optional SDL3 window/audio playback, keyboard/gamepad mapping, nearest pixels, resize/fullscreen/pause and guest-clock pacing; opt-in TCP development control and bounded WAV capture; unthrottled device output muted; settings persistence remains | Synthetic renderer/input/audio queue and actual TCP tests; paced real SDL stream accepts/drains 930,219 frames; full audio-enabled route matches 25 retained guest images and original final guest state; no listening/analog parity claim |
@@ -587,7 +595,7 @@ compatibility. Native hooks need guards and a reference route. Co-op and
 netplay require game-specific authority/state work; rollback also needs
 deterministic simulation, captured inputs and complete device/CD state.
 
-**Implemented developer checkpoint schema 1** uses runtime ABI 27 and is
+**Implemented developer checkpoint schema 1** uses runtime ABI 28 and is
 restricted to exact reviewed builds. The host binds the executable, adjacent
 DLLs, actual input identities, selected machine profiles and explicit reviewed
 source/module context. It accepts paused TCP save and fresh-window restore

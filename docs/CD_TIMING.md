@@ -91,12 +91,62 @@ pending READ/audio boundaries, fresh provider binding, pending ADPCM and
 filtered PCM state, and atomic refusal of malformed or mismatched states.
 These direct-device suites execute no guest instructions.
 
+The frozen ABI28 qualification at diagnostic revision
+`ea6382a774bbe9846a12c61a2818487c3fa70e0a` reports 1,169 direct timing
+checks and 64 complete-machine checkpoint cases with 204,710 expectations.
+Twelve checkpoint cuts include filtered PCM continuation. The 82-file
+compiler/runtime/CMake source closure is SHA256
+`995ecfa893ee74ea046b758cbccfe0ab1baa57ecbec21c8a4c7313f06aca533a`.
+
 The separate `scripts/cd_timing_reference.py` driver compiles original pinned
 Geargrafx independently, compares original seek calculations with authored
 rational vectors, and exercises command ports with emitted native and
 interpreted guest operations. Mesen's untouched calculation and the original
 MIT program retain their own scopes and differences. Working-source pilots
 are labeled separately from final frozen-source qualification.
+
+The final frozen comparison pins original Geargrafx at
+`1c62a549328241518101f5be5bf3e6840b96ea5d` and Mesen at
+`b9fa69ddc6d0a331fb103fdb5eef6904305703c2`. It passes 12,432 seek vectors
+for the selected calculation in each core and the toolkit. Three out-of-domain
+toolkit refusals remain explicit. Eight original-MIT-program outputs are
+retained, including six differing whole-millisecond results and two agreements.
+Twenty-one command cases run at both CPU divisors (3 and 12); the toolkit
+executes **112,536 native instructions and, separately, 112,536 interpreted
+instructions**, covering ten executed encoded identities. The fixture emits
+74 operations; emission is not the executed-identity count. Gear's original
+command ports are supervised by the test harness, rather than claiming an
+original-core CPU replay. Twenty-eight internal complete-core round trips
+pass. Actual writes to the sample-latch strobe precede reads: both tiers and
+Gear return zero before readiness and the authored nonzero sample afterward.
+
+The contemporary Gear source revision
+`0ca083267f690205a516bb0a2a8f8c5dd5361e96` was checked for source drift:
+its CD calculation, transport, audio and media inputs match the executed pin.
+Other core files differ. This is a source comparison, not a fresh execution
+of that later full core. Two independent audits verify the frozen result's
+source/artifact bindings, raw records, per-key counts and declared differences.
+
+The command comparison retains two older reference-policy differences. Gear's
+reset keeps its pending physical seek while cancelling playback; the toolkit's
+established reset cancels both. In the authored initial past-leadout READ case,
+Gear reports STOPPED/GOOD while the toolkit retains IDLE and reports CHECK
+CONDITION. Each engine's complete reported tuple is validated separately for
+these declared cases. They are not silently projected into equality or changed
+by the new timing flag. Mesen comparison here covers its calculation, not an
+independent full command or guest CPU trace.
+
+Separate Ys III startup tests use ABI28 **without native modules**, with
+authentic reset and each timing profile's own newly created checkpoints.
+Their first pending READ has head LBA 0 and target LBA 3,596, so it exercises
+an actual distance-dependent path. Fixed and distance deadlines are
+220,415,792 and 227,352,952 master ticks respectively. Both derive from the
+same dispatch tick, 216,907,839, inside the raw command-counter increment
+bracket; a later paused observation is not treated as command issue time.
+Each profile passes two pending-READ checkpoint round trips with fresh-process
+60-frame continuation and complete-file/core equality. These startup checks
+execute **zero native instructions**; they do not qualify a full native game
+route or import checkpoints from ABI27 or the other timing profile.
 
 Model agreement and finite game regressions do not establish electrical bus
 timing, per-drive jitter, analog audio, physical seek conformance or complete

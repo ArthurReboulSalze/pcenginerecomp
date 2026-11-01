@@ -190,8 +190,19 @@ accepted device frames, including at least 7,896 newly nonzero frames after
 accounting for possible tail/pending losses. Physical playback and listening
 quality remain unqualified.
 
-These are cold-prefix and exact-build continuation tests. The already
-qualified ABI26 Play selection stays protected. They do not establish the old
-full route under ABI27, campaign completion or hardware conformance. Strict
+These earlier tests covered cold-prefix and exact-build continuation. They
+kept the qualified ABI26 Play selection protected and did not by themselves
+establish the old full route under ABI27, campaign completion or hardware conformance. Strict
 baseline runs stop at the expected unsupported first byte with exit 3; their
 forensic journals remain distinct from successful candidate continuations.
+
+## Later native migration
+
+A fresh ABI27 native replay under `nec-invalid` passes the separately admitted
+checkpoint-linked reference through the actual Alcaino frontier: 104,745
+frames, 3,209,517,525 native retirements and zero fallback. All 53,516 executed
+source identities conserve their counts; the expanded catalogue retains all
+57,752 earlier identities and adds 250. Its 309 assists remain explicit.
+This qualifies the tested consumer route, not unknown-command hardware
+semantics or the older ABI26 stair-room endpoint. See
+[the complete migration scope](NATIVE_MIGRATIONS.md#abi-27-native-migration).

@@ -10,14 +10,24 @@ enhancements.
 returning CHECK CONDITION and illegal-command sense. The strict default and
 legacy `gear-good` response remain available. Original Geargrafx and Beetle
 are checked separately, with their wire and reset differences retained.
+Fresh original-core runs cover **252 cases per core**, including all 248
+unrecognized opcodes. A separate authored guest conserves **23,241 retirements
+across 893 source identities**, interpreted to native with zero fallback.
 Native modules require re-emission and rebuilding; old capture labels stay
 intact and checkpoints remain exact-build-only. See
 [unknown CD profiles](docs/CD_UNKNOWN.md).
 The fresh frozen SDL build passes **1,478 Python tests without skips,
-66 C++ suites and 12 fresh-process audio checkpoint cases**. Ys III's bounded
-ABI27 candidate passes ten-byte rejection → READ recovery, complete fresh
-checkpoint comparisons and paced output checks. Its qualified ABI26 Play
-selection remains unchanged.
+66 C++ suites and 12 fresh-process audio checkpoint cases**.
+
+**ABI 27: a fresh Ys III route now runs entirely natively under `nec-invalid`.**
+The rebuilt catalogue retains all 57,752 old identities and adds 250.
+A fresh reset reaches the tested Alcaino frontier after **104,745 frames**,
+with **3,209,517,525 native and zero interpreted instructions**; all 53,516
+executed source identities conserve their individual counts. This finite
+assisted route uses 309 explicit validated RAM writes. It is separate from
+the older ABI26 stair-room route and is not campaign or hardware certification.
+Fresh candidate-owned restores and paced SDL audio submission also pass.
+See [ABI27 migration qualification](docs/NATIVE_MIGRATIONS.md#abi-27-native-migration).
 
 **Earlier ABI 26 qualification: the full retained Ys III route replays natively.** A fresh
 reset reaches its terminal stair room after **102,802 frames**, executing

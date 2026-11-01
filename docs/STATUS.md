@@ -44,14 +44,14 @@ fallback; all 893 source identities conserve retirements. Its reported CPU/
 work vector, 44 observed RAM bytes and pending sense agree. These are
 separate proof scopes from the complete-state checkpoint cuts.
 
-The ABI27 Ys III candidate passes an unassisted cold prefix, ten-byte `$FF`
+The earlier bounded ABI27 Ys III candidate passes an unassisted cold prefix, ten-byte `$FF`
 rejection followed by READ `$08`, and candidate-owned fresh checkpoint
 restores with complete-file continuation equality. A paced 120-frame fork
 executes 3,689,416 native instructions with zero fallback and proves newly
 generated audio submission under separately counted pause/shutdown clearing.
 This cohort executes 6,816 of the retained 57,752 compiled identities. The
-selected ABI26 Play package remains protected; no full-route ABI27, campaign,
-listening or hardware qualification is inferred. See
+ABI26 Play package stayed protected at that milestone; those bounded checks
+alone did not qualify a full route, campaign, listening or hardware. See
 [the bounded consumer scope](CD_UNKNOWN.md#bounded-ys-iii-consumer-checks).
 
 Frozen code `1bac964633c624f2d6834337e621940c41c8aeb4` passes fresh SDL Release
@@ -59,12 +59,48 @@ configure/build and the complete required checker: **1,478 Python tests with
 zero skips, 66 C++ suites and 12 fresh-process audio checkpoint cases**.
 The shared compiler/runtime/CMake closure is 80 files, SHA256
 `7c2771ff590fcd2cdfdfd51e71c8a34aab2a6a86b48d275d6071b8832647e8c4`.
-The independent matrix uses separately frozen diagnostic code `68125cf`;
-the consumer candidate pins `d71add5`. All three revisions have identical
-80-file shared source bytes. Later fixes affect diagnostic guards, authored
+The original independent matrix uses diagnostic code `68125cf`; the latest
+repeated comparison pins `b1ffdcc`, and the consumer pins `d71add5`. All four
+revisions have identical 80-file shared source bytes. Later fixes affect diagnostic guards, authored
 examples and test expectations, without relabeling those original receipts.
 
-## Full retained-route native migration
+## ABI 27 native migration
+
+The ABI27 catalogue preserves all 57,752 retained identities and adds 250,
+for 58,002 compiled identities. Seven original capture inputs retain their
+ABI labels, raw bytes, checkpoint origins and per-input contributions.
+The 121,417,027-byte profile stays within existing public parser limits;
+checkpoint reconstruction and native verification captures are excluded.
+
+A fresh native reset passes the admitted `nec-invalid` route through the
+actual Alcaino frontier: **104,745 frames, 3,209,517,525 native instructions
+and zero interpreted instructions or guard misses**. All 53,516 executed
+source identities conserve their counts; 6,899 interpreted retirements become
+native. The route contains 5,523 bounded steps and 309 typed assisted writes.
+It compares against a separately admitted reset prefix plus an exact-build
+checkpoint tail, not a falsely relabeled uninterrupted reference run.
+See [the migration scope](NATIVE_MIGRATIONS.md#abi-27-native-migration).
+
+All 26 source/native checkpoint comparisons pass with exact non-tier machine
+state and explicitly bounded host WAV bookkeeping. Two candidate-owned
+fresh-process suffixes each execute 60 frames and 1,836,171 native instructions
+with zero fallback; immediate and continued whole checkpoint files match.
+A separate paced 120-frame suffix executes 3,672,293 native instructions with
+zero fallback. It synthesizes 88,457 new PCM frames and proves at least 87,760
+newly accepted SDL frames. Imported PCM, planned pause clearing and shutdown
+draining are separate, with zero observed active drops or unplanned clears.
+These are digital synthesis and submission checks, not listening or hardware
+qualification. The shared runtime/compiler and checkpoint schema are unchanged.
+
+A read-only 432-frame extension from the successful build's own final
+checkpoint executes 13,795,134 native instructions with zero fallback,
+converting seven more interpreted retirements. The main/extension union is
+53,528 executed identities; all 250 newly compiled identities execute. Five
+of the extension's twelve identities absent from the main run are new to
+the catalogue, while seven were already retained. Its inherited 309 debug
+writes remain visible, with no new writes.
+
+## Earlier full retained-route native migration (ABI 26)
 
 Ys III's fresh ABI 26 native replay passes the retained route through the
 terminal stair room: **102,802 frames, 3,122,661,937 native instructions and

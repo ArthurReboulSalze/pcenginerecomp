@@ -4,7 +4,8 @@
 `DevClient` connection. It observes a paused guest, asserts conditions, waits
 with ordinary controller input, and sends bounded input pulses. It performs no
 RAM writes, checkpoint loads, implicit pause/resume, expression evaluation or
-dynamic code execution. Runtime ABI **26** and `pce-dev-1` are unchanged.
+dynamic code execution. This host-only helper does not change the runtime ABI
+or the `pce-dev-1` protocol.
 
 For raw client replies retained before validation and a stricter optional
 status-pair interface, see [paused observations](PAUSED_OBSERVATIONS.md).
@@ -35,7 +36,13 @@ assert receipt["ok"], receipt.get("error")
 
 The caller owns the connection lifetime. `run_plan` returns a schema-1 receipt
 on success or a handled validation, transport or route failure. It restores the
-client's original timeout. The following authored example uses only a frame
+client's original timeout. All five combined input masks must be neutral on
+entry; the helper observes first and then acquires and holds its own intent.
+A wrapper that temporarily holds input for an observation must release its
+own hold before calling `run_plan`. An initial conflict is refused before
+acquisition, so the helper does not clear that pre-existing caller-owned hold.
+
+The following authored example uses only a frame
 predicate; frames are guest video boundaries, not controller polls:
 
 ```json

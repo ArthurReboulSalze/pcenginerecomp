@@ -85,6 +85,11 @@ overwrite edited data when execution resumes. Neither a passing relation nor
 a successful checkpoint restore establishes that a particular game assist is
 semantically safe. Consumer-specific invariants remain necessary.
 
+An automatic hazard detector does not override the planner's preconditions.
+A declined plan must stop the route. If a consumer revises an older restriction
+to permit validated same-bank data edits, bind that change to new explicit
+authority and exercise the actual planning path before resuming discovery.
+
 Complete checkpoint bytes and continued execution supply separate evidence.
 The validator compares reported source generations only; it cannot inspect
 unreported bank counters or hidden machine state. Native and interpreted work,
@@ -128,6 +133,16 @@ write that has already been sent. Preserve the consumer's pre-send checks:
 5. Retain the actual reply and complete AFTER readbacks before invoking
    `validate_paused_write`. Keep source-summary invariance and other consumer
    policy checks alongside the returned typed effect proof.
+
+For a group of edits, chain the actual validated observations. The first row
+uses the original strict group anchor; each later row must match the preceding
+row's verified AFTER state before another operation is sent. Also require
+complete RAM to equal the original bytes plus exactly the prior literal rows.
+Subtracting only prior write counters from a fresh status is insufficient:
+a valid data edit can advance the generation of the bank containing current
+code. Keep those measured effects in the chain rather than dropping generation
+fields or weakening CPU/device comparison. Each row still needs its own
+authority, source exclusions, write-ahead intent, ACK and typed effect proof.
 
 A checkpoint-window capture contains newly executed source, not its complete
 imported history. Bind the retained complete prefix to the exact checkpoint,

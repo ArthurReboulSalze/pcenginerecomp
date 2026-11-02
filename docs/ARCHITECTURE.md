@@ -53,6 +53,17 @@ translations, ordinary compiler diagnostics, and portable host optimization.
 An optimizing block IR/backend can follow measured needs without replacing
 media, analysis, bus, or validation interfaces.
 
+## Offline discovery interfaces
+
+Offline native discovery now has an independent declared-membership layer:
+`native_catalog.load_native_catalog` authenticates an observed manifest, its
+original capture/profile and listed generated artifacts under an explicit
+selection contract. `native_gaps.report_native_gaps` joins full identities
+while keeping input ABI/origin/hit counts separate. It neither imports a
+consumer SDK nor qualifies generated semantics or a linked binary. See
+[native gap reports](NATIVE_GAPS.md). The [isolated RomAtlas comparison](ROMATLAS_REFERENCE.md)
+adds separately pinned decoder/core evidence, without a runtime dependency.
+
 ## Cartridge and System Card startup
 
 ABI 29 adds an explicit `synthesized|captured-q` CD subchannel selection.

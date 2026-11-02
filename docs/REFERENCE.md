@@ -8,6 +8,12 @@ scope, including unavailable state and real reference disagreements. See
 not turn either emulator into a hardware oracle or certify complete CPU,
 bus, video, audio or retail compatibility.
 
+The [original RomAtlas decoder comparison](ROMATLAS_REFERENCE.md) adds an
+isolated, offline locked Rust probe. It checks all 256 encoding slots over
+boundary/MPR/operand cases and retains exact BRK metadata disagreements.
+Actual physical mapping evidence comes from 96 separate original-core calls,
+not from a RomAtlas CD frontend. No reference code is linked into the runtime.
+
 ## Captured Q device comparison
 
 The opt-in [captured subchannel check](CD_SUBCHANNEL.md#references-and-limits)

@@ -10,6 +10,26 @@ project owns its game-specific routes, patches, assets and presentation choices.
 Ys III is one regression case; compatibility evidence remains tied to the
 tested CPU, hardware, media and runtime profiles.
 
+**Native discovery now has a reusable gap report.** `native-gaps` verifies an
+observed module's declared emitted identities and exact source artifacts,
+then compares full byte/MPR identities from captured windows. It keeps each
+window's costs separate, identifies missing variants and avoids treating
+unexercised compiled code as new execution. It supports the known ABI 28/29
+selection contract without migrating an existing consumer. See
+[the CLI and Python interface](docs/NATIVE_GAPS.md).
+
+**RomAtlas now supplies actual independent decoder checks.** An isolated
+offline build checks 25,221 authored records across opcode, boundary and mapping
+cases, including a narrow original-core fetch probe. Known BRK metadata differences
+remain explicit; no unexpected difference is accepted. See
+[reference scope and reproduction](docs/ROMATLAS_REFERENCE.md).
+
+The fresh SDL check passes **1,682 Python tests without skips, 70 C++ suites
+and 12 fresh-process audio checkpoint cases**. Runtime ABI 29, CPU translation,
+device code and CMake bytes are unchanged by this discovery-tooling batch.
+Fresh recoverable-build errors now identify the missing recovery option before
+creating output; [resume keeps its sealed-input contract](docs/BUILD_RECOVERY.md).
+
 **ABI 29 adds opt-in captured CD subchannels.** Read-only CHD providers expose
 original 96-byte P–W packets from supported `RW_RAW` extents, with explicit
 absence, stored-pregap mapping and fatal decoder/source-error handling.
@@ -20,7 +40,7 @@ need regeneration and rebuilding; existing consumer checkpoints stay with their
 original builds. The byte FIFO/subchannel IRQ interface remains separate work.
 See [captured subchannel contracts and references](docs/CD_SUBCHANNEL.md).
 
-The required SDL check passes **1,636 Python tests without skips, 70 C++ suites
+That captured-subchannel SDL check passed **1,636 Python tests without skips, 70 C++ suites
 and 12 fresh-process audio checkpoint cases**. Original Geargrafx/Beetle checks
 pass 315 authored captured-Q records. The selected Ys III build remains ABI 28;
 its media declares no captured subchannels. Its regression and any future ABI 29
@@ -32,7 +52,8 @@ paced audio fork also passes. See [current verification scope](docs/STATUS.md#se
 
 [Native discovery guidance](docs/NATIVE_DISCOVERY.md) now distinguishes
 executed, compiled and statically reachable code, explains existing mapping-aware
-analysis, and records the missing reusable gap-report/snapshot-export interfaces.
+analysis, and records the implemented gap report and planned authenticated
+snapshot-export interface.
 
 **Consumer raw audits now have reusable same-ABI relations.** The new pure
 helper validates imported counters, explicit source/candidate tier relations

@@ -6,6 +6,11 @@ every new observed byte variant separately is not required merely to discover
 more candidates. Keep execution evidence, compiled membership and static
 reachability distinct.
 
+The shared [native gap report](NATIVE_GAPS.md) now implements the membership
+join, identity union and per-input missing-cost ranking below. It authenticates
+the declared observed-module selection and artifact bytes; build/execution
+qualification remains separate.
+
 ## What exists today
 
 The toolkit already provides:
@@ -64,15 +69,15 @@ generated retail source private.
 The source-reviewed [RomAtlas PCE frontend](https://github.com/weisserw/romatlas/blob/3d0d1393149491777626f5a8e4461f7c49b2d6df/docs/pce.md)
 supports HuCard analysis. That is not a qualified PC Engine CD image frontend.
 Its [instruction decoder](https://github.com/weisserw/romatlas/blob/3d0d1393149491777626f5a8e4461f7c49b2d6df/crates/romatlas-pce/src/decode.rs)
-accepts explicit bytes and an MPR context, making a bounded independent decode
-comparison a possible future check without representing a CD overlay as a
-HuCard. No RomAtlas binary, decoder parity, integration or hardware behavior is
-qualified by this source inspection. Preserve licensing and pin its version
-before any future adapter is executed.
+accepts explicit bytes and an MPR context. The new
+[isolated original-source comparison](ROMATLAS_REFERENCE.md) actually checks
+25,221 authored records, preserving exact BRK frontend disagreements and a
+separate narrow original-core fetch scope. It uses no CD image or fake HuCard.
+It does not qualify a CD frontend, complete core semantics or physical hardware.
 
-The reusable missing interfaces are a capture-to-emitted-membership gap report
-and a provenance-bound, paused physical source-snapshot exporter. They are
-planned contributor tools, not new runtime blockers or currently shipped APIs.
+The remaining missing interface is a provenance-bound, paused physical
+source-snapshot exporter. It is planned contributor tooling, not a new runtime
+blocker or currently shipped API.
 The snapshot exporter must establish the epoch/source relation above; an
 unlabelled memory dump is insufficient. The useful lesson from static-closure
 work on other recomp projects is to expand declared reachable code while

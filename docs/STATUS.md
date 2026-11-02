@@ -1,5 +1,54 @@
 # Current status — 2 November 2026
 
+## Reusable native discovery and independent decoder checks
+
+The new [native gap report](NATIVE_GAPS.md) authenticates observed-module
+declared emitted membership against its exact original profile/capture and
+generated artifacts under the explicit ABI 28/29 selection contract. Full
+PC/all-MPR/physical/byte identities, new operand-byte exclusions and unsupported
+encodings remain distinct. Complete input captures retain their original ABI,
+origin and per-window hit counts. SHA aliases are deduplicated; overlapping
+windows get no combined execution count or campaign percentage.
+
+The fresh required SDL build/check passes **1,682 Python tests without skips,
+70 C++ suites and 12 fresh-process audio checkpoint cases**. All 86 shared
+tool source files and the recorded Python/C++ verification epoch remain
+unchanged during the run; the Rust adapter is separately hash-bound to its
+actual original-reference execution and final verification. The shared source
+digest is `ca8a4e855fefb6c0135480292f28497ffcca75e37220231cf9809919c41fafeb`.
+Runtime/CMake, CPU translation, ISA and ABI 29 bytes remain unchanged.
+
+Real read-only Ys III integration reconstructs the 58,039 baseline and 58,041
+candidate catalogs from 948 artifacts each. The same closed 546-frame capture
+reports two missing variants against the baseline and none against the candidate;
+its two original interpreted retirements remain two in both reports. The thirteen
+canonical captures exercise 53,616 declared emitted identities in either catalog.
+The candidate therefore has 4,425 unexercised keys in those captures, including
+its two staged additions. These are catalog/discovery diagnostics, not execution
+qualification or a selected consumer upgrade.
+
+The [original RomAtlas comparison](ROMATLAS_REFERENCE.md) passes its declared
+25,221-record partition: 24,480 exact decoder matches, 97 explicit BRK frontend
+disagreements, 548 truncation/invalid refusals and 96 separate original-core
+mapped-fetch cases. Unknown differences fail. Offline locked compilation pins
+original source, tool and host dependency bytes. No reference source is linked
+into the runtime, and no CD frontend, complete CPU or hardware proof is inferred.
+
+Recoverable-build preflight now names missing recovery options before creating
+output. It preserves explicit toolchain roots, safe fresh-directory admission
+and independently sealed resume options. Ys III's new candidate source review
+also caught and corrected two private controller path assumptions before any
+guest launch. No runtime ABI, CPU translation or device behavior changes are
+required by this diagnostic milestone. Existing selected packages/checkpoints
+remain with their exact producers; authenticated paused physical-snapshot
+export and measured recovery performance improvements remain separate work.
+
+The recovery cost now has a controlled authored diagnosis: both build modes
+produce identical 100 object contents and compiler commands, while repeated
+full preparation/tree identities dominate the profiled recovery call tree.
+This is not a production speed ratio. See [measured cost and required invariants](BUILD_RECOVERY.md#measured-verification-cost)
+for the next producer optimization; no input-integrity check was weakened.
+
 ## Captured CD subchannels and retained Q
 
 ABI 29 implements original 96-byte P–W data from supported CHD `RW_RAW`

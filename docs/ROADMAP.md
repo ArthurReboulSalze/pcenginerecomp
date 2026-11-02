@@ -202,9 +202,11 @@ still track broader work; the current finite probes do not close those gates.
    semantics; the current accumulated identity set is not such a trace.
    [Native discovery guidance](NATIVE_DISCOVERY.md) describes joining authentic
    captures to actual emitted identities and using the existing bounded,
-   mapping-aware analyzer. Reusable gap reporting and authenticated paused
-   physical-snapshot export remain planned; static candidates are not executed
-   coverage. RomAtlas's current PCE frontend is HuCard-only.
+   mapping-aware analyzer. [Reusable gap reporting](NATIVE_GAPS.md) is now
+   implemented for the explicit ABI 28/29 observed-emitter selection contract;
+   authenticated paused physical-snapshot export remains planned. Static
+   candidates are not executed coverage. The [original RomAtlas decoder check](ROMATLAS_REFERENCE.md)
+   has a bounded authored scope; its image frontend remains HuCard-only.
 6. **Identity-bound developer checkpoints.** Paused exact-build machine save
    and fresh-process restore are implemented, including pending device/DSP
    state and explicit resumed-window evidence. This remains separate from CD
@@ -261,6 +263,16 @@ writers and complete game qualification remain outside that archive contract.
    selected real READ-to-DMA pending states, RAM commits, pause/reset behavior
    and sector gaps. It retains 54 original-engine timing/state differences;
    further mixed-device overlaps and bus-phase qualification remain separate.
+
+## Recovery producer performance — measured work
+
+The controlled authored [recovery measurement](BUILD_RECOVERY.md#measured-verification-cost)
+identifies repeated whole-input preparation as a major cost, with identical
+compiler commands and 100 matching objects. The profiled pair is not a
+production benchmark. Optimize with a qualified immutable-input/revalidation
+contract, then verify mutation, path, dependency, interruption and durable
+object guarantees. Source/content checks, active SDKs and sealed old builds
+must not be bypassed or patched to obtain a faster timing.
 
 ## Additive observation profiles — implemented
 

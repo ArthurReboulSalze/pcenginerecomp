@@ -17,6 +17,33 @@ class RecoveryPrimitiveTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
 
+    def test_fresh_missing_toolchain_root_refuses_before_output_or_processes(self):
+        descriptor=self.root/'authored.toml';descriptor.write_text('authored fixture')
+        output=self.root/'new-build';before=sorted(self.root.iterdir())
+        for generator in (None,'Ninja'):
+            with self.subTest(generator=generator), \
+                    patch('pcerecomp.project.verify') as verify, \
+                    patch('pcerecomp.build_inputs.prepare') as prepare, \
+                    patch('pcerecomp.build_process.quiesce') as quiesce, \
+                    patch('pcerecomp.build_process.run') as run:
+                with self.assertRaisesRegex(ValueError,r'Build recovery:.*--recovery-toolchain-root'):
+                    recovery.build(descriptor,output,generator=generator)
+                self.assertFalse(output.exists())
+                self.assertEqual(sorted(self.root.iterdir()),before)
+                for operation in (verify,prepare,quiesce,run):operation.assert_not_called()
+
+    def test_wrong_recovery_generator_names_the_supported_option_without_outputs(self):
+        descriptor=self.root/'authored.toml';descriptor.write_text('authored fixture')
+        bundle=self.root/'bundle';bundle.mkdir();output=self.root/'new-build'
+        before=sorted(self.root.iterdir())
+        with patch('pcerecomp.build_inputs.prepare') as prepare, \
+                patch('pcerecomp.build_process.run') as run:
+            with self.assertRaisesRegex(ValueError,r'Build recovery:.*--generator Ninja'):
+                recovery.build(descriptor,output,generator='Unix Makefiles',toolchain_root=bundle)
+            self.assertFalse(output.exists())
+            self.assertEqual(sorted(self.root.iterdir()),before)
+            prepare.assert_not_called();run.assert_not_called()
+
     def model_admission(self, outputs, *, attempt=1, sequence=0, previous=None, new=None, missing=None):
         start=recovery._sealed(dict(schema=1,attempt=attempt,resume=attempt>1,
                                    contract_sha256='a'*64,started_ns=attempt))

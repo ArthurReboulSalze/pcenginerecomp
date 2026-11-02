@@ -217,6 +217,12 @@ def main(argv=None):
         capture = commands.add_parser(name, help="Emit guarded native C++ from a private capture or observation profile")
         capture.add_argument("capture", type=Path)
         emission_arguments(capture)
+    gaps = commands.add_parser('native-gaps', help='Report private full-identity native gaps without summing overlapping capture windows')
+    gaps.add_argument('manifest', type=Path, help='Observed module manifest; declared membership, not linked-binary proof')
+    gaps.add_argument('captures', nargs='+', type=Path, help='Complete closed discovery captures; identical content is deduplicated')
+    gaps.add_argument('--observations', type=Path, required=True,
+                      help='Exact original profile or capture pinned by the module manifest')
+    gaps.add_argument('--out', type=Path, required=True, help='New private code-bearing JSON report; never overwritten')
     args = parser.parse_args(argv)
     return run_command(args)
 
@@ -257,6 +263,22 @@ def run_command(args):
             args.out.parent.mkdir(parents=True, exist_ok=True)
             args.out.write_text(descriptor, encoding="ascii", newline="\n")
             print(descriptor, end="")
+        elif args.command == 'native-gaps':
+            from .native_catalog import load_native_catalog
+            from .native_gaps import report_native_gaps
+            if args.out.exists() or args.out.is_symlink():
+                raise ValueError('Native gap reporting requires a new private output file')
+            catalog = load_native_catalog(args.manifest, args.observations)
+            result = report_native_gaps(catalog, args.captures)
+            encoded = json.dumps(result, indent=2, allow_nan=False) + '\n'
+            args.out.parent.mkdir(parents=True, exist_ok=True)
+            with args.out.open('x', encoding='utf-8', newline='\n') as stream:
+                stream.write(encoded)
+            print(json.dumps(dict(format=result['format'], policy=result['policy'],
+                                  qualification=False, summary=result['summary'],
+                                  inputs=[dict(sha256=item['sha256'], runtime_abi=item['runtime_abi'],
+                                               classifications=item['classifications'])
+                                          for item in result['inputs']]), indent=2))
         elif args.command == "compose-observations":
             sources = [*args.baseline_input, *args.inputs]
             if args.baseline_profile is not None:

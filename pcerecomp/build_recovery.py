@@ -554,7 +554,8 @@ def _options(*, generator, desktop, cmake_args, toolchain_root, dependency_roots
              allow_revision_override):
     _require(type(desktop) is bool and type(allow_revision_override) is bool,
              'desktop and allow_revision_override must be boolean')
-    _require(generator is None or generator == 'Ninja', 'recoverable builds require Ninja')
+    _require(generator is None or generator == 'Ninja',
+             '--recoverable builds require --generator Ninja (the default)')
     _require(isinstance(cmake_args, (list, tuple)), 'cmake_args must be a sequence of CMake options')
     keys = set()
     for argument in cmake_args:
@@ -593,6 +594,12 @@ def build(descriptor, build_dir, *, resume=False, allow_revision_override=False,
     if resume:
         _directory(root)
     else:
+        # Diagnose a missing recovery input before publishing an empty output,
+        # lock or metadata directory. Resume restores its already sealed root
+        # below, so an omitted CLI option remains valid for that path.
+        _require(requested['toolchain_root'] is not None,
+                 'fresh --recoverable builds require --recovery-toolchain-root PATH '
+                 'for the explicitly selected compiler and Ninja bundle')
         _directory(root.parent)
         _require(not root.exists(), 'fresh builds require a new directory')
         root.mkdir()

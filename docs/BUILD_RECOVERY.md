@@ -4,8 +4,8 @@ Consumer builds can opt into recovery **before the first configure**. The first
 supported producer is Windows 10/11 x64, LLVM-MinGW and Ninja, using the same audited
 toolchain/SDK closure as the [package cache](BUILD_CACHE.md). Ordinary builds,
 package-cache builds and [managed module updates](INCREMENTAL_BUILDS.md) retain
-their separate contracts. Recovery does not change runtime ABI 28 or guest
-semantics.
+their separate contracts. Recovery does not change the runtime ABI or guest
+semantics; the current toolkit runtime remains ABI 29.
 
 ## Start and resume
 
@@ -32,6 +32,14 @@ compiler, Ninja and SDL package path definitions are accepted. Ambient compiler
 flags, external search paths, toolchain files, unsupported graphs/profiles and
 combining recovery with package-cache options are refused. Resume restores the
 original options; it does not reconfigure or admit a new descriptor/toolchain.
+
+Fresh recovery preflight now identifies a missing `--recovery-toolchain-root`
+or unsupported generator using the recovery option names, before creating the
+build directory, lock or metadata. Supplying compiler/Ninja CMake arguments is
+not a substitute for the complete declared bundle root. Resume may still omit
+that option because it restores the already sealed root. A failed earlier
+metadata-only attempt is retained separately; use a new directory after fixing
+fresh-build options.
 
 ## What is verified
 
@@ -79,6 +87,26 @@ Success creates a new ordinary build receipt with attempt, contract, checkpoint,
 retained/recompiled object and input-audit provenance. It explicitly records
 `execution_evidence: false`. Run the official consumer command and qualify its
 own TCP/checkpoint behavior separately; compilation never proves gameplay.
+
+## Measured verification cost
+
+A controlled authored measurement compared ordinary and recoverable fresh
+headless builds using the same source/module/toolchain and two compiler jobs.
+Both produced the same 100 object contents and identical compiler commands.
+The profiled observations were 15.016 and 192.822 seconds respectively.
+Recovery made 13 full preparation calls containing 52 tree identities; that
+nested work accounted for 111.237 cumulative seconds in this fixture. Profiling
+recorded substantially more Python calls for recovery, so this is a bottleneck
+diagnosis, not a production speed ratio or general benchmark. Cumulative
+profile times overlap and cannot be added.
+
+Repeated full input-tree verification is therefore a concrete performance
+target. A future faster producer needs an enforced immutable-input snapshot or
+equivalent content/revalidation contract, preserving same-length and
+timestamp-preserving mutation detection, reparse/ownership refusal and recovery
+durability. Replacing content checks with timestamps or silently adopting an
+old output directory is not a supported optimization. Existing ordinary, cache,
+managed-update and recovery producers keep their separate contracts.
 
 ## Refusals and boundaries
 

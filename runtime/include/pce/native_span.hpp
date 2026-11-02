@@ -96,17 +96,28 @@ using GeneratedSpan=Exit (*)(Bus&,Cpu&,std::uint64_t,NativeSpan&);
 Exit generated_span(Bus&,Cpu&,std::uint64_t deadline,NativeSpan&);
 
 inline Exit dispatch_span(Bus& bus,Cpu& cpu,std::uint64_t deadline,
-                          bool allow_interpreter,NativeSpan& span,GeneratedSpan generated) {
-    if(!generated) throw Fault("native span requires an explicit generated entry");
+                          ExecutionPolicy policy,NativeSpan& span,GeneratedSpan generated) {
+    switch(policy) {
+    case ExecutionPolicy::native_only: case ExecutionPolicy::hybrid: case ExecutionPolicy::interpreter_only: break;
+    default: throw Fault("invalid execution policy");
+    }
+    if(policy!=ExecutionPolicy::interpreter_only && !generated)
+        throw Fault("native span requires an explicit generated entry");
     try {
         while(span.prepare(bus,cpu,deadline)) {
+            if(policy==ExecutionPolicy::interpreter_only) {
+                auto result=interpret_step(bus,cpu,deadline);
+                span.finish(bus,cpu);
+                if(result==Exit::executed) continue;
+                span.stopped=true;span.status=result;return result;
+            }
             const auto completed=span.completed;
             span.begin_dispatch();
             auto result=generated(bus,cpu,deadline,span);
             if(result==Exit::miss) {
                 if(!span.pending()) throw Fault("native span miss has no open instruction");
                 ++cpu.guard_misses;
-                if(allow_interpreter) result=interpret_step(bus,cpu,deadline);
+                if(policy==ExecutionPolicy::hybrid) result=interpret_step(bus,cpu,deadline);
                 span.finish(bus,cpu);
                 if(result==Exit::executed) continue;
             } else if(result!=Exit::executed) {
@@ -122,5 +133,10 @@ inline Exit dispatch_span(Bus& bus,Cpu& cpu,std::uint64_t deadline,
         try {span.abort(bus,cpu);} catch(...) {} // Preserve original fault/callback exception.
         std::rethrow_exception(original);
     }
+}
+inline Exit dispatch_span(Bus& bus,Cpu& cpu,std::uint64_t deadline,
+                          bool allow_interpreter,NativeSpan& span,GeneratedSpan generated) {
+    return dispatch_span(bus,cpu,deadline,
+        allow_interpreter ? ExecutionPolicy::hybrid:ExecutionPolicy::native_only,span,generated);
 }
 } // namespace pce

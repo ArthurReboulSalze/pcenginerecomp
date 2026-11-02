@@ -1,5 +1,33 @@
 # Current status — 2 November 2026
 
+## Supported same-build interpreter reference mode
+
+[Reference windows](REFERENCE_MODE.md) now have a supported runtime, host, TCP,
+Python client and consumer interface. `--dev-reference on` is an immutable
+capability bound into checkpoint context/fingerprint. Initial `reference_frames`
+selection precedes every dispatch and capture; repeated paused segments retain
+the irreversible interpreter policy. Ordinary resume/step/load after selection
+refuse. Enabled sessions cannot publish persistent BRAM.
+
+The host calls scalar interpreter execution directly, with zero generated entry
+calls and no synthetic guard misses. Actual new interpreted work and imported
+prefix counters stay separate. Typed execution-policy provenance survives raw
+captures, mixed-ABI/profile composition, emission, native catalog admission and
+consumer receipts. Cold captures cannot acquire a fictitious checkpoint origin.
+CPU/Bus layouts, guest checkpoint encoding and runtime ABI 29 are unchanged.
+
+The independently authored fixture executes 70,000 native and 70,000 interpreted
+instructions from the same canonical checkpoint, plus a separate interpreted
+operand-change continuation. Entire decoded machine state, actual completed RGB
+and filtered PCM agree after excluding only four tier-accounting fields; guards,
+device state and time remain in the comparison. Separate host tests exercise
+headless and SDL TCP/checkpoint paths, strict capability identity, multiple
+bounded reference segments and pure live capture inspection. This is internal
+tier/reference-interface evidence, not a new Geargrafx or campaign comparison.
+
+The earlier completed helper/discovery verification below retains its original
+producer and scope; it is not a test of the new reference capability.
+
 ## Reusable file snapshots and qualification evidence
 
 [Evidence helpers](EVIDENCE_HELPERS.md) now share strict same-byte JSON parsing,

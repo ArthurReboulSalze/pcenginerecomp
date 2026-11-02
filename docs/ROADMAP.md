@@ -317,6 +317,13 @@ admission and serialization; refusal stops at existing bounds with unknown
 metrics left explicit. It preserves profile-v1 provenance and does not turn
 historical captures into newly executed evidence.
 
+Long discovery histories can exhaust the inline profile's 128 MiB serialization
+bound even when an extension adds relatively few instruction identities. The
+next composition milestone is a reviewed, versioned bundle for hash-bound raw
+history and contributions. It must retain every original input and attribution,
+with strict admission and reproducibility checks. Pruning evidence or raising
+private limits is not a supported continuation path.
+
 The first playable release needs a clearly scoped qualification record. It
 does not need every enhancement, but must accurately report what executes
 natively, which fallback paths remain, and which gameplay/save routes were

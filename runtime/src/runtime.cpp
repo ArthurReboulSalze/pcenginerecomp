@@ -715,13 +715,21 @@ Exit interpret_step(Bus& bus, Cpu& s, std::uint64_t deadline) {
     return Exit::executed;
 }
 
-Exit step(Bus& bus, Cpu& s, std::uint64_t deadline, bool allow_interpreter) {
+Exit step(Bus& bus, Cpu& s, std::uint64_t deadline, ExecutionPolicy policy) {
+    switch(policy) {
+    case ExecutionPolicy::interpreter_only: return interpret_step(bus,s,deadline);
+    case ExecutionPolicy::native_only: case ExecutionPolicy::hybrid: break;
+    default: throw Fault("invalid execution policy");
+    }
     auto result=generated_step(bus,s,deadline);
     if(result==Exit::miss) {
         ++s.guard_misses;
-        if(allow_interpreter) return interpret_step(bus,s,deadline);
+        if(policy==ExecutionPolicy::hybrid) return interpret_step(bus,s,deadline);
     }
     return result;
+}
+Exit step(Bus& bus, Cpu& s, std::uint64_t deadline, bool allow_interpreter) {
+    return step(bus,s,deadline,allow_interpreter ? ExecutionPolicy::hybrid:ExecutionPolicy::native_only);
 }
 const char* exit_name(Exit status) {
     switch(status) {

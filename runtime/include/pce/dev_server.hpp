@@ -14,6 +14,10 @@ struct DevSnapshot {
   // Trusted host-produced JSON object, never guest or client text.
   std::function<std::string()> status;
   std::function<void()> apply_input;
+  // Host-owned opt-in policy selection, only from a quiescent remote pause.
+  // The callback validates the first-dispatch boundary; later calls retain it.
+  std::function<void()> reference_frames;
+  bool reference_selected = false;
   std::function<std::string(const std::string&)> save_checkpoint, load_checkpoint;
   // Paused, stored retired-source observations only; no source bytes or peeks.
   std::function<std::string()> capture_summary;

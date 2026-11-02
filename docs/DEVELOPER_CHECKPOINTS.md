@@ -7,6 +7,10 @@ checkpoint introduction retained ABI 25. It does not define a
 portable game-save format, an emulator-state importer, in-process rewind,
 rollback or cross-module migration. CD BRAM persistence remains a separate
 interface; see [PERSISTENCE.md](PERSISTENCE.md).
+The optional [interpreter reference capability](REFERENCE_MODE.md) is bound into
+the host identity and reviewed context. Only checkpoints created by the same
+enabled build/recipe can fork into reference windows; imported tier counters
+remain exact. Existing disabled/older-build checkpoints are refused.
 ABI 27 additionally retains the typed unknown-CD policy and invalid-response
 counter. Policy-specific checkpoints require the exact matching recipe;
 see [CD response profiles](CD_UNKNOWN.md).

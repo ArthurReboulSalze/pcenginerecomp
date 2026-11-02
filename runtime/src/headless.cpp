@@ -91,6 +91,7 @@ int main(int argc, char** argv) {
         std::cerr << "BRAM snapshot: [--bram-out NEW_RAW_2048_FILE] exports existing CD backup memory only after successful finalization; never replaces a file.\n";
         std::cerr << "Optional native dispatch: [--native-span 1..256]; limits above one require an opted-in stable module. Omission preserves single-step execution.\n";
         std::cerr << "Developer checkpoints: [--checkpoint-dir EXISTING_PRIVATE_DIRECTORY --checkpoint-context REVIEWED_SHA256] [--checkpoint-load BASENAME.pcec]; paused TCP only, exact build/media, fresh-window restore, no BRAM export.\n";
+        std::cerr << "Reference execution: [--dev-reference on|off]; enabled paused TCP supports bounded reference_frames before first dispatch, retaining exact enabled checkpoint identity.\n";
         std::cerr << "HuCard boot: pce-headless --hucard-reset base|sf2|populous RAW_ROM MAX_STEPS MAX_TICKS native|hybrid [--rom-header none|copier512] [--rom-encoding linear|bit-reversed] [ordinary non-CD options]\n";
         return 2;
     }
@@ -101,6 +102,7 @@ int main(int argc, char** argv) {
         const char* dev_port=nullptr;
         const char* dev_start_paused=nullptr;
         const char* dev_memory_write=nullptr;
+        const char* dev_reference=nullptr;
         const char* wall_seconds=nullptr;
         const char* code_capture_path=nullptr;
         const char* capture_limit=nullptr;
@@ -174,6 +176,7 @@ int main(int argc, char** argv) {
             else if(name=="--dev-port" && !dev_port) dev_port=argv[option+1];
             else if(name=="--dev-start-paused" && !dev_start_paused) dev_start_paused=argv[option+1];
             else if(name=="--dev-memory-write" && !dev_memory_write) dev_memory_write=argv[option+1];
+            else if(name=="--dev-reference" && !dev_reference) dev_reference=argv[option+1];
             else if(name=="--code-capture" && !code_capture_path) code_capture_path=argv[option+1];
             else if(name=="--capture-limit" && !capture_limit) capture_limit=argv[option+1];
             else if(name=="--code-capture-start-frame" && !capture_start_frame) capture_start_frame=argv[option+1];
@@ -292,6 +295,11 @@ int main(int argc, char** argv) {
         if(dev_start_paused && (!dev_port || (std::string(dev_start_paused)!="on" && std::string(dev_start_paused)!="off"))) throw pce::Fault("--dev-start-paused requires --dev-port and on or off");
         if(dev_memory_write && (!dev_port || (std::string(dev_memory_write)!="on" && std::string(dev_memory_write)!="off"))) throw pce::Fault("--dev-memory-write requires --dev-port and on or off");
         const bool memory_write_enabled=dev_memory_write && std::string(dev_memory_write)=="on";
+        if(dev_reference && std::string(dev_reference)!="on" && std::string(dev_reference)!="off")
+            throw pce::Fault("--dev-reference requires on or off");
+        const bool reference_enabled=dev_reference && std::string(dev_reference)=="on";
+        if(reference_enabled && (!dev_port || !dev_start_paused || std::string(dev_start_paused)!="on" || output_mode!="continuous" || bram_out_path))
+            throw pce::Fault("--dev-reference on requires continuous paused TCP startup and excludes BRAM export");
         if(checkpoint_directory || checkpoint_context || checkpoint_load) {
             if(!checkpoint_directory || !checkpoint_context || !dev_port ||
                !pce::checkpoint_hex_identity(checkpoint_context))
@@ -542,6 +550,15 @@ int main(int argc, char** argv) {
         if(audio_path)wave=std::make_unique<pce::WaveWriter>(audio_path,static_cast<std::uint32_t>(capture_frames),output_rate);
         std::unique_ptr<pce::CodeCapture> code_capture;
         if(code_capture_path) code_capture=std::make_unique<pce::CodeCapture>(std::filesystem::path(std::u8string(reinterpret_cast<const char8_t*>(code_capture_path))),static_cast<std::size_t>(observation_limit));
+        if(code_capture && reference_enabled)code_capture->set_execution_policy(false,tier,static_cast<unsigned>(native_span_limit));
+        bool reference_selected=false,dispatch_started=false;
+        const auto execution_policy_json=[&] {
+            std::ostringstream json;
+            json<<"{\"schema\":1,\"reference_enabled\":true,\"selected\":"<<(reference_selected?"true":"false")
+                <<",\"configured_tier\":\""<<tier<<"\",\"effective_policy\":\""<<(reference_selected?"interpreter":tier)
+                <<"\",\"effective_native_span\":"<<(reference_selected?0:native_span_limit)<<'}';
+            return json.str();
+        };
         bool capture_started=false;
         std::uint64_t capture_actual_frame=0,capture_actual_ticks=0,capture_native_before=0,capture_interpreted_before=0;
         auto status=pce::Exit::executed;
@@ -627,6 +644,9 @@ int main(int argc, char** argv) {
                 identity(bool(value));if(value) identity.string(value);
             }
             identity(audio_enabled,std::uint32_t(output_rate));identity.string(output_mode);
+            // Disabled recipes retain their exact old identity. An enabled
+            // baseline and either fork share this immutable capability.
+            if(reference_enabled)identity.string("pce-reference-capability-v1");
             return pce::checkpoint_hash(identity.data);
         };
         if(checkpoint_directory) {
@@ -693,6 +713,7 @@ int main(int argc, char** argv) {
             return checkpoint_metadata(file,bus,s);
         };
         const auto load_checkpoint=[&](const std::string& name) {
+            if(reference_selected)throw pce::Fault("checkpoint load cannot change a selected reference window");
             if(s.native_steps || s.interpreter_steps || capture_started || (wave&&wave->frames()) || checkpoint_resumed || bram_out_path)
                 throw pce::Fault("checkpoint load requires a fresh execution window without retirements, capture or BRAM export");
             verify_checkpoint_inputs();
@@ -877,6 +898,14 @@ int main(int argc, char** argv) {
                 snapshot.frame=bus.vdc.video.sequence();snapshot.ticks=s.ticks;
                 snapshot.frame_ticks=bus.vdc.video.completed_ticks();
                 snapshot.apply_input=apply_buttons;
+                snapshot.reference_selected=reference_selected;
+                if(reference_enabled)snapshot.reference_frames=[&] {
+                    if(reference_selected)return; // Same policy, another bounded segment.
+                    if(dispatch_started || capture_started)
+                        throw pce::Fault("reference selection requires a fresh window before first dispatch or capture");
+                    if(code_capture)code_capture->set_execution_policy(true,tier,static_cast<unsigned>(native_span_limit));
+                    reference_selected=true;
+                };
                 if(checkpoint_directory) {
                     snapshot.save_checkpoint=save_checkpoint;snapshot.load_checkpoint=load_checkpoint;
                 }
@@ -945,6 +974,7 @@ int main(int argc, char** argv) {
                 snapshot.status=[&] {
                     std::ostringstream json;
                     json<<'{';
+                    if(reference_enabled)json<<"\"execution_policy\":"<<execution_policy_json()<<',';
                     if(checkpoint_directory)json<<"\"checkpoint\":"<<checkpoint_window_json()<<',';
                     if(bus.vdc.raster.enabled) {write_vdc_access_status(json);json<<',';}
                     if(reset_boot)json<<"\"boot\":"<<boot_json()<<',';
@@ -1090,9 +1120,10 @@ int main(int argc, char** argv) {
             while(paused() && !host_quit && !wall_expired) {
                 pump();std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
+            dispatch_started=true;
             for(std::uint64_t i=0; i<max_steps;) {
 #ifdef PCE_NATIVE_SPAN
-                if(native_span_option) {
+                if(native_span_option && !reference_selected) {
                     struct BoundaryContext {
                         const decltype(before_instruction)& before;const decltype(after_instruction)& after;
                         const decltype(finish_capture)& finish;pce::NativeSpan* span=nullptr;
@@ -1121,13 +1152,14 @@ int main(int argc, char** argv) {
                     if(!before_instruction()) break;
                     const auto n=s.native_steps,interpreted=s.interpreter_steps;
                     const auto aggregate=[&] {
-                        if(native_span_option) {
+                        if(native_span_option && !reference_selected) {
                             ++span_batches;++span_generated_calls;
                             span_native+=s.native_steps-n;span_interpreted+=s.interpreter_steps-interpreted;
                             span_max_completed=std::max(span_max_completed,s.native_steps-n+s.interpreter_steps-interpreted);
                         }
                     };
-                    try {status=pce::step(bus,s,deadline,tier=="hybrid");}
+                    try {status=pce::step(bus,s,deadline,reference_selected ? pce::ExecutionPolicy::interpreter_only:
+                        (tier=="hybrid" ? pce::ExecutionPolicy::hybrid:pce::ExecutionPolicy::native_only));}
                     catch(...) {aggregate();finish_capture();throw;}
                     aggregate();
                     after_instruction();++i;
@@ -1149,6 +1181,7 @@ int main(int argc, char** argv) {
             "System Card reset-vector boot; deterministic reference initialization; not hardware power-on certification":
             "IPL-entry CPU/device sandbox; not authentic reset or game certification") << "\",";
         if(checkpoint_directory)report<<"\"checkpoint\":"<<checkpoint_window_json()<<',';
+        if(reference_enabled)report<<"\"execution_policy\":"<<execution_policy_json()<<',';
         if(reset_boot)report<<"\"boot\":"<<boot_json()<<',';
         if(hucard_boot && hucard_profile!=pce::HuCardProfile::base) {write_cartridge_status(report);report<<',';}
         if(bus.arcade_card) {write_arcade_status(report);report<<',';}

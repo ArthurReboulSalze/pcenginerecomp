@@ -12,6 +12,76 @@ from pcerecomp import project
 
 
 class ConsumerProjectTests(unittest.TestCase):
+    def test_reference_cli_flag_forwards_explicit_capability(self):
+        base = ['run', str(self.descriptor), '--build-dir', str(self.root/'build'),
+                '--receipt', str(self.root/'receipt.json')]
+        for arguments, expected in (([], False), (['--reference-enabled'], True)):
+            with patch('pcerecomp.project.run', return_value={'qualified': True}) as run, patch('builtins.print'):
+                self.assertEqual(project.main(base+arguments), 0)
+                self.assertIs(run.call_args.kwargs['reference_enabled'], expected)
+
+    def test_reference_capability_is_typed_launch_only_and_checkpoint_bound(self):
+        checked = self.verify()
+        original = project.checkpoint_context(checked)
+        self.assertEqual(original, project.checkpoint_context(checked, reference_enabled=False))
+        enabled = project.checkpoint_context(checked, reference_enabled=True)
+        self.assertNotEqual(original, enabled)
+        command = project.command_for(checked, Path('runner'), dev_port=0, start_paused=True,
+                                      checkpoint_dir=self.root, reference_enabled=True)
+        self.assertEqual(command[command.index('--dev-reference')+1], 'on')
+        self.assertEqual(command[command.index('--checkpoint-context')+1], enabled)
+        self.assertNotIn('--dev-reference', project.command_for(checked, Path('runner')))
+        for options in ({}, {'dev_port': 0}, {'start_paused': True}):
+            with self.subTest(options=options), self.assertRaises(ValueError):
+                project.command_for(checked, Path('runner'), reference_enabled=True, **options)
+        for value in (1, 0, 'on', None):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                project.checkpoint_context(checked, reference_enabled=value)
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                project.command_for(checked, Path('runner'), reference_enabled=value)
+        with self.assertRaisesRegex(ValueError, 'Reference capability'):
+            project.run(self.descriptor, self.root, self.root/'never.json', reference_enabled=True,
+                        save_root=self.root/'save', save_namespace='fixture', save_contract='a'*64)
+
+    def test_reference_report_preserves_recipe_and_requires_no_native_suffix(self):
+        checked = self.verify()
+        policy = {'schema': 1, 'reference_enabled': True, 'selected': True,
+                  'configured_tier': checked['config']['runtime']['tier'],
+                  'effective_policy': 'interpreter', 'effective_native_span': 0}
+        result = {'execution_policy': policy, 'native_steps': 0, 'interpreter_steps': 9}
+        self.assertTrue(project._execution_policy_provenance(checked, result, reference_enabled=True)['valid'])
+        self.assertFalse(project._execution_policy_provenance(checked, result)['valid'])
+        self.assertFalse(project._execution_policy_provenance(checked, {}, reference_enabled=True)['valid'])
+        for key, value in (('schema', True), ('reference_enabled', 1), ('selected', 1),
+                           ('configured_tier', 'interpreter'), ('effective_policy', 'hybrid'),
+                           ('effective_native_span', False), ('effective_native_span', 1)):
+            changed = copy.deepcopy(result); changed['execution_policy'][key] = value
+            with self.subTest(key=key, value=value):
+                self.assertFalse(project._execution_policy_provenance(checked, changed, reference_enabled=True)['valid'])
+        changed = copy.deepcopy(result); changed['native_steps'] = 1
+        self.assertFalse(project._execution_policy_provenance(checked, changed, reference_enabled=True)['valid'])
+        # Imported native prefix is deliberately kept separate from this suffix.
+        changed['checkpoint'] = {'resumed': True, 'origin': {'sha256': 'a'*64, 'ticks': 7, 'frame': 1,
+            'native_steps': 1, 'interpreter_steps': 0}, 'window': {'ticks': 8, 'native_steps': 0, 'interpreter_steps': 9}}
+        changed['ticks'] = 15
+        self.assertTrue(project._execution_policy_provenance(checked, changed, reference_enabled=True)['valid'])
+
+    def test_reference_dispatch_report_requires_scalar_bypass(self):
+        checked = self.verify(); checked['config']['runtime']['native_span'] = 1
+        result = {'native_steps': 0, 'interpreter_steps': 9,
+                  'execution_policy': {'schema': 1, 'reference_enabled': True, 'selected': True,
+                    'configured_tier': checked['config']['runtime']['tier'], 'effective_policy': 'interpreter',
+                    'effective_native_span': 0},
+                  'native_dispatch': {'schema': 1, 'protocol': 'per_instruction_v1', 'supported': False,
+                    'limit': 1, 'batches': 0, 'generated_calls': 0, 'native_completed': 0,
+                    'interpreted_completed': 0, 'local_continuations': 0, 'max_completed': 0}}
+        self.assertTrue(project._native_dispatch_provenance(checked, result, reference_enabled=True)['valid'])
+        for key in ('batches', 'generated_calls', 'native_completed', 'interpreted_completed',
+                    'local_continuations', 'max_completed'):
+            changed = copy.deepcopy(result); changed['native_dispatch'][key] = 1
+            with self.subTest(key=key):
+                self.assertFalse(project._native_dispatch_provenance(checked, changed, reference_enabled=True)['valid'])
+
     def test_subchannel_profile_is_typed_explicit_forwarded_and_checkpoint_bound(self):
         implicit = project.checkpoint_context(self.verify())
         self.replace('cd_unknown_status = "fault"',

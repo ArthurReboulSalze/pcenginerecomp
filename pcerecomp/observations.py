@@ -470,7 +470,7 @@ def plan_observation_profile(input_paths, *, baseline_inputs=(), capacity=MAX_OB
         all_inputs = {item['sha256'] for item in profile['inputs']}
         # Metadata deliberately omits code bytes, PC/MPR rows and hit payloads.
         sources = {item['sha256']: {key: item[key] for key in
-                   ('sha256', 'size_bytes', 'runtime_abi', 'checkpoint_origin') if key in item}
+                   ('sha256', 'size_bytes', 'runtime_abi', 'checkpoint_origin', 'execution_policy') if key in item}
                    for item in metadata}
         report['existing_inputs'] = [sources[key] for key in sorted(base)]
         report['new_inputs'] = [sources[key] for key in sorted(all_inputs - base)]
@@ -555,7 +555,7 @@ def plan_additive_observation_profile(input_paths, *, baseline_inputs=(), baseli
         report['limits']['union_identities'] = profile['capacity']
         base = {item['sha256'] for item in prior['inputs']}
         sources = {item['sha256']: {key: item[key] for key in
-            ('sha256', 'size_bytes', 'runtime_abi', 'checkpoint_origin') if key in item} for item in metadata}
+            ('sha256', 'size_bytes', 'runtime_abi', 'checkpoint_origin', 'execution_policy') if key in item} for item in metadata}
         report['existing_inputs'] = [sources[key] for key in sorted(base)]
         report['new_inputs'] = [sources[key] for key in sorted(sources.keys()-base)]
         report['duplicate_shas'] = [dict(sha256=key, argument_count=count, duplicate_arguments=count-1)

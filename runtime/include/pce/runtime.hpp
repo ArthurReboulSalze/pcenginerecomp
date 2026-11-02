@@ -21,6 +21,10 @@ namespace pce {
 inline constexpr unsigned abi_version = 29;
 enum Flag : std::uint8_t { C=1, Z=2, I=4, D=8, B=16, T=32, V=64, N=128 };
 enum class Exit { executed, miss, unsupported, budget };
+// Host-selected execution policy, not guest state or checkpoint identity.
+// Reference execution uses the existing interpreter without probing generated
+// entries, manufacturing guard misses, or relabeling imported retirements.
+enum class ExecutionPolicy { native_only, hybrid, interpreter_only };
 enum class BankKind { unmapped, ram, rom, io, bram };
 enum class SystemCardProfile { none, standard, super };
 
@@ -411,6 +415,8 @@ Exit interpret_step(Bus&, Cpu&, std::uint64_t deadline);
 // Defined either by generated code or by the no-module stub. Single-step ABI
 // makes invalidation and every instruction boundary observable from day one.
 Exit generated_step(Bus&, Cpu&, std::uint64_t deadline);
+Exit step(Bus&, Cpu&, std::uint64_t deadline, ExecutionPolicy);
+// Retained source/API compatibility: false selects native-only, true hybrid.
 Exit step(Bus&, Cpu&, std::uint64_t deadline, bool allow_interpreter=true);
 const char* exit_name(Exit);
 } // namespace pce

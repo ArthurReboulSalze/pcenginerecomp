@@ -76,6 +76,29 @@ def _geometry(width, height, source="present"):
     return width * height * 3
 
 
+def _execution_policy(value):
+    """Validate opt-in host policy metadata without importing a guest SDK."""
+    fields = {'schema', 'reference_enabled', 'selected', 'configured_tier',
+              'effective_policy', 'effective_native_span'}
+    if not isinstance(value, dict) or set(value) != fields:
+        raise ValueError('unexpected execution policy fields')
+    if type(value['schema']) is not int or value['schema'] != 1:
+        raise ValueError('unsupported execution policy schema')
+    if type(value['reference_enabled']) is not bool or value['reference_enabled'] is not True:
+        raise ValueError('execution policy requires enabled reference capability')
+    if type(value['selected']) is not bool:
+        raise ValueError('execution policy selected must be boolean')
+    tier = value['configured_tier']
+    if tier not in ('native', 'hybrid'):
+        raise ValueError('invalid configured execution tier')
+    if value['effective_policy'] != ('interpreter' if value['selected'] else tier):
+        raise ValueError('execution policy disagrees with selection')
+    span = _integer(value['effective_native_span'], 0, 256, 'effective native span')
+    if (value['selected'] and span != 0) or (not value['selected'] and span == 0):
+        raise ValueError('execution policy span disagrees with selection')
+    return value
+
+
 def _capture_view(value, *, page=None):
     """Validate code-free retired-source evidence, including loss accounting."""
     if not isinstance(value, dict):
@@ -96,15 +119,24 @@ def _capture_view(value, *, page=None):
     fields = base | counters | {"capacity", "identity_count", "complete", "window"}
     if 'checkpoint_origin' in value:
         fields.add('checkpoint_origin')
+    if 'execution_policy' in value:
+        fields.add('execution_policy')
     if page is not None:
         fields |= {"offset", "limit", "next_offset", "done", "sources"}
     if set(value) != fields:
         raise ValueError("unexpected live capture fields")
+    policy = None
+    if 'execution_policy' in value:
+        policy = _execution_policy(value['execution_policy'])
+        if value['runtime_abi'] < 29:
+            raise ValueError('capture execution policy requires ABI29 or later')
     for key in counters:
         _integer(value[key], 0, MAX_COUNTER, key)
     _integer(value["capacity"], 1, 65536, "capture capacity")
     _integer(value["identity_count"], 0, value["capacity"], "identity count")
     native, interpreted = value["native_instructions"], value["interpreted_instructions"]
+    if policy and policy['selected'] and native:
+        raise ValueError('interpreter reference capture contains native retirements')
     retained_native = value["retained_native_instructions"]
     retained_interpreted = value["retained_interpreted_instructions"]
     retained = retained_native + retained_interpreted
@@ -427,11 +459,18 @@ class DevClient:
             raise ProtocolError("full capture history differs from retained totals")
         return {**summary, "sources": rows}
 
-    def advance(self, frames):
-        """Advance a paused simulation and wait until its requested frame ends."""
+    def advance(self, frames, *, reference=False):
+        """Advance a paused simulation to its bounded target; reference is opt-in.
+
+        Reference execution requires the enabled same-build host capability and
+        its pre-dispatch policy latch. This never sends an unbounded resume.
+        """
         _integer(frames, 1, 600, "frames")
+        if type(reference) is not bool:
+            raise ValueError('reference must be boolean')
         deadline = time.monotonic() + self.timeout
-        queued = self._request("step_frames", {"frames": frames}, self.timeout)
+        queued = self._request("reference_frames" if reference else "step_frames",
+                               {"frames": frames}, self.timeout)
         try:
             target = _integer(queued.get("target_frame"), 0, (1 << 64) - 1, "target frame")
             while True:
@@ -442,6 +481,13 @@ class DevClient:
                 current = _integer(status.get("frame"), 0, (1 << 64) - 1, "frame")
                 if type(status.get("paused")) is not bool:
                     raise ValueError("status must contain boolean paused")
+                if reference:
+                    host = status.get('host')
+                    if not isinstance(host, dict):
+                        raise ValueError('reference status requires host execution policy')
+                    policy = _execution_policy(host.get('execution_policy'))
+                    if not policy['selected']:
+                        raise ValueError('reference advancement requires selected interpreter policy')
                 if current >= target and status["paused"]:
                     return status
                 time.sleep(min(0.01, max(0, deadline - time.monotonic())))
@@ -502,6 +548,9 @@ def main(argv=None):
     frames = commands.add_parser("frames")
     frames.add_argument("count", type=int)
     frames.add_argument("--resume", action="store_true")
+    reference_frames = commands.add_parser("reference-frames",
+        help="bounded interpreter reference window on an explicitly enabled paused host")
+    reference_frames.add_argument("count", type=int)
     inputs = commands.add_parser("input")
     inputs.add_argument("mask", type=lambda value: int(value, 0))
     inputs.add_argument("--slot", type=int, default=0)
@@ -542,6 +591,9 @@ def main(argv=None):
                 result = client.advance(args.count)
                 if args.resume:
                     client.call("resume")
+            elif args.command == "reference-frames":
+                client.call("pause")
+                result = client.advance(args.count, reference=True)
             elif args.command == "input":
                 _integer(args.mask, 0, 0xFFF, "mask")
                 _integer(args.slot, 0, 4, "slot")

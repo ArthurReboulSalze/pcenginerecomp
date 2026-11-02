@@ -361,9 +361,52 @@ static unsigned live_capture_checks(pce::DevServer& server,const pce::DevSnapsho
   return checks;
 }
 
+static unsigned reference_checks() {
+  pce::DevServer server(0, true);
+  pce::DevSnapshot state;
+  state.frame = 10;
+  Peer peer(server.port());
+  const auto call = [&](const std::string& command) {
+    return peer.call(server, state, "{\"id\":800,\"cmd\":" + command + "}");
+  };
+  unsigned calls = 0;
+  require(has(call("\"reference_frames\",\"frames\":1"), "explicit host opt-in"),
+          "reference request without capability accepted");
+  state.reference_frames = [&] { ++calls; state.reference_selected = true; };
+  for (const auto& frames : {"0", "601", "true", "1.0", "-1"})
+    require(has(call(std::string("\"reference_frames\",\"frames\":") + frames), "\"ok\":false"),
+            "invalid reference frame count accepted");
+  require(calls == 0 && server.paused(10), "invalid reference request changed policy/pause");
+  require(has(call("\"resume\""), "\"ok\":true"), "authored resume refused");
+  require(has(call("\"reference_frames\",\"frames\":1"), "quiescent remote pause") && calls == 0,
+          "running reference request selected policy");
+  call("\"pause\"");
+  state.local_paused = true;
+  require(has(call("\"reference_frames\",\"frames\":1"), "local desktop pause") && calls == 0,
+          "local pause accepted reference stepping");
+  state.local_paused = false;
+  state.reference_frames = [&] { throw std::runtime_error("authored first-dispatch refusal"); };
+  require(has(call("\"reference_frames\",\"frames\":1"), "first-dispatch refusal") && server.paused(10),
+          "reference callback refusal changed stepping");
+  state.reference_frames = [&] { ++calls; state.reference_selected = true; };
+  require(has(call("\"reference_frames\",\"frames\":2"), "\"target_frame\":12") && calls == 1 && !server.paused(10),
+          "valid reference selection did not start bounded step");
+  require(has(call("\"reference_frames\",\"frames\":1"), "quiescent remote pause") && calls == 1,
+          "active reference step accepted another request");
+  state.frame = 12;
+  require(server.paused(12), "reference target did not return paused");
+  for (const auto& command : {"\"resume\"", "\"step_frames\",\"frames\":1"})
+    require(has(call(command), "\"ok\":false") && server.paused(12), "reference escaped into normal execution");
+  require(has(call("\"reference_frames\",\"frames\":1"), "\"target_frame\":13") && calls == 2,
+          "same reference policy could not advance another bounded segment");
+  state.frame = 13;
+  return 16;
+}
+
 int main() {
   try {
     unsigned checks = 0, captures = 0, status_calls = 0;
+    checks += reference_checks();
     pce::DevServer server(0, true);
     require(server.port() != 0 && server.paused(0),
             "automatic port or initial pause failed");

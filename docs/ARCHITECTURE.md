@@ -172,6 +172,15 @@ mode or `Cpu`/`Bus` layout changes are introduced. CMake enables the additive
 entry only for manifests declaring its protocol. Hosts default to the legacy
 single-step path, and performance qualification must compare against that path.
 
+Opt-in [interpreter reference windows](REFERENCE_MODE.md) use an explicit host
+execution policy and preserve the bool dispatch API. The production host bypasses
+generated code and native spans for reference runs, recording zero new native
+work and actual interpreted retirements. Initial selection precedes all dispatch
+and capture; subsequent bounded TCP segments retain the irreversible policy.
+Capability-bound fingerprints require the same enabled build/recipe, with no
+checkpoint identity rewriting. Captures retain per-input policy provenance.
+CPU/Bus layout, checkpoint encoding and runtime ABI 29 remain unchanged.
+
 The [recoverable build producer](BUILD_RECOVERY.md) seals its complete input
 contract before configure, then the effective generated CMake/Ninja model and
 actual completed object/dependency groups as bounded hash-linked deltas.

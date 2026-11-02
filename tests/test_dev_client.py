@@ -106,7 +106,104 @@ def live_page(summary, request):
                          "interpreted_hits": 0} for index in range(offset, end)]}
 
 
+def execution_policy(*, selected=True, tier='hybrid', span=16):
+    return {'schema': 1, 'reference_enabled': True, 'selected': selected,
+            'configured_tier': tier, 'effective_policy': 'interpreter' if selected else tier,
+            'effective_native_span': 0 if selected else span}
+
+
+def reference_capture(rows=2):
+    summary = live_capture(rows=rows)
+    summary.update(runtime_abi=29, native_instructions=0, interpreted_instructions=rows,
+                   retained_native_instructions=0, retained_interpreted_instructions=rows,
+                   execution_policy=execution_policy())
+    summary['window'].update(current_native_steps=100, current_interpreter_steps=30+rows)
+    summary['checkpoint_origin'] = {'sha256': 'a'*64, 'ticks': 500, 'frame': 2,
+                                    'native_steps': 99, 'interpreter_steps': 29}
+    return summary
+
+
+def reference_page(summary, request):
+    page = live_page(summary, request)
+    for row in page['sources']:
+        row.update(native_hits=0, interpreted_hits=1)
+    return page
+
+
 class LiveCaptureClientTests(unittest.TestCase):
+    def test_reference_policy_preserves_imported_origin_and_paged_new_work(self):
+        summary = reference_capture(rows=257)
+        def respond(request):
+            return ok(request, capture=summary if request['cmd'] == 'capture_summary'
+                      else reference_page(summary, request))
+        with Server(respond) as server, DevClient(server.port) as client:
+            history = client.capture_history()
+            self.assertEqual(history['execution_policy'], execution_policy())
+            self.assertEqual(history['checkpoint_origin'], summary['checkpoint_origin'])
+            self.assertEqual(history['window']['native_steps_before'], 100)
+            self.assertEqual(history['native_instructions'], 0)
+            self.assertEqual(history['interpreted_instructions'], 257)
+            self.assertEqual(len(history['sources']), 257)
+            self.assertTrue(all(r['native_hits'] == 0 and r['interpreted_hits'] == 1
+                                for r in history['sources']))
+        self.assertEqual([r.get('offset') for r in server.requests[1:]], [0, 256])
+
+    def test_unselected_reference_capability_retains_configured_native_capture(self):
+        for tier in ('native', 'hybrid'):
+            summary = live_capture() | {'runtime_abi': 29,
+                'execution_policy': execution_policy(selected=False, tier=tier, span=256)}
+            def respond(request):
+                return ok(request, capture=summary if request['cmd'] == 'capture_summary'
+                          else live_page(summary, request))
+            with self.subTest(tier=tier), Server(respond) as server, DevClient(server.port) as client:
+                result = client.capture_history()
+                self.assertEqual(result['execution_policy'], summary['execution_policy'])
+                self.assertEqual(result['native_instructions'], 2)
+
+    def test_reference_capture_rejects_untyped_or_incoherent_policy(self):
+        invalid = [None, {}, execution_policy() | {'extra': 0}]
+        for key, value in (('schema', True), ('schema', 2), ('reference_enabled', 1),
+                           ('reference_enabled', False), ('selected', 1),
+                           ('configured_tier', 'interpreter'), ('effective_policy', 'hybrid'),
+                           ('effective_native_span', True), ('effective_native_span', 1),
+                           ('effective_native_span', 0.0), ('effective_native_span', 257)):
+            invalid.append(execution_policy() | {key: value})
+        invalid.append(execution_policy(selected=False, span=0))
+        for policy in invalid:
+            summary = reference_capture() | {'execution_policy': policy}
+            with self.subTest(policy=policy), Server(lambda r: ok(r, capture=summary)) as server, DevClient(server.port) as client:
+                with self.assertRaises(ProtocolError):
+                    client.capture_summary()
+                with self.assertRaisesRegex(DevError, 'closed'):
+                    client.call('ping')
+        for changes in ({'runtime_abi': 28}, {'native_instructions': 1, 'interpreted_instructions': 1,
+                'retained_native_instructions': 1, 'retained_interpreted_instructions': 1}):
+            summary = reference_capture() | changes
+            if 'native_instructions' in changes:
+                summary['window'].update(current_native_steps=101, current_interpreter_steps=31)
+            with self.subTest(changes=changes), Server(lambda r: ok(r, capture=summary)) as server, DevClient(server.port) as client:
+                with self.assertRaises(ProtocolError):
+                    client.capture_summary()
+
+    def test_reference_policy_cannot_change_appear_or_disappear_between_pages(self):
+        for drift in ('selected', 'tier', 'removed', 'inserted'):
+            summary = reference_capture()
+            if drift == 'inserted':
+                summary.pop('execution_policy')
+            def respond(request):
+                if request['cmd'] == 'capture_summary':
+                    return ok(request, capture=summary)
+                page = reference_page(summary, request)
+                if drift == 'removed':
+                    page.pop('execution_policy')
+                else:
+                    page['execution_policy'] = execution_policy(
+                        selected=drift != 'selected', tier='native' if drift == 'tier' else 'hybrid')
+                return ok(request, capture=page)
+            with self.subTest(drift=drift), Server(respond) as server, DevClient(server.port) as client:
+                with self.assertRaisesRegex(ProtocolError, 'epoch changed'):
+                    client.capture_history()
+
     def test_checkpoint_origin_survives_live_summary_pages_and_armed_windows(self):
         origin = {'sha256': 'a'*64, 'ticks': 500, 'frame': 2,
                   'native_steps': 99, 'interpreter_steps': 29}
@@ -416,6 +513,55 @@ class DevelopmentClientTests(unittest.TestCase):
                         client.advance(count)
         self.assertEqual(calls, 3)
 
+    def test_reference_advance_is_bounded_and_waits_for_selected_paused_status(self):
+        polls = 0
+        def respond(request):
+            nonlocal polls
+            if request['cmd'] == 'reference_frames':
+                self.assertEqual(request['frames'], 3)
+                return ok(request, target_frame=15)
+            self.assertEqual(request['cmd'], 'status')
+            polls += 1
+            return ok(request, frame=14 if polls == 1 else 15, paused=polls >= 3,
+                      host={'execution_policy': execution_policy()})
+        with Server(respond) as server, DevClient(server.port) as client:
+            result = client.advance(3, reference=True)
+            self.assertEqual((result['frame'], result['paused']), (15, True))
+            self.assertEqual(result['host']['execution_policy'], execution_policy())
+        self.assertEqual([r['cmd'] for r in server.requests], ['reference_frames']+['status']*3)
+
+    def test_reference_advance_refuses_untyped_flags_and_unbounded_counts_before_send(self):
+        with Server(lambda r: ok(r)) as server, DevClient(server.port) as client:
+            for flag in (0, 1, None, 'true', [], {}):
+                with self.subTest(flag=flag), self.assertRaises(ValueError):
+                    client.advance(1, reference=flag)
+            for count in (0, 601, True, 1.0):
+                with self.subTest(count=count), self.assertRaises(ValueError):
+                    client.advance(count, reference=True)
+        self.assertEqual(server.requests, [])
+
+    def test_reference_advance_rejects_missing_or_unselected_provenance(self):
+        for host in (None, {}, {'execution_policy': execution_policy(selected=False)},
+                     {'execution_policy': execution_policy() | {'selected': 1}}):
+            def respond(request):
+                return ok(request, target_frame=1) if request['cmd'] == 'reference_frames' else ok(
+                    request, frame=1, paused=True, host=host)
+            with self.subTest(host=host), Server(respond) as server, DevClient(server.port) as client:
+                with self.assertRaises(ProtocolError):
+                    client.advance(1, reference=True)
+                with self.assertRaisesRegex(DevError, 'closed'):
+                    client.call('ping')
+
+    def test_reference_advance_keeps_one_total_deadline(self):
+        def respond(request):
+            return ok(request, target_frame=2) if request['cmd'] == 'reference_frames' else ok(
+                request, frame=1, paused=False, host={'execution_policy': execution_policy()})
+        with Server(respond) as server, DevClient(server.port, timeout=0.04) as client:
+            with self.assertRaisesRegex(DevError, 'timed out'):
+                client.advance(2, reference=True)
+        self.assertEqual(server.requests[0]['cmd'], 'reference_frames')
+        self.assertTrue(all(r['cmd'] == 'status' for r in server.requests[1:]))
+
     def test_fragmentation_does_not_reset_total_response_timeout(self):
         class SlowFragments(list):
             def __iter__(self):
@@ -490,6 +636,19 @@ class DevelopmentClientTests(unittest.TestCase):
         self.assertEqual([r["cmd"] for r in server.requests], ["pause", "set_input", "step_frames", "status", "clear_input", "resume"])
         self.assertEqual(server.requests[1]["mask"], 0x48)
         self.assertEqual(server.requests[1]["port"], 2)
+
+    def test_cli_reference_frames_never_resumes(self):
+        def respond(request):
+            if request['cmd'] == 'reference_frames':
+                self.assertEqual(request['frames'], 3)
+                return ok(request, target_frame=3)
+            return ok(request, frame=3, paused=True, host={'execution_policy': execution_policy()})
+        with Server(respond) as server, patch('sys.stdout', new_callable=io.StringIO) as output:
+            self.assertEqual(main(['--port', str(server.port), 'reference-frames', '3']), 0)
+            self.assertTrue(json.loads(output.getvalue())['host']['execution_policy']['selected'])
+        self.assertEqual([r['cmd'] for r in server.requests], ['pause', 'reference_frames', 'status'])
+        with patch('sys.stderr', new_callable=io.StringIO), self.assertRaises(SystemExit):
+            main(['--port', '1', 'reference-frames', '3', '--resume'])
 
 
 if __name__ == "__main__":

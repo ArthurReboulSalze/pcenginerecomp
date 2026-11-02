@@ -38,6 +38,10 @@ ABIs are preserved; a later-ABI input cannot be backdated into an older module.
 The loader checks the exact admitted ISA/emitter selection hashes and native
 opcode set. A future selection change requires a separately reviewed contract;
 it is not permission to reinterpret historical module membership silently.
+The reference-mode metadata extension retains that selection contract: no
+translation or membership rule changes. The reviewed emitter pin includes the
+additive policy field, which must match the authenticated original capture;
+invented, removed or altered policy provenance refuses.
 
 ## Reading the report
 

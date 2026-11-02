@@ -10,6 +10,20 @@ project owns its game-specific routes, patches, assets and presentation choices.
 Ys III is one regression case; compatibility evidence remains tied to the
 tested CPU, hardware, media and runtime profiles.
 
+**Same-build interpreter reference windows are now supported.** An explicitly
+enabled build can restore its own checkpoint and run bounded interpreter-only
+segments over TCP. Generated dispatch is bypassed, imported counters stay exact,
+and captures/receipts record the effective execution policy. Native counterparts
+use the same binary, module and machine recipe; old or disabled-build checkpoints
+remain incompatible. See [setup, API and comparison rules](docs/REFERENCE_MODE.md).
+Runtime ABI 29 and guest checkpoint encoding remain unchanged.
+
+Authored tests compare 70,000 actual native instructions with 70,000 interpreted
+instructions from one checkpoint: complete machine state, completed RGB and
+filtered PCM agree after excluding only four tier-accounting counters. This is
+internal tier parity; independent hardware/emulator and campaign evidence remain
+separate.
+
 **Consumer evidence now has shared snapshot and admission helpers.** Exact-byte
 JSON snapshots, streamed artifact bindings and explicit process/seal boundaries
 replace repeated private read/hash maps. A role ledger validates current and

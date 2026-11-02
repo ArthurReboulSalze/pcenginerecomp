@@ -346,6 +346,8 @@ def emit_capture(capture: dict, output: Path, capture_sha256: str | None = None,
     if 'checkpoint_origin' in capture:
         extra['capture_checkpoint_origin'] = dict(capture['checkpoint_origin'])
         extra['capture_execution_window'] = 'resumed-checkpoint-suffix'
+    if 'execution_policy' in capture:
+        extra['capture_execution_policy'] = dict(capture['execution_policy'])
     return _emit_observations(instructions, output, provenance, accounting, extra,
         exclude_ranges, partition_size, single_unit, partition_layout, native_span)
 

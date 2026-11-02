@@ -2,6 +2,8 @@
 
 Both runners have an optional development server for controller input, bounded
 frame advancement, status, screenshots and paused physical-memory inspection.
+An explicit [same-build interpreter reference capability](REFERENCE_MODE.md)
+adds bounded `reference_frames` windows from a fresh paused run or own checkpoint.
 RAM editing additionally requires `--dev-memory-write on`. The server is disabled unless `--dev-port`
 is present. This uses the runner's own video and SDL targets; it never captures
 the owner's desktop or accesses other applications.
@@ -112,6 +114,7 @@ silently fall back to another operation.
 | `pause` | None | Pauses simulation at the next host polling safe point; cancels pending frame advancement |
 | `resume` | None | Releases the network pause and cancels pending advancement |
 | `step_frames` | Required `frames` 1..600 | Sets `target_frame`, runs toward it, then leaves the network pause engaged |
+| `reference_frames` | Required `frames` 1..600 | Opt-in interpreter-only segment; initially selects before first dispatch/capture, then allows bounded continuation under the same policy |
 | `screenshot` | Optional `source`: `guest` (default) or `present` | Inline RGB24 capture |
 | `present_shot` | None | Alias for a `present` screenshot |
 | `read_memory` | Required physical `address` 0..2097151 and `length` 1..256 | Paused RAM/ROM bytes as lowercase hex, with echoed `address` and `length` |

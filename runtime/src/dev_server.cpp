@@ -410,10 +410,17 @@ struct DevServer::Impl {
         stepping = false;
       } else if (cmd == "resume") {
         fields({});
+        if (snapshot.reference_selected)
+          throw std::runtime_error("reference execution requires bounded reference_frames");
         paused = false;
         stepping = false;
-      } else if (cmd == "step_frames") {
+      } else if (cmd == "step_frames" || cmd == "reference_frames") {
         fields({"frames"});
+        const bool reference = cmd == "reference_frames";
+        if (!reference && snapshot.reference_selected)
+          throw std::runtime_error("reference execution requires reference_frames");
+        if (reference && (!paused || (stepping && snapshot.frame < target_frame)))
+          throw std::runtime_error("reference execution requires a quiescent remote pause");
         if (snapshot.local_paused)
           throw std::runtime_error(
               "release the local desktop pause before stepping frames");
@@ -421,6 +428,13 @@ struct DevServer::Impl {
         if (count < 1 || count > 600 ||
             snapshot.frame > std::numeric_limits<std::uint64_t>::max() - count)
           throw std::runtime_error("frame count out of range");
+        if (reference) {
+          if (!snapshot.reference_frames)
+            throw std::runtime_error("reference execution requires explicit host opt-in");
+          snapshot.reference_frames();
+          // Resnapshot policy before handling any pipelined command.
+          resnapshot = true;
+        }
         paused = true;
         stepping = true;
         target_frame = snapshot.frame + count;

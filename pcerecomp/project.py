@@ -617,8 +617,10 @@ def _cached_build(project, build_dir, *, allow_revision_override, generator, des
         return receipt
 
 
-def checkpoint_context(project: dict) -> str:
+def checkpoint_context(project: dict, *, reference_enabled=False) -> str:
     """Exact reviewed source/input/profile recipe, independent of run limits."""
+    if type(reference_enabled) is not bool:
+        raise ValueError('reference_enabled requires a boolean')
     config = project['config']
     recipe = {'schema': 1, 'kind': 'pce-developer-checkpoint-context',
               'tool': {'revision': project['tool_identity']['revision'],
@@ -629,6 +631,8 @@ def checkpoint_context(project: dict) -> str:
         recipe['boot'] = config['boot']
     else:
         recipe['payload'] = {key: value for key, value in config['payload'].items() if key not in {'path', 'sha256'}}
+    if reference_enabled:
+        recipe['reference_capability'] = 'pce-reference-capability-v1'
     return hashlib.sha256(json.dumps(recipe, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
@@ -642,9 +646,14 @@ def _checkpoint_name(name):
 
 
 def command_for(project: dict, binary: Path, *, dev_port=None, start_paused=False, memory_write=False,
-                code_capture=None, capture_limit=None, checkpoint_dir=None, checkpoint_load=None):
+                code_capture=None, capture_limit=None, checkpoint_dir=None, checkpoint_load=None,
+                reference_enabled=False):
     config, files = project["config"], project["files"]
     limits, runtime = config["limits"], config["runtime"]
+    if type(reference_enabled) is not bool:
+        raise ValueError('reference_enabled requires a boolean')
+    if reference_enabled and (dev_port is None or not start_paused or runtime['video'] != 'continuous'):
+        raise ValueError('reference_enabled requires continuous paused TCP startup')
     if "boot" in config:
         if config['boot']['mode'] == 'hucard-reset':
             command = [str(binary), '--hucard-reset', config['boot']['profile'], str(files['cartridge']),
@@ -682,6 +691,8 @@ def command_for(project: dict, binary: Path, *, dev_port=None, start_paused=Fals
                     "--dev-memory-write", "on" if memory_write else "off"]
     elif start_paused or memory_write:
         raise ValueError("Pause/memory writes require --dev-port")
+    if reference_enabled:
+        command += ['--dev-reference', 'on']
     if code_capture is not None:
         command += ["--code-capture", str(Path(code_capture).resolve())]
         if capture_limit is not None:
@@ -695,7 +706,8 @@ def command_for(project: dict, binary: Path, *, dev_port=None, start_paused=Fals
             raise ValueError('checkpoint_dir requires an existing private directory without a symlink')
         if dev_port is None or not start_paused:
             raise ValueError('Developer checkpoints require paused TCP startup')
-        command += ['--checkpoint-dir', str(directory), '--checkpoint-context', checkpoint_context(project)]
+        command += ['--checkpoint-dir', str(directory), '--checkpoint-context',
+                    checkpoint_context(project, reference_enabled=reference_enabled)]
         if checkpoint_load is not None:
             command += ['--checkpoint-load', _checkpoint_name(checkpoint_load)]
     elif checkpoint_load is not None:
@@ -811,7 +823,40 @@ def _vdc_access_provenance(project, result):
         return {"valid": False, "error": str(error)}
 
 
-def _native_dispatch_provenance(project, result):
+def _execution_policy_provenance(project, result, *, reference_enabled=False):
+    value = result.get('execution_policy') if isinstance(result, dict) else None
+    if not reference_enabled and (not isinstance(result, dict) or 'execution_policy' not in result):
+        return None
+    try:
+        if not reference_enabled:
+            raise ValueError('Execution policy requires explicit reference capability')
+        _table(value, {'schema', 'reference_enabled', 'selected', 'configured_tier',
+                       'effective_policy', 'effective_native_span'}, name='execution_policy')
+        if (type(value['schema']) is not int or value['schema'] != 1
+                or value['reference_enabled'] is not True or type(value['selected']) is not bool):
+            raise ValueError('Unsupported execution policy report')
+        runtime = project['config']['runtime']
+        if value['configured_tier'] != runtime['tier']:
+            raise ValueError('Execution policy configured tier differs from recipe')
+        expected_policy = 'interpreter' if value['selected'] else runtime['tier']
+        expected_span = 0 if value['selected'] else runtime.get('native_span', 1)
+        _integer(value['effective_native_span'], 0, 256, 'effective_native_span')
+        if value['effective_policy'] != expected_policy or value['effective_native_span'] != expected_span:
+            raise ValueError('Inconsistent effective execution policy')
+        if value['selected']:
+            checkpoint = _checkpoint_provenance(result)
+            if checkpoint is not None and not checkpoint['valid']:
+                raise ValueError(checkpoint['error'])
+            native = (checkpoint['window']['native_steps'] if checkpoint and checkpoint['resumed']
+                      else result.get('native_steps'))
+            if type(native) is not int or native != 0:
+                raise ValueError('Interpreter reference window contains native retirements')
+        return {'valid': True, **value}
+    except (ValueError, KeyError, TypeError) as error:
+        return {'valid': False, 'error': str(error)}
+
+
+def _native_dispatch_provenance(project, result, *, reference_enabled=False):
     expected = project['config']['runtime'].get('native_span')
     if expected is None:
         return None
@@ -831,6 +876,14 @@ def _native_dispatch_provenance(project, result):
             _integer(value[key], 0, 2**64-1, 'native_dispatch.'+key)
         if value['limit'] != expected:
             raise ValueError('Reported native span limit differs from the declared runtime')
+        policy = _execution_policy_provenance(project, result, reference_enabled=reference_enabled)
+        if policy is not None and not policy['valid']:
+            raise ValueError(policy['error'])
+        if policy is not None and policy['selected']:
+            if any(value[key] for key in ('batches', 'generated_calls', 'native_completed',
+                                         'interpreted_completed', 'local_continuations', 'max_completed')):
+                raise ValueError('Interpreter reference must bypass native span dispatch')
+            return {'valid': True, **value}
         n, i = result.get('native_steps'), result.get('interpreter_steps')
         checkpoint = _checkpoint_provenance(result)
         if checkpoint is not None:
@@ -877,16 +930,19 @@ def save_identity(project, contract: str) -> str:
 
 def run(descriptor: Path, build_dir: Path, receipt_path: Path, *, allow_revision_override=False,
         dev_port=None, start_paused=False, memory_write=False, code_capture=None, capture_limit=None,
-        save_root=None, save_namespace=None, save_contract=None, checkpoint_dir=None, checkpoint_load=None) -> dict:
+        save_root=None, save_namespace=None, save_contract=None, checkpoint_dir=None, checkpoint_load=None,
+        reference_enabled=False) -> dict:
     options = dict(allow_revision_override=allow_revision_override, dev_port=dev_port,
                    start_paused=start_paused, memory_write=memory_write,
                    code_capture=code_capture, capture_limit=capture_limit,
-                   checkpoint_dir=checkpoint_dir, checkpoint_load=checkpoint_load)
+                   checkpoint_dir=checkpoint_dir, checkpoint_load=checkpoint_load, reference_enabled=reference_enabled)
     requested = (save_root is not None, save_namespace is not None, save_contract is not None)
     if not any(requested):
         return _run(descriptor, build_dir, receipt_path, **options)
     if not all(requested):
         raise ValueError("Persistence requires save_root, save_namespace and save_contract together")
+    if reference_enabled:
+        raise ValueError('Reference capability cannot publish a persistent BRAM session')
     if checkpoint_load is not None:
         raise ValueError('Checkpoint loading cannot publish a persistent BRAM session')
     if receipt_path.exists() or receipt_path.is_symlink():
@@ -905,7 +961,8 @@ def run(descriptor: Path, build_dir: Path, receipt_path: Path, *, allow_revision
 
 def _run(descriptor: Path, build_dir: Path, receipt_path: Path, *, allow_revision_override=False,
          dev_port=None, start_paused=False, memory_write=False, code_capture=None, capture_limit=None,
-         bram_session=None, bram_contract=None, checkpoint_dir=None, checkpoint_load=None) -> dict:
+         bram_session=None, bram_contract=None, checkpoint_dir=None, checkpoint_load=None,
+         reference_enabled=False) -> dict:
     if receipt_path.exists() or receipt_path.is_symlink():
         raise ValueError("Execution receipt already exists")
     project = verify(descriptor, allow_revision_override=allow_revision_override)
@@ -929,7 +986,7 @@ def _run(descriptor: Path, build_dir: Path, receipt_path: Path, *, allow_revisio
             raise ValueError("Capture and execution receipt require separate paths")
     command = command_for(project, binary, dev_port=dev_port, start_paused=start_paused, memory_write=memory_write,
                           code_capture=code_capture, capture_limit=capture_limit,
-                          checkpoint_dir=checkpoint_dir, checkpoint_load=checkpoint_load)
+                          checkpoint_dir=checkpoint_dir, checkpoint_load=checkpoint_load, reference_enabled=reference_enabled)
     if bram_session is not None:
         if save_identity(project, bram_contract) != bram_session.compatibility_sha256:
             raise ValueError("Consumer save binding changed before execution")
@@ -969,7 +1026,8 @@ def _run(descriptor: Path, build_dir: Path, receipt_path: Path, *, allow_revisio
     boot_report = _boot_provenance(project, result, bram_seeded=(bram_session.seed_path is not None)
                                    if bram_session is not None else None)
     vdc_report = _vdc_access_provenance(project, result)
-    dispatch_report = _native_dispatch_provenance(project, result)
+    policy_report = _execution_policy_provenance(project, result, reference_enabled=reference_enabled)
+    dispatch_report = _native_dispatch_provenance(project, result, reference_enabled=reference_enabled)
     capture_report = None
     if code_capture is not None:
         from .capture import load_capture
@@ -981,6 +1039,10 @@ def _run(descriptor: Path, build_dir: Path, receipt_path: Path, *, allow_revisio
                                and checkpoint_report['resumed'] else None)
             if capture.get('checkpoint_origin') != expected_origin:
                 raise ValueError('Code capture checkpoint origin differs from execution window')
+            expected_policy = ({key: value for key, value in policy_report.items() if key != 'valid'}
+                               if policy_report and policy_report['valid'] else None)
+            if capture.get('execution_policy') != expected_policy:
+                raise ValueError('Code capture execution policy differs from the host report')
             if capture["capacity"] != (capture_limit if capture_limit is not None else 16384):
                 raise ValueError("Code capture capacity differs from the requested limit")
             if counters is None or capture["retired_instructions"] != counters["total"]:
@@ -1005,6 +1067,8 @@ def _run(descriptor: Path, build_dir: Path, receipt_path: Path, *, allow_revisio
                               "observations": len(capture["observations"])}
             if expected_origin is not None:
                 capture_report['checkpoint_origin'] = expected_origin
+            if expected_policy is not None:
+                capture_report['execution_policy'] = expected_policy
         except (ValueError, OSError, KeyError, TypeError) as error:
             capture_report = {"path": str(code_capture), "valid": False, "error": str(error)}
     receipt = {"schema": 1, "kind": "pce-consumer-execution", "binding": _binding(project),
@@ -1017,6 +1081,7 @@ def _run(descriptor: Path, build_dir: Path, receipt_path: Path, *, allow_revisio
                             and source_unchanged and outputs_unchanged and (capture_report is None or capture_report["valid"])
                             and (boot_report is None or boot_report["valid"])
                             and (vdc_report is None or vdc_report["valid"])
+                            and (policy_report is None or policy_report['valid'])
                             and (dispatch_report is None or dispatch_report['valid']),
                "limits": ["Execution receipt is reproducibility evidence, not independent emulator parity",
                           "Native site count is not executed native work; full host diagnostics retained",
@@ -1034,6 +1099,8 @@ def _run(descriptor: Path, build_dir: Path, receipt_path: Path, *, allow_revisio
         receipt["vdc_access_validation"] = vdc_report
     if dispatch_report is not None:
         receipt['native_dispatch_validation'] = dispatch_report
+    if policy_report is not None:
+        receipt['execution_policy_validation'] = policy_report
     if bram_session is not None:
         save_report = {"namespace": bram_session.namespace,
                        "compatibility_sha256": bram_session.compatibility_sha256,
@@ -1080,6 +1147,8 @@ def main(argv=None):
             sub.add_argument("--dev-port", type=int)
             sub.add_argument("--start-paused", action="store_true")
             sub.add_argument("--memory-write", action="store_true")
+            sub.add_argument('--reference-enabled', action='store_true',
+                             help='Enable same-build paused interpreter reference windows')
             sub.add_argument("--code-capture", type=Path)
             sub.add_argument("--capture-limit", type=int)
             sub.add_argument("--save-root", type=Path)
@@ -1109,7 +1178,8 @@ def main(argv=None):
                          dev_port=args.dev_port, start_paused=args.start_paused, memory_write=args.memory_write,
                          code_capture=args.code_capture, capture_limit=args.capture_limit,
                          save_root=args.save_root, save_namespace=args.save_namespace, save_contract=args.save_contract,
-                         checkpoint_dir=args.checkpoint_dir, checkpoint_load=args.checkpoint_load)
+                         checkpoint_dir=args.checkpoint_dir, checkpoint_load=args.checkpoint_load,
+                         reference_enabled=args.reference_enabled)
         print(json.dumps(result, indent=2))
         return 0 if args.command != "run" or result["qualified"] else 3
     except (ValueError, OSError, subprocess.SubprocessError, KeyError, TypeError) as error:

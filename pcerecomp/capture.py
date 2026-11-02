@@ -17,13 +17,36 @@ def integer(value, maximum, label, minimum=0):
     return value
 
 
+def validate_execution_policy(policy):
+    """Exact host capability metadata; this never changes guest state identity."""
+    fields = {'schema', 'reference_enabled', 'selected', 'configured_tier',
+              'effective_policy', 'effective_native_span'}
+    if not isinstance(policy, dict) or set(policy) != fields:
+        raise ValueError('Invalid execution policy fields')
+    if type(policy['schema']) is not int or policy['schema'] != 1:
+        raise ValueError('Unsupported execution policy schema')
+    if any(type(policy[key]) is not bool for key in ('reference_enabled', 'selected')):
+        raise ValueError('Execution policy flags require booleans')
+    tier, selected = policy['configured_tier'], policy['selected']
+    if tier not in ('native', 'hybrid'):
+        raise ValueError('Invalid configured execution tier')
+    expected = 'interpreter' if selected else tier
+    if policy['effective_policy'] != expected or (selected and not policy['reference_enabled']):
+        raise ValueError('Incoherent execution policy selection')
+    span = integer(policy['effective_native_span'], 256, 'effective native span')
+    if (selected and span != 0) or (not selected and span == 0):
+        raise ValueError('Execution policy span disagrees with selection')
+    return dict(policy)
+
+
 def validate_capture(capture):
     """Return canonical observations with decoder-derived instruction metadata."""
     fields = {
         'schema', 'runtime_abi', 'capacity', 'dropped_instructions',
         'unreadable_instructions', 'retired_instructions', 'complete', 'observations'
     }
-    if not isinstance(capture, dict) or set(capture) not in (fields, fields | {'checkpoint_origin'}):
+    optional = {'checkpoint_origin', 'execution_policy'}
+    if not isinstance(capture, dict) or not fields <= set(capture) or set(capture) - fields - optional:
         raise ValueError('Invalid code-capture fields')
     if 'checkpoint_origin' in capture:
         validate_checkpoint_origin(capture['checkpoint_origin'])
@@ -31,6 +54,11 @@ def validate_capture(capture):
         raise ValueError('Unsupported code-capture schema')
     if type(capture['runtime_abi']) is not int or capture['runtime_abi'] not in CAPTURE_ABIS:
         raise ValueError('Unsupported code-capture runtime ABI')
+    policy = None
+    if 'execution_policy' in capture:
+        policy = validate_execution_policy(capture['execution_policy'])
+        if capture['runtime_abi'] < 29 or not policy['reference_enabled']:
+            raise ValueError('Capture execution policy requires a reference-enabled ABI29 producer')
     capacity = integer(capture['capacity'], MAX_OBSERVATIONS, 'capacity', 1)
     dropped = integer(capture['dropped_instructions'], U64, 'dropped instructions')
     unreadable = integer(capture['unreadable_instructions'], U64, 'unreadable instructions')
@@ -64,6 +92,8 @@ def validate_capture(capture):
         if ins.data != raw or ins.physical != addresses:
             raise ValueError('Instruction length or physical mapping disagrees with decoder')
         native = integer(item['native_hits'], U64, 'native hits')
+        if policy and policy['selected'] and native:
+            raise ValueError('Interpreter reference capture contains native retirements')
         interpreted = integer(item['interpreted_hits'], U64, 'interpreted hits')
         if not 0 < native + interpreted <= U64:
             raise ValueError('Observation must have a bounded nonzero hit count')

@@ -27,7 +27,8 @@ MAX_MANIFEST_BYTES = 64 * 1024 * 1024
 MAX_ARTIFACT_BYTES = 64 * 1024 * 1024
 MAX_TOTAL_ARTIFACT_BYTES = 512 * 1024 * 1024
 _ISA_SHA = '8f1b4454029d442313b93ea162311f0cf4d46a965cdd562b1341f72c2d6ba9ea'
-_EMITTER_SHA = '68368ed1230806efa907a03dc9b1d5116f3881a6917a86f6ba93f67fd7f077a6'
+# Compat58 adds capture policy metadata only; translated selection is unchanged.
+_EMITTER_SHA = '8ba31b588355b9528a8379bd6d0e31f3502df7938faa9309c23e68f6fbf5daa0'
 _NATIVE_SHA = '6951ccf25b9c079dad86a31f937af81afadae0e28add5e7635da58ca9934e6fd'
 _GUARDS = ['full_mpr_snapshot', 'exact_source_bytes_per_instruction', 'instruction_deadline']
 _POLICY = 'return to dispatcher, then bounded interpreter or explicit trap'
@@ -300,6 +301,10 @@ def load_native_catalog(manifest_path, observations_path, *, producer_contract=P
                               capture_execution_window='resumed-checkpoint-suffix')
         elif {'capture_checkpoint_origin', 'capture_execution_window'} & manifest.keys():
             raise ValueError('Module invented capture checkpoint origin')
+        if 'execution_policy' in value:
+            accounting['capture_execution_policy'] = value['execution_policy']
+        elif 'capture_execution_policy' in manifest:
+            raise ValueError('Module invented capture execution policy')
     else:
         if any(key.startswith(('capture_', 'captured_')) for key in manifest):
             raise ValueError('Profile manifest cannot declare singular capture provenance')

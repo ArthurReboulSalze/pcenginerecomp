@@ -47,7 +47,17 @@ private:
         std::uint64_t ticks=0,frame=0,native_steps=0,interpreter_steps=0;
     };
     std::optional<CheckpointOrigin> checkpoint_origin_;
+    struct ExecutionPolicy { bool selected; std::string tier; unsigned span; };
+    std::optional<ExecutionPolicy> execution_policy_;
     mutable bool observed_=false;
+    void policy_fields(std::ostream& json) const {
+        if(!execution_policy_)return;
+        const auto& p=*execution_policy_;
+        json<<",\"execution_policy\":{\"schema\":1,\"reference_enabled\":true,\"selected\":"
+            <<(p.selected?"true":"false")<<",\"configured_tier\":\""<<p.tier
+            <<"\",\"effective_policy\":\""<<(p.selected?"interpreter":p.tier)
+            <<"\",\"effective_native_span\":"<<(p.selected?0:p.span)<<'}';
+    }
     void checkpoint_fields(std::ostream& json) const {
         if(!checkpoint_origin_)return;
         const auto& o=*checkpoint_origin_;
@@ -64,6 +74,7 @@ private:
             <<",\"dropped_instructions\":"<<dropped_<<",\"unreadable_instructions\":"<<unreadable_
             <<",\"complete\":"<<(!dropped_&&!unreadable_ ? "true":"false");
         checkpoint_fields(json);
+        policy_fields(json);
     }
 public:
     CodeCapture(const std::filesystem::path& path,std::size_t capacity):capacity_(capacity) {
@@ -82,6 +93,14 @@ public:
     CodeCapture(const CodeCapture&)=delete;
     CodeCapture& operator=(const CodeCapture&)=delete;
     ~CodeCapture() {if(file_) std::fclose(file_);}
+    void set_execution_policy(bool selected,const std::string& tier,unsigned span) {
+        if(observed_ || finished_)throw Fault("capture execution policy must precede first observation");
+        if((tier!="native" && tier!="hybrid") || span<1 || span>256)
+            throw Fault("invalid capture execution policy configuration");
+        if(execution_policy_ && (execution_policy_->selected || execution_policy_->tier!=tier || execution_policy_->span!=span))
+            throw Fault("capture execution policy cannot be reselected");
+        execution_policy_=ExecutionPolicy{selected,tier,span};
+    }
     void set_checkpoint_origin(const std::string& sha256,std::uint64_t ticks,std::uint64_t frame,
                                std::uint64_t native,std::uint64_t interpreted) {
         if(observed_ || finished_ || checkpoint_origin_)throw Fault("checkpoint capture origin must precede first observation");
@@ -114,6 +133,8 @@ public:
         const auto interpreted=cpu.interpreter_steps-pending.interpreted_before;
         if(!native && !interpreted) return; // guard misses, budgets and traps are not instructions.
         if(native+interpreted!=1) throw Fault("invalid code-capture retirement delta");
+        if(execution_policy_ && execution_policy_->selected && native)
+            throw Fault("interpreter reference capture retired native code");
         ++retired_;
         native_+=native;interpreted_+=interpreted;
         if(!pending.readable) {++unreadable_;return;}
@@ -173,7 +194,7 @@ public:
         json<<"{\"schema\":1,\"runtime_abi\":"<<abi_version<<",\"capacity\":"<<capacity_
             <<",\"dropped_instructions\":"<<dropped_<<",\"unreadable_instructions\":"<<unreadable_
             <<",\"retired_instructions\":"<<retired_<<",\"complete\":"<<(!dropped_&&!unreadable_ ? "true":"false");
-        checkpoint_fields(json);json<<",\"observations\":[";
+        checkpoint_fields(json);policy_fields(json);json<<",\"observations\":[";
         bool comma=false;
         for(const auto* entry:ordered) {
             const auto& key=entry->identity;

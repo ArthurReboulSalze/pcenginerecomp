@@ -10,6 +10,25 @@ project owns its game-specific routes, patches, assets and presentation choices.
 Ys III is one regression case; compatibility evidence remains tied to the
 tested CPU, hardware, media and runtime profiles.
 
+**VDC register races now have independent guest-code coverage.** A new
+24-case matrix runs actual translated and interpreted instructions against
+original Geargrafx: DMA holds a VRAM request while the guest changes its
+address increment, then a real port access waits for completion. All 744
+native retirements run without fallback; pending state, wrap results and
+timestamps match. See [queued-register race coverage](docs/VDC_ACCESS.md#guest-register-changes-during-pending-requests).
+
+**Reference checks now reject mismatched or ambiguous replies.** The shared
+Geargrafx MCP client validates response IDs and rejects duplicate JSON keys,
+non-finite numbers and malformed results. Authored regressions and a real
+isolated Gear smoke check the boundary. Runtime ABI 28 and the qualified
+consumer's compiled code stay unchanged. See [the reference client contract](docs/REFERENCE.md#shared-http-reference-boundary).
+Ys III also passes a fresh TCP checkpoint pair on that qualified package:
+each 60-frame continuation executes 1,866,913 native instructions with zero
+fallback and matching complete state, RAM, pixels and encoded hit counts.
+A separate 120-frame paced SDL audio fork passes with zero fallback.
+The current required SDL check passes **1,600 Python tests without skips,
+68 C++ suites and 12 fresh-process audio checkpoint cases**.
+
 **All four new late-game identities now execute natively.** The staged-profile
 Ys III candidate completes a fresh reset replay and seven own-checkpoint
 continuations: **111,789 route frames, 3,433,175,577 native instructions and

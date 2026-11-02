@@ -107,6 +107,54 @@ are reported separately; all queue/timing fields remain exact. The authored
 C++ queue suite adds **49,279 expectations**. These checks establish the
 bounded model above, not hardware or whole-game parity.
 
+## Guest register changes during pending requests
+
+`scripts/vdc_queue_reference.py --suite races --native` adds a separate
+authored guest matrix. The default `--suite legacy` preserves the original
+615-case ROM and plan; `--suite all` includes both. Each run requires a new
+private output directory and the same pinned original Gear source and
+explicit libraries described in [DEVELOPMENT.md](DEVELOPMENT.md).
+
+The **24 cases** cover both CPU speeds, all three VCE dot dividers, and
+read/write requests at `7FFF` and `FFFF`, with selected changes from increment
+1 to 32, 64 or 128. Real guest instructions start a 512-word VRAM DMA and
+queue the target access. Observations immediately before and after the
+decisive CR high-byte write require the same pending request and a positive,
+advancing DMA. A later guest data-port access incurs the wait. No pending
+flag, DMA state or display phase is injected for these cases; the initial
+VRAM pattern, CPU speed and common completed prefetch are authored setup.
+
+The separately compiled original Gear core, toolkit interpreter and emitted
+native module match **1,536 records**, including CPU registers/mappings,
+queue/register state, timestamps, RAM and complete VRAM hashes. Each engine
+passes **168 independent assertion groups** covering the pending witness,
+control change, endpoint arithmetic, driven/retained read bus and complete
+expected RAM/VRAM result. These are grouped assertions, not 168 individual
+bytes or independent hardware measurements. The expected values are authored
+arithmetic and data, not copied from either execution tier.
+
+The native run retires **744 instructions across 124 encoded identities**
+with zero fallback. Its **96 source-byte/MPR guard negatives**, including
+48 at the genuine DMA-held pending window, preserve the full encoded CORE
+checkpoint payload, generation counters and VDC port counters. This is a
+purity check on failed dispatch, not a fresh-process checkpoint restore.
+The race cases have **no reference field projections**. The existing named
+MWR3 renderer differences belong only to the separate legacy cases.
+
+A fresh `--suite all --native` run also passes **639 cases / 4,092 records**,
+with **1,326 native retirements, zero fallback, 221 encoded identities and
+four MPR contexts**. Its 120 pure guard negatives include the same 48 genuine
+pending-window negatives. The combined run retains exactly the original
+99 named MWR3 read-bus differences; no new race record differs from Gear.
+The old 3,678 literal checks and new 168 assertion groups keep their distinct
+units rather than becoming a count of independently measured bytes.
+
+This closes independent guest coverage of the selected live-CR completion
+semantics. It introduces no runtime fix, ABI change or checkpoint migration.
+Other register races, half-written raster comparisons, further IRQ overlaps
+and physical bus alignment remain separate qualification work. Ys III's TCP
+checkpoint regression is separate from this authored original-core matrix.
+
 ## Timer interrupts during waits
 
 The separate authored `scripts/vdc_irq_reference.py` probe checks timer

@@ -47,6 +47,53 @@ def firmware():
     raw[0x300:0x307]=bytes((0xAD,2,0,0x8D,12,0x20,0xEA))
     return bytes(raw),ops
 
+
+RACE_SPECS=(('read',0x7FFF,32),('read',0xFFFF,128),
+            ('write',0x7FFF,64),('write',0xFFFF,32))
+
+
+def race_firmware():
+    """Authored guest DMA and queue triggers; no pending state is injected.
+
+    The initial VRAM pattern remains an explicitly host-authored fixture.
+    A 512-word DMA keeps the target pending across the entire CR update at
+    either CPU speed. Only the later real data-port access drains the wait.
+    """
+    raw=bytearray(firmware()[0]);programs=[]
+    for index,(kind,address,increment)in enumerate(RACE_SPECS):
+        ops=[]
+        def add(*values):ops.append(bytes(values))
+        def reg(number,value):add(3,number);add(0x13,value&255);add(0x23,value>>8)
+        reg(5,0);reg(0,address)
+        for number,value in((15,0),(16,0x100),(17,0x1000),(18,511)):reg(number,value)
+        reg(1,address)if kind=='read'else reg(2,0xAB5C)
+        add(3,5);add(0x13,0)
+        prefix=len(ops);add(0x23,(1,32,64,128).index(increment)<<3)
+        add(0xAD,0,0);add(0x8D,2,0x20) # BUSY while real DMA still holds the queue.
+        if kind=='read':
+            add(0xAD,2,0);add(0x8D,0,0x20);add(0xAD,3,0);add(0x8D,1,0x20)
+        else:
+            add(3,1);add(0x13,0) # MARR low waits without overwriting the incremented MAWR.
+        add(0xA9,0x5A);add(0x8D,3,0x20)
+        offset=0x600+index*0x100;code=b''.join(ops)+b'\x80\xFE'
+        if len(code)>0x100:raise ValueError('Race guest exceeds its independent source partition')
+        raw[offset:offset+len(code)]=code
+        programs.append(dict(kind=kind,address=address,increment=increment,entry=0xE000+offset,
+                             prefix=prefix,steps=len(ops),ops=ops))
+    return bytes(raw),programs
+
+
+def race_plans():
+    _,programs=race_firmware();cases=[]
+    for fast in(0,1):
+        for control in range(3):
+            for program in programs:
+                spec={k:v for k,v in program.items()if k!='ops'}
+                cases.append(dict(id=f"commit-race-{fast}-{control}-{spec['kind']}-{spec['address']:04x}",
+                    race=spec,operations=[('r',fast,control),('x',spec['entry']),
+                        ('i',spec['prefix']),('g',),('i',spec['steps']-spec['prefix']),('m',)]))
+    return cases
+
 def write_register(index,value):return [('w',0,index),('w',2,value&255),('w',3,value>>8)]
 
 def plans():
@@ -120,15 +167,57 @@ def validate_records(rows,cases):
             elif op[0]=='s':wanted.append(('device',37))
             elif op[0]=='p':wanted.append(('byte',2))
             elif op[0]=='m':wanted.append(('ram',64))
+            elif op[0]=='g':wanted.append(('guard-window',37))
             elif op[0]=='i':wanted.extend([('cpu',16),('device',37)]*op[1])
     if type(rows)is not list or len(rows)!=len(wanted):raise ValueError('Queue observation count differs')
     for row,(kind,width)in zip(rows,wanted):
         if type(row)is not dict or set(row)!={'kind','values'}or row['kind']!=kind or type(row['values'])is not list or len(row['values'])!=width or any(type(v)is not int or not 0<=v<2**64 for v in row['values']):raise ValueError('Queue record shape/type differs')
     return rows
 
+
+def race_literals(rows,spec):
+    """Independent endpoint arithmetic and a pending witness on both sides.
+
+    DMA reads 0100..02FF in order; FFFF is undriven and must retain that
+    independently computed final DMA word. Expected values never come from a
+    runtime latch, observed wait duration or reference-engine output.
+    """
+    pattern=lambda i:((i*73)^(i>>3)^0xA53C)&65535
+    prefix=spec['prefix'];before=rows[prefix*2-1]['values'];window=rows[prefix*2]['values']
+    after=rows[prefix*2+2]['values'];kind=spec['kind'];address=spec['address'];increment=spec['increment']
+    pending=[int(kind=='read'),int(kind=='write')]
+    if before!=window or before[5:7]!=pending or after[5:7]!=pending or not before[14]>after[14]>0:
+        raise ValueError('Actual decisive CR write must remain inside genuine pending DMA')
+    if before[12]!=5 or after[12]!=5 or before[20]!=0 or after[20]!=(1,32,64,128).index(increment)<<11:
+        raise ValueError('Actual decisive CR high write did not change only the increment policy')
+    if before[7:9]!=after[7:9]or before[15:20]!=after[15:20]:
+        raise ValueError('CR write changed pending request/delay/address state')
+    final=rows[-2]['values'];ram=rows[-1]['values']
+    value=pattern(address)if address<32768 else pattern(0x2FF)
+    expected=[value&255,value>>8,64,0x5A]if kind=='read'else[0,0,64,0x5A]
+    if ram[:4]!=expected or any(ram[4:]):raise ValueError('Independent race result RAM bytes differ')
+    if any(final[5:9])or final[14]or final[20]!=(1,32,64,128).index(increment)<<11:
+        raise ValueError('Race completion did not drain exactly its genuine queue/DMA')
+    if kind=='read':
+        if final[16]!=(address+increment)&65535 or final[10]!=value or final[11]!=value:
+            raise ValueError('Read completion did not use live increment/open bus')
+    elif final[15]!=(address+increment)&65535 or final[10]!=pattern(0)or final[11]!=pattern(0x2FF):
+        raise ValueError('Write completion did not use live increment/retained read bus')
+    words=[pattern(i)for i in range(32768)]
+    for i in range(512):words[0x1000+i]=pattern(0x100+i)
+    if kind=='write'and address<32768:words[address]=0xAB5C
+    digest=14695981039346656037
+    for word in words:
+        for byte in(word&255,word>>8):digest=((digest^byte)*1099511628211)&((1<<64)-1)
+    if final[35]!=digest:raise ValueError('Independent complete VRAM result differs')
+    return 7 # Seven independent assertion groups; full RAM/VRAM are included.
+
 def literal_checks(rows,cases):
     validate_records(rows,cases);index=checks=0
     for case in cases:
+        if 'race'in case:
+            count=2*case['race']['steps']+2
+            checks+=race_literals(rows[index:index+count],case['race']);index+=count;continue
         control=0;phase=None;countdown=None
         for op in case['operations']:
             if op[0]=='r':control=op[2]
@@ -186,7 +275,7 @@ def compare_gear(actual,golden,cases):
     differences=[];index=0
     for case in cases:
         for op in case['operations']:
-            count=op[1]*2 if op[0]=='i'else int(op[0]in('s','p','m','j'))
+            count=op[1]*2 if op[0]=='i'else int(op[0]in('s','p','m','j','g'))
             for _ in range(count):
                 a,b=actual[index],golden[index]
                 mode3_case=case['id']in('active-background-0-3','active-background-1-3','active-background-2-3')
@@ -267,7 +356,11 @@ def run(args):
     for i,p in enumerate(files):
         saved=epoch/str(i)/p.name;saved.parent.mkdir();shutil.copyfile(p,saved);bindings['authored_epoch'][str(saved)]=sha(saved)
     try:
-        image=out/'authored.pce';image.write_bytes(firmware()[0]);cases=plans();plan=out/'queue.plan';plan.write_text(serialize(cases));bindings['authored_fixtures']={str(p):sha(p)for p in(image,plan)}
+        suite=getattr(args,'suite','legacy')
+        if suite not in('legacy','races','all'):raise ValueError('Unknown VDC queue suite')
+        cases=(plans()if suite!='races'else[])+(race_plans()if suite!='legacy'else[])
+        image=out/'authored.pce';image.write_bytes(firmware()[0]if suite=='legacy'else race_firmware()[0]);plan=out/'queue.plan';plan.write_text(serialize(cases));bindings['authored_fixtures']={str(p):sha(p)for p in(image,plan)}
+        report['suite']=suite
         gear=build_gear(args,out,report,bindings,compiler);golden=execute('gear',gear,plan,image,cases,out,report,bindings);literals={'gear':literal_checks(golden[0],cases)}
         probe=build_tool(args,out,report,bindings,compiler)if args.native else args.probe.resolve()if args.probe else None
         if probe:
@@ -285,9 +378,13 @@ def run(args):
             compare_gear(native[0],golden[0],cases)
             if native[0]!=actual[0]:raise ValueError('Native/interpreter full records differ')
             if {common.capture_identity(o):o['native_hits']for o in native[1]['observations']}!={common.capture_identity(o):o['interpreted_hits']for o in actual[1]['observations']}:raise ValueError('Actual per-key native hits differ')
-            if (out/'native.stderr').read_text().strip()!='PCE_QUEUE_GUARDS=24':raise ValueError('Twenty-four pure native guard negatives required')
-            literals['native']=literal_checks(native[0],cases);report['tool']=source_identity(tool);report['native']=dict(retirements=native[1]['retired_instructions'],interpreted=0,identities=len(observed['observations']),mpr_contexts=len({tuple(o['mpr'])for o in observed['observations']}),pure_guard_negatives=24)
-        report.update(result='pass',cases=len(cases),records=len(golden[0]),literal_checks=literals,actual_cpu_cases=12,retirements_per_main_cpu_case=len(firmware()[1]),retirements_per_both_pending_case=3)
+            cpu_cases=sum(any(op[0]=='i'for op in case['operations'])for case in cases)
+            pending_windows=sum(op[0]=='g'for case in cases for op in case['operations'])
+            guards=2*(cpu_cases+pending_windows)
+            if (out/'native.stderr').read_text().strip()!=f'PCE_QUEUE_GUARDS={guards}':raise ValueError('Required pure native source/MPR guard negatives missing')
+            literals['native']=literal_checks(native[0],cases);report['tool']=source_identity(tool);report['native']=dict(retirements=native[1]['retired_instructions'],interpreted=0,identities=len(observed['observations']),mpr_contexts=len({tuple(o['mpr'])for o in observed['observations']}),pure_guard_negatives=guards,genuine_pending_guard_negatives=2*pending_windows)
+        report.update(result='pass',cases=len(cases),records=len(golden[0]),literal_checks=literals,actual_cpu_cases=sum(any(op[0]=='i'for op in case['operations'])for case in cases),retirements_per_main_cpu_case=len(firmware()[1]),retirements_per_both_pending_case=3)
+        if suite!='legacy':report['commit_races']=dict(cases=len(race_plans()),literal_assertion_groups_per_case=7,guest_started_dma_words=512,manual_queue_or_phase_injection=False,pending_witness='Positive genuine DMA and unchanged queued request immediately before/after CR ST2; control writes cannot requeue',initial_fixture='Authored VRAM pattern, reset speed and common completed prefetch; guest instructions trigger DMA and target queue',scope='Commit-time CR increment and actual wait/guard behavior only; no fresh IRQ, checkpoint, electrical bus or hardware claim')
     except Exception as error:report.update(result='fail',error=str(error));raise
     finally:reference.record_preservation(report,bindings);(out/'result.json').write_text(json.dumps(report,indent=2)+'\n')
     if report['result']!='pass':raise ValueError('Evidence preservation failed')
@@ -295,6 +392,6 @@ def run(args):
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--gear-source',type=Path,required=True);parser.add_argument('--tool-source',type=Path,default=ROOT);parser.add_argument('--probe',type=Path);parser.add_argument('--native',action='store_true');parser.add_argument('--out',type=Path,required=True);parser.add_argument('--compiler',default='clang++');parser.add_argument('--cmake',default='cmake');parser.add_argument('--ninja',default='ninja');parser.add_argument('--library',type=Path,action='append',default=[])
+    parser.add_argument('--gear-source',type=Path,required=True);parser.add_argument('--tool-source',type=Path,default=ROOT);parser.add_argument('--probe',type=Path);parser.add_argument('--native',action='store_true');parser.add_argument('--suite',choices=('legacy','races','all'),default='legacy');parser.add_argument('--out',type=Path,required=True);parser.add_argument('--compiler',default='clang++');parser.add_argument('--cmake',default='cmake');parser.add_argument('--ninja',default='ninja');parser.add_argument('--library',type=Path,action='append',default=[])
     try:run(parser.parse_args())
     except(ValueError,RuntimeError,OSError,KeyError,subprocess.SubprocessError)as error:print(error,file=sys.stderr);raise SystemExit(1)

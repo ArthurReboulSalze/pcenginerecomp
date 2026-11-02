@@ -185,6 +185,16 @@ still track broader work; the current finite probes do not close those gates.
    [distance timing profile](CD_TIMING.md) now covers bounded READ/CDDA seeks
    and playback readiness while retaining the fixed default. Further measured
    drive models and addresses outside its calibration need separate work.
+   The next subchannel milestone needs an explicit provider contract for
+   original 96-byte data, its representation and absence, then captured-Q
+   validation and a separately selected byte-stream/IRQ profile. The current
+   provider exposes no captured subchannel data; synthesized position replies
+   must not be advertised as raw-Q support. Gear's ordinary media path and
+   Beetle's FIFO acknowledgements differ. Preserve the existing default and
+   qualify each proposed profile against the original core that implements
+   it, including malformed Q, overflow, mixed IRQ sources and a checkpoint
+   restored halfway through a packet. This is planned work, not a newly
+   implemented device or a reason to change a qualified consumer's SDK pin.
 5. **Capture inspection and trace coverage.** Paused, bounded read-only TCP
    summaries and retired source-span pages are implemented, including exact
    native/interpreted counts, completeness/loss and deferred-window metadata.

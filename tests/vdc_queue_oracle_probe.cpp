@@ -1,5 +1,6 @@
 #include "pce/runtime.hpp"
 #include "pce/code_capture.hpp"
+#include "pce/checkpoint.hpp"
 #include "vdc_queue_probe_support.hpp"
 #include <memory>
 #include <tuple>
@@ -15,13 +16,14 @@ struct Adapter {
     void advance(unsigned ticks){bus->vdc.advance(ticks,&bus->vce);}
     unsigned slot(unsigned elapsed){return bus->vdc.cpu_vram_slot_available(elapsed);}
     void cpu_entry(unsigned address){c.pc=address;c.mpr[0]=255;c.mpr[1]=248;c.mpr[2]=255;}
+    void pending_guards(){if(!bus->vdc.vram_dma_pending || !bus->vdc.has_pending_vram())throw std::runtime_error("guest race must retain genuine DMA-held CPU work");guarded=false;}
     void seed(unsigned address,unsigned value){(*bus->vdc.vram)[address]=static_cast<std::uint16_t>(value);}
     std::vector<std::uint64_t> device()const{const auto& v=bus->vdc;std::vector<std::uint64_t> out{v.raster.master_ticks,v.raster.hclock,v.raster.vdc_line,v.raster.v_state,v.raster.h_state,v.pending_vram_read,v.pending_vram_write,static_cast<unsigned>(v.vram_transfer_delay),v.vram_cpu_cycles,v.status,v.read_buffer,v.vram_bus_latch,v.selected,v.satb_pending,v.vram_dma_pending};for(auto r:v.reg)out.push_back(r);out.push_back(reset_probe::hash(v.vram->data(),32768));out.push_back(reset_probe::hash(v.satb.data(),256));return out;}
     std::vector<std::uint64_t> cpu()const{std::vector<std::uint64_t> out{c.pc,c.a,c.x,c.y,c.sp,c.p,c.clock_divisor,c.ticks};for(auto m:c.mpr)out.push_back(m);return out;}
     std::vector<std::uint64_t> ram()const{auto p=bus->bytes->data()+0x1F0000;return {p,p+64};}
     void instruction(){
 #ifdef PCE_QUEUE_NATIVE_ONLY
-        if(!guarded){auto snapshot=[&]{return std::tuple{cpu(),device(),ram(),bus->generation,bus->vdc.reads,bus->vdc.writes};};auto before=snapshot();auto pa=pce::Bus::physical(c,c.pc);auto old=(*bus->bytes)[pa];(*bus->bytes)[pa]^=255;auto result=pce::generated_step(*bus,c,100000000);(*bus->bytes)[pa]=old;if(result!=pce::Exit::miss||snapshot()!=before)throw std::runtime_error("source guard advanced pending queue");++guards;c.mpr[3]^=1;result=pce::generated_step(*bus,c,100000000);c.mpr[3]^=1;if(result!=pce::Exit::miss||snapshot()!=before)throw std::runtime_error("MPR guard advanced pending queue");++guards;guarded=true;}
+        if(!guarded){auto snapshot=[&]{return std::tuple{pce::encode_checkpoint(*bus,c),bus->generation,bus->vdc.reads,bus->vdc.writes};};auto before=snapshot();auto pa=pce::Bus::physical(c,c.pc);auto old=(*bus->bytes)[pa];(*bus->bytes)[pa]^=255;auto result=pce::generated_step(*bus,c,100000000);(*bus->bytes)[pa]=old;if(result!=pce::Exit::miss||snapshot()!=before)throw std::runtime_error("source guard advanced pending queue");++guards;c.mpr[3]^=1;result=pce::generated_step(*bus,c,100000000);c.mpr[3]^=1;if(result!=pce::Exit::miss||snapshot()!=before)throw std::runtime_error("MPR guard advanced pending queue");++guards;guarded=true;}
 #endif
         pce::CodeCapture::Pending pending;if(capture)pending=capture->before(*bus,c);
 #ifdef PCE_QUEUE_NATIVE_ONLY

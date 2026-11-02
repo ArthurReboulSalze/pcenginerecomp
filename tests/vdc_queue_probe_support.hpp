@@ -22,6 +22,7 @@ template<class Adapter> void execute(Adapter& a,const char* plan) {
         case 't': input>>x>>y;a.seed(x,y);break;
         case 'q': input>>x;a.queue(x);break;
         case 'x': input>>x;a.cpu_entry(x);break;
+        case 'g': a.pending_guards();reset_probe::record(first,"guard-window",a.device());break;
         case 'i': input>>x;while(x--){a.instruction();reset_probe::record(first,"cpu",a.cpu());reset_probe::record(first,"device",a.device());}break;
         default:throw std::runtime_error("unknown queue fixture operation");
         }

@@ -148,6 +148,13 @@ The report records 99 specific MWR3 background bus differences instead of
 claiming whole-renderer equality; all other compared fields remain exact.
 See [VDC_ACCESS.md](VDC_ACCESS.md) for those boundaries.
 
+Add `--suite races` to select the 24 genuine guest CR-increment races, or
+`--suite all` for both matrices. The default `--suite legacy` preserves the
+original authored ROM and plan. The race suite starts DMA and pending VRAM
+work through real guest instructions, witnesses the CR write while that work
+remains pending, and compares the resulting wait and wrap behavior in all
+three execution paths. See [the exact scope and counts](VDC_ACCESS.md#guest-register-changes-during-pending-requests).
+
 The additional `scripts/vdc_irq_reference.py` probe checks real timer
 underflow during a queued VRAM read blocked by a finite DMA. Its **54 cases /
 2,484 records** cover both CPU speeds, three VCE dot speeds, remaining timer

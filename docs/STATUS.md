@@ -1,5 +1,63 @@
 # Current status — 1 November 2026
 
+## Independent pending-VRAM guest coverage and reference admission
+
+The new opt-in queue race matrix passes 24 cases / 1,536 records against
+the original Geargrafx core pinned at `1c62a549328241518101f5be5bf3e6840b96ea5d`.
+Real guest instructions change CR increment while a guest-started 512-word
+DMA holds the VRAM request pending. Both CPU speeds, three VCE dividers and
+selected driven/undriven wrap cases match without field projections.
+All 744 translated retirements execute natively with zero fallback across
+124 encoded identities; 96 pure source/MPR misses include 48 in genuinely
+pending windows. Full CORE preservation for those guard misses remains
+separate from fresh-process checkpoint restoration. See
+[the authored guest scope](VDC_ACCESS.md#guest-register-changes-during-pending-requests).
+The fresh combined old/new run passes 639 cases / 4,092 records and 1,326
+native retirements with zero fallback. It preserves exactly the old 99
+named MWR3 read-bus differences; all new race fields remain exact.
+
+The shared HTTP Gear client now validates response identity and shape and
+refuses duplicate keys, non-finite JSON and malformed tool content. Six
+authored replies accepted by the exact previous client are refused by the
+new client. Fourteen focused tests and an actual isolated Gear initialization,
+empty notification acknowledgement and no-media tool call pass. These checks
+qualify transport admission, not CPU semantics. See
+[the shared reference boundary](REFERENCE.md#shared-http-reference-boundary).
+
+Compiler/runtime source remains the same 84-file digest
+`16679df8f6758cbac67e97dc2a3cb20d327ee80631e3cce25601dc0672b0734a`;
+runtime ABI 28 and exact-build checkpoint compatibility are unchanged. No
+consumer rebuild is required. This batch strengthens verification without inventing a VDC
+or CD runtime defect. Captured subchannels and other device profiles remain
+[planned work](ROADMAP.md).
+
+The Ys III project separately tests its now-selected, previously qualified
+native package through TCP. Two distinct processes each continue 60 frames
+from the same package-owned final checkpoint, executing **1,866,913 native
+instructions and zero interpreted instructions** across 2,962 full encoded
+identities. Both entire immediate checkpoint files equal the source file;
+continued files, CORE/HOST, RAM, pixels and per-key counts match. The tests
+make no new RAM writes. Imported frame 111,789 and its instruction/PCM prefix
+are not newly executed work. This is a fresh exact-build continuation
+regression, separate from cold-reset qualification and ongoing discovery.
+
+A separate paced 120-frame fork from the same checkpoint executes 3,736,634
+native instructions with zero fallback and closes naturally through SDL.
+Digital queue accounting is exact: 33 imported frames + 88,457 newly
+generated = 88,487 submitted + 3 pending. The 604-frame planned pause-tail
+clear, zero observed active drops and three shutdown frames remain separate.
+Raw newly generated/nonzero counters support a conservative lower bound of
+87,850 fresh nonzero frames accepted by the device. The capped 88,200-frame
+WAV contains 33 imported and 88,167 fresh frames; it does not prove the
+remaining newly generated tail. This is digital submission evidence, not a
+listening, physical-device fidelity or complete-campaign claim.
+
+The fresh required SDL build/check passes **1,600 Python tests with zero skips,
+68 C++ suites and 12 fresh-process audio checkpoint cases**. Both the shared
+84-file compiler/runtime identity and the complete public verification-source
+epoch remain unchanged during that check. Independent fixture/core proofs,
+HTTP transport tests and retail checkpoint/audio forks retain separate scopes.
+
 ## Four staged late identities qualified
 
 The existing profile-v2 consumer now completes a fresh 104,745-frame reset

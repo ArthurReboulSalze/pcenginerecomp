@@ -6,6 +6,7 @@ or installed by this script. Only authored synthetic media and RAM are used.
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import socket
@@ -113,6 +114,38 @@ def patches_for_vector(opcode, vector):
     return patches
 
 
+MCP_MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+MCP_HTTP_TIMEOUT_SECONDS = 5
+
+
+def _mcp_json(data, context):
+    """Decode original reference evidence without ambiguous keys or numbers."""
+    def object_pairs(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError(f"duplicate key: {key}")
+            result[key] = value
+        return result
+
+    def finite_float(token):
+        value = float(token)
+        if not math.isfinite(value):
+            raise ValueError("non-finite number")
+        return value
+
+    def invalid_constant(token):
+        raise ValueError(f"non-finite constant: {token}")
+
+    try:
+        if isinstance(data, bytes):
+            data = data.decode("utf-8")
+        return json.loads(data, object_pairs_hook=object_pairs,
+                          parse_float=finite_float, parse_constant=invalid_constant)
+    except (ValueError, RecursionError) as exc:
+        raise RuntimeError(f"Invalid {context} JSON: {exc}") from exc
+
+
 class Mcp:
     def __init__(self, port):
         self.url = f"http://127.0.0.1:{port}/mcp"
@@ -121,29 +154,64 @@ class Mcp:
 
     def rpc(self, method, params=None):
         self.sequence += 1
+        request_id = self.sequence
+        notification = method.startswith("notifications/")
         request = {"jsonrpc": "2.0", "method": method, "params": params or {}}
-        if not method.startswith("notifications/"):
-            request["id"] = self.sequence
-        req = urllib.request.Request(self.url, data=json.dumps(request).encode(), headers=self.headers)
-        with urllib.request.urlopen(req, timeout=5) as response:
-            if response.headers.get("Mcp-Session-Id"):
-                self.headers["Mcp-Session-Id"] = response.headers["Mcp-Session-Id"]
-            data = response.read(2*1024*1024+1)
-        if len(data) > 2*1024*1024:
+        if not notification:
+            request["id"] = request_id
+        req = urllib.request.Request(self.url, data=json.dumps(request, allow_nan=False).encode(), headers=self.headers)
+        # A bounded socket operation timeout, not an overall wall-clock deadline.
+        with urllib.request.urlopen(req, timeout=MCP_HTTP_TIMEOUT_SECONDS) as response:
+            session = response.headers.get("Mcp-Session-Id")
+            status = response.status
+            content_type = response.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+            data = response.read(MCP_MAX_RESPONSE_BYTES + 1)
+        if len(data) > MCP_MAX_RESPONSE_BYTES:
             raise RuntimeError("MCP response exceeded 2 MiB")
-        result = json.loads(data) if data else {}
-        if "error" in result:
-            raise RuntimeError(f"MCP protocol error: {result['error']}")
-        return result.get("result", {})
+        if notification:
+            if status != 202 or data:
+                raise RuntimeError("MCP notification requires HTTP 202 with an empty body")
+            result = {}
+        else:
+            if status != 200 or content_type != "application/json":
+                raise RuntimeError("MCP reference request requires HTTP 200 application/json")
+            envelope = _mcp_json(data, "MCP response")
+            if not isinstance(envelope, dict) or envelope.get("jsonrpc") != "2.0":
+                raise RuntimeError("Invalid MCP JSON-RPC 2.0 response envelope")
+            if type(envelope.get("id")) is not int or envelope["id"] != request_id:
+                raise RuntimeError("MCP response id does not match the request")
+            if ("result" in envelope) == ("error" in envelope):
+                raise RuntimeError("MCP response requires exactly one of result or error")
+            if "error" in envelope:
+                error = envelope["error"]
+                if (not isinstance(error, dict) or type(error.get("code")) is not int
+                        or not isinstance(error.get("message"), str)):
+                    raise RuntimeError("Invalid MCP protocol error envelope")
+                raise RuntimeError(f"MCP protocol error: {error['code']}: {error['message']}")
+            result = envelope["result"]
+            if not isinstance(result, dict):
+                raise RuntimeError("MCP reference result must be an object")
+        # A rejected response must not change the session used by later calls.
+        if session is not None:
+            if not session or any(not 0x21 <= ord(char) <= 0x7E for char in session):
+                raise RuntimeError("Invalid MCP session id")
+            self.headers["Mcp-Session-Id"] = session
+        return result
 
     def call(self, tool, **arguments):
         result = self.rpc("tools/call", {"name": tool, "arguments": arguments})
-        if result.get("isError"):
+        if "isError" in result and type(result["isError"]) is not bool:
+            raise RuntimeError(f"Invalid reference isError flag for {tool}")
+        if result.get("isError", False):
             raise RuntimeError(f"Reference tool failed: {tool}: {result.get('content')}")
-        blocks = [b["text"] for b in result.get("content", []) if b["type"] == "text"]
-        if len(blocks) != 1:
+        content = result.get("content")
+        if (not isinstance(content, list) or any(not isinstance(block, dict)
+                or not isinstance(block.get("type"), str) for block in content)):
+            raise RuntimeError(f"Invalid reference content for {tool}")
+        blocks = [b.get("text") for b in content if b["type"] == "text"]
+        if len(blocks) != 1 or not isinstance(blocks[0], str):
             raise RuntimeError(f"Unexpected reference response for {tool}")
-        return json.loads(blocks[0])
+        return _mcp_json(blocks[0], f"reference tool {tool}")
 
 
 def state(result):

@@ -14,6 +14,27 @@ and terminates its own headless portable process on a dedicated loopback
 port. It does not attach to an owner's emulator session or change an AI
 client's plugin configuration.
 
+## Shared HTTP reference boundary
+
+The HTTP client is verification infrastructure, separate from the guest
+runtime and from the original-core probes compiled below. A syntactically
+valid response is insufficient evidence: a reply must belong to the request
+that produced it. The client validates JSON-RPC version and request identity,
+rejects ambiguous result/error envelopes, and parses both the envelope and
+the tool's embedded JSON without duplicate keys or non-finite numbers.
+Malformed or tool-error replies stop the check; they cannot become an empty
+successful observation. The existing five-second socket-operation timeout
+and 2 MiB response bound remain; the socket timeout is not a total request
+deadline. This adapter expects HTTP 200 JSON for requests and an empty HTTP
+202 acknowledgement for notifications, as observed in portable Gear.
+
+Authored offline transport cases exercise both accepted Gear-shaped replies
+and rejection paths. A separate real portable-Gear smoke checks initialization,
+session handling, notification and tool calls. These tests establish the
+client boundary; they do not independently qualify any CPU or device behavior.
+The original-core queue matrix below does not use this HTTP transport and
+retains its own exact source and raw-output bindings.
+
 ## VDC retained VRAM bus - ABI 23
 
 `scripts/vram_latch_reference.py --native` independently builds the original

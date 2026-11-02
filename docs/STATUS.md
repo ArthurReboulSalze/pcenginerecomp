@@ -1,5 +1,57 @@
 # Current status — 2 November 2026
 
+## Reusable file snapshots and qualification evidence
+
+[Evidence helpers](EVIDENCE_HELPERS.md) now share strict same-byte JSON parsing,
+streamed file bindings and explicit content revalidation. Detached snapshot
+values preserve JSON types; duplicate/non-finite input, conflicting rereads,
+timestamp-preserving edits and alias retargeting refuse. Explicit dependency
+maps reuse binary admission work within one epoch, while trusted process and
+output boundaries re-read actual content.
+
+The shared role ledger resolves current and explicitly carried receipts through
+one path for both parent lookup and complete sealing. Carried receipts retain
+their original contract/producer and explicit review linkage. New output records
+evidence consistency with `qualification: false`; native execution, raw journal
+semantics and campaign decisions remain independently validated consumer policy.
+Historical custom receipts require an explicit adapter or document policy.
+
+Runtime ABI 29, guest checkpoint serialization, CPU/device code, CMake and native
+translation remain unchanged. A separate metadata helper process can supervise
+an older SDK actor while preserving its original source/ABI and import checks.
+This is a file-evidence interface; authenticated guest physical snapshot export
+and recovery-build performance optimization remain separate work.
+
+The required SDL build/check passes **1,744 Python tests without skips,
+70 C++ suites and 12 fresh-process audio checkpoint cases**. All 88 shared
+source files and 493 verification files, including the Rust adapter, remain
+unchanged throughout that run. Shared source SHA256 is
+`a15ce5ec744854ea6165f5dc143ead45b51252f97a59b002597a64a8f7d3010b`.
+The 62 new authored cases include actual parent/whole-seal call paths,
+same-size/restored-timestamp changes, alias retargeting, detached payloads,
+deep typed claims and preserved unsuccessful output artifacts.
+
+Separate real-file adoption reads the selected consumer's 9,777 explicit graph
+paths once. Repeating that table adds zero binary reads; a full explicit check
+then reads all 9,778 admitted paths, including the qualification document, once
+each. The 6,011,016,284-byte sum counts lexical path spellings rather than unique
+inodes. This is an I/O-count observation, not a production speed ratio. The old
+ABI 28/source-84 producer remains distinct from the source-88 helper domain.
+Closed B044 discovery metadata and its capture/checkpoint hashes retain their
+original unqualified scope; this adoption did not decode a checkpoint or replay
+native/raw validation.
+
+A new helper-supervised TCP/checkpoint run uses that same old execution
+producer. The isolated child restores its own closed checkpoint, immediately
+saves a byte-identical whole file, then advances six neutral frames with
+164,369 native instructions and zero interpreted retirements. It checks actual
+file/ACK/context joins, complete encoded-source conservation, RAM/images and
+natural process closure. The parent checks immutable inputs before and after
+the child, binds its closed outputs, and emits the shared consistency-only
+ledger. No earlier route or original-emulator comparison is replayed, no
+checkpoint fingerprint is rewritten and no new native/campaign qualification
+is inferred from that generic output.
+
 ## Reusable native discovery and independent decoder checks
 
 The new [native gap report](NATIVE_GAPS.md) authenticates observed-module

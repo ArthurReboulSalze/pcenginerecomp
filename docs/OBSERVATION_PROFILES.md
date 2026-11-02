@@ -2,7 +2,7 @@
 
 An observation profile is a private catalogue of exact instruction identities
 from one or more original capture files. Supported offline inputs retain their
-original ABI 12 through 28 labels. The generated module targets current ABI 28.
+original ABI 12 through 29 labels. The generated module targets current ABI 29.
 Composition neither changes those historical labels nor converts checkpoints,
 certifies an ABI migration, or establishes a newly executed run.
 

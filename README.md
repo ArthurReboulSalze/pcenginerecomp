@@ -10,6 +10,25 @@ project owns its game-specific routes, patches, assets and presentation choices.
 Ys III is one regression case; compatibility evidence remains tied to the
 tested CPU, hardware, media and runtime profiles.
 
+**Consumer evidence now has shared snapshot and admission helpers.** Exact-byte
+JSON snapshots, streamed artifact bindings and explicit process/seal boundaries
+replace repeated private read/hash maps. A role ledger validates current and
+explicitly carried results through the same resolver, preserving original
+contracts and producer references. Its output records evidence consistency;
+native execution and checkpoint semantics remain consumer checks. See
+[the Python interfaces and private evidence contract](docs/EVIDENCE_HELPERS.md).
+
+The helper-tooling SDL check passes **1,744 Python tests without skips,
+70 C++ suites and 12 fresh-process audio checkpoint cases**. Runtime ABI 29,
+CPU/device code, native translation and CMake remain unchanged. Authored
+integration cases cover complete carried/current role assembly and content
+drift; real-file adoption admits a 9,777-file consumer graph once, reuses an
+identical overlap without binary reads, and explicitly revalidates all inputs.
+A new Ys III TCP smoke test restores and immediately re-saves an identical
+own-build checkpoint, then advances six frames with zero fallback. The helper
+parent and retained execution SDK stay in separate processes; its consistency
+closure grants no new gameplay qualification.
+
 **Native discovery now has a reusable gap report.** `native-gaps` verifies an
 observed module's declared emitted identities and exact source artifacts,
 then compares full byte/MPR identities from captured windows. It keeps each
@@ -24,7 +43,7 @@ cases, including a narrow original-core fetch probe. Known BRK metadata differen
 remain explicit; no unexpected difference is accepted. See
 [reference scope and reproduction](docs/ROMATLAS_REFERENCE.md).
 
-The fresh SDL check passes **1,682 Python tests without skips, 70 C++ suites
+The discovery-tooling SDL check passed **1,682 Python tests without skips, 70 C++ suites
 and 12 fresh-process audio checkpoint cases**. Runtime ABI 29, CPU translation,
 device code and CMake bytes are unchanged by this discovery-tooling batch.
 Fresh recoverable-build errors now identify the missing recovery option before

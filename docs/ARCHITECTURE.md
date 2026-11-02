@@ -55,6 +55,15 @@ media, analysis, bus, or validation interfaces.
 
 ## Offline discovery interfaces
 
+Consumer evidence has a host-side file boundary: `snapshots.SnapshotStore`
+binds the bytes it parses, streams explicit artifact graphs and revalidates
+content at process/output boundaries. `qualification.EvidenceGraph` and its
+role ledger admit explicitly specified receipts and carried reviews without
+rewriting their contracts or producer references. Consistency output does not
+establish native execution or game qualification; those validators remain in
+the consumer. See [evidence helpers](EVIDENCE_HELPERS.md). These file snapshots
+do not change guest checkpoint serialization or runtime ABI.
+
 Offline native discovery now has an independent declared-membership layer:
 `native_catalog.load_native_catalog` authenticates an observed manifest, its
 original capture/profile and listed generated artifacts under an explicit

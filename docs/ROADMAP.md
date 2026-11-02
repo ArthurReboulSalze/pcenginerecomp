@@ -45,6 +45,14 @@ finishing the base PC Engine/CD correctness path.
 
 ## Immediate contributor batches
 
+Reusable [file snapshots and evidence admission](EVIDENCE_HELPERS.md) now cover
+the recurring consumer parse/hash, dependency-graph and carried/current role
+checks. Generic closures remain explicitly separate from native execution
+qualification. Shared metadata helpers do not make build inputs immutable or
+optimize the recovery producer: measured full-tree preparation cost still needs
+its own reviewed content/revalidation contract. Authenticated guest physical
+snapshot export and broader consumer semantic validators remain separate work.
+
 The retained 144 later PSG values now have a complete domain explanation:
 original Gear HPF output was compared to raw toolkit output. Matched-domain
 [audio traces](AUDIO_TRACES.md), longer guest pipelines and authored source/

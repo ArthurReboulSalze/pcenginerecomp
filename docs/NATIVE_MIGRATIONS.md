@@ -6,6 +6,88 @@ runtime ABI, a changed observation catalogue, or promotion of interpreted
 source identities into native code. It does not certify complete game or
 hardware compatibility.
 
+## Raw-audited same-build discovery extension
+
+The existing staged-profile ABI28 `fixed`/`nec-invalid` package continues from
+its own qualified frame-111,789 checkpoint. No module regeneration, runtime
+change, SDK migration or fresh cold replay is required for this extension.
+The two retained windows are independently admitted from their original raw
+request/reply journals, controllers, exact builds, own-parent save ACKs and
+complete observations before their evidence enters the canonical union.
+
+| Candidate window | New frames | New native / interpreted | Encoded identities | New block retirements | Actual writes |
+|---|---:|---:|---:|---:|---:|
+| Read-only continuation | 336 | 10,463,948 / 0 | 6,884 | 1,680 | 0 |
+| Declared data-assist continuation | 342 | 10,644,435 / 0 | 5,307 | 1,710 | 1 |
+
+The windows add **678 frames / 21,108,383 native / zero interpreted / 3,390
+block retirements**. Their unique encoded-key union is 7,794; identities
+appearing in both windows are counted once in that union. The original roles
+retain their seven inherited interpreted instructions as prefix history;
+both original windows themselves also execute zero new interpreted work.
+Their producer and decoder identities are preserved separately from the
+candidate and analysis tools.
+
+All 40 corresponding full RAM and image cuts match. Original and candidate
+checkpoint comparisons preserve strict non-tier CORE and all 60 HOST bytes,
+with the declared five tier-counter relations. Each role loads only its own
+build's checkpoint. An extra initial candidate save is checked against its
+real parent when no corresponding reference save exists.
+
+The assisted role has one actual expected-byte write under authority allowing
+at most two attempts. Both roles' complete original capture corpora are
+reconstructed independently; their six-versus-seven input sets are retained.
+Compiled/original/live and future-execution footprints protect every backing
+alias. Complete RAM readbacks, actual WAL/ACK/status, the frozen typed write
+validator and independent fresh-cut policy reproduce all ten effect fields.
+Final decoded block and guard counters must also agree with the runner and
+complete encoded five-family block hits. Matching summary totals alone do
+not establish those relations.
+
+The eight previously qualified route captures and these exact two candidate
+captures form the canonical chain: **112,467 frames / 3,454,283,960 native /
+zero interpreted**, with **53,614 of 58,039 compiled identities exercised**.
+All prior 53,613 keys remain; one already compiled key is first exercised.
+The remaining 4,425 compiled identities are unexercised. The route contains
+315 explicit validated data writes, including the 314 in the retained prefix.
+Additional exploration branches and checkpoint/audio forks do not extend
+these route totals or the key union.
+
+Four closed raw role gates, their independent composition and the exact
+canonical union are bound in a supplemental qualification. The selected
+package and its previous qualification/selection files are preserved. The
+[shared pure helpers](RAW_AUDIT_INTEGRATION.md#shared-pure-relations) supply
+typed counter and identity relations; consumer-owned raw adapters supply the
+case-specific process, source, state and authority admission. A bounded
+comparison or metadata preflight remains unqualified on its own. This closes
+finite same-build evidence and makes no new hardware, listening or campaign
+claim.
+
+Fresh exact-build tests use the admitted frame-112,467 own checkpoint, with
+30 imported PCM frames and zero source WAV frames. Before launching, revised
+actors authenticate all four actual raw gates, their independent composition,
+the exact ten-capture union, selected package and final raw save ACK. The
+supplemental qualification and all dereferenced dependencies are frozen and
+rechecked after each process; qualification booleans alone are insufficient.
+
+The new direct/restored pair runs 60 frames per process, each retiring
+**1,866,468 native instructions and zero interpreted**, with all 2,510 encoded
+identity counts equal. Entire source-to-immediate files match in both hosts;
+entire continued files, CORE/HOST, complete RAM and pixels also match. The
+tests make no new RAM writes. A separate paced 120-frame fork retires
+**3,732,624 native instructions with zero fallback** and closes naturally.
+
+Digital audio accounting retains `30 + 88,456 = 88,446 + 40`. The 687-frame
+planned pause-tail clear, zero observed active loss and 40-frame shutdown
+remainder remain separately measured. Raw generated/nonzero counter deltas
+support a conservative 87,729-frame fresh accepted/nonzero lower bound. The
+capped WAV contains 88,200 frames: 30 imported and 88,170 fresh nonzero;
+286 new tail frames remain outside that WAV evidence. Packaged adjacent SDL
+selection is verified, with prior clean-PATH launch evidence kept separate.
+These forks are excluded from canonical work/coverage and add no listening
+or physical hardware claim. Runtime ABI 28 and the selected compiled package
+are unchanged.
+
 ## Staged profile-v2 late-identity qualification
 
 The ABI28 `fixed`/`nec-invalid` consumer using the staged profile retains all

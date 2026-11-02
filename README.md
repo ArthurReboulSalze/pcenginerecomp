@@ -10,6 +10,23 @@ project owns its game-specific routes, patches, assets and presentation choices.
 Ys III is one regression case; compatibility evidence remains tied to the
 tested CPU, hardware, media and runtime profiles.
 
+**Consumer raw audits now have reusable same-ABI relations.** The new pure
+helper validates imported counters, explicit source/candidate tier relations
+and complete encoded instruction identities. It rejects boolean counters,
+duplicate or non-finite JSON, mapping drift and per-key count changes before
+an adapter can compose its qualification. Original raw journals, process and
+checkpoint provenance, write authority and final admission stay explicit.
+See [consumer raw-audit integration](docs/RAW_AUDIT_INTEGRATION.md).
+
+Ys III's two retained discovery windows now pass all four raw role audits:
+**678 new frames, 21,108,383 native instructions and zero fallback**. The
+linked route exercises 53,614 of 58,039 compiled identities. Fresh own-checkpoint
+repeatability and a separate paced audio fork also pass; imported work and
+test forks stay outside the new route totals. See [the extension's scope](docs/NATIVE_MIGRATIONS.md#raw-audited-same-build-discovery-extension).
+The required SDL check passes **1,616 Python tests without skips, 68 C++
+suites and 12 fresh-process audio checkpoint cases**. ABI 28 and the selected
+consumer's compiled package are unchanged.
+
 **VDC register races now have independent guest-code coverage.** A new
 24-case matrix runs actual translated and interpreted instructions against
 original Geargrafx: DMA holds a VRAM request while the guest changes its
@@ -26,7 +43,7 @@ Ys III also passes a fresh TCP checkpoint pair on that qualified package:
 each 60-frame continuation executes 1,866,913 native instructions with zero
 fallback and matching complete state, RAM, pixels and encoded hit counts.
 A separate 120-frame paced SDL audio fork passes with zero fallback.
-The current required SDL check passes **1,600 Python tests without skips,
+That earlier VDC/reference-boundary SDL check passed **1,600 Python tests without skips,
 68 C++ suites and 12 fresh-process audio checkpoint cases**.
 
 **All four new late-game identities now execute natively.** The staged-profile
@@ -80,7 +97,7 @@ new identities, contributions and remaining capacity before a build. It
 preserves profile-v1 bytes, source provenance and all existing limits. See
 [composition planning](docs/OBSERVATION_PROFILES.md#preflight-an-extension-before-emission-or-build).
 
-The latest additive-composition SDL check passes **1,583 Python tests without skips,
+The earlier additive-composition SDL check passed **1,583 Python tests without skips,
 68 C++ suites and 12 fresh-process audio checkpoint cases**. Independent
 earlier CD timing checks cover 12,432 seek vectors and 21 command cases at both CPU
 speeds, with native and interpreted execution checked separately.

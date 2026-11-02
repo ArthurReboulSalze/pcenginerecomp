@@ -4,6 +4,15 @@ The development client can retain the evidence needed to investigate a failed
 inspection. This is independent of guest code capture and developer machine
 checkpoints. These host-only helpers do not change the runtime ABI or checkpoint schema.
 
+Consumer projects can compose the streaming journal reader with the pure
+same-ABI counter, own-origin and full encoded-key relations in
+`scripts.dev_audit_relation`. The
+[raw-audit integration guide](RAW_AUDIT_INTEGRATION.md) describes distinct
+reference/candidate roles, parent dependencies, raw response-to-file joins
+and independently validated write authority. A passed pure comparison remains
+one component of the final qualification; each actual journal and saved-state
+relation needs its own admission.
+
 ## Raw wire journal
 
 ### Archiving a closed journal

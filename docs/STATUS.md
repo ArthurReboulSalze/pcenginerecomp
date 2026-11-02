@@ -1,5 +1,55 @@
 # Current status — 1 November 2026
 
+## Consumer raw-audit integration
+
+The reusable pure same-ABI relation layer now validates typed imported
+counters, own-origin windows and complete encoded identity maps. It rejects
+boolean counters before arithmetic, duplicate/non-finite JSON, mapping or
+byte drift, zero-hit observations and incorrect per-key promotion. Sixteen
+independent authored tests cover these relations. Consumer adapters retain
+their exact case, producer/decoder, build, raw-response and write-authority
+obligations. See [the integration API and sequence](RAW_AUDIT_INTEGRATION.md).
+
+Ys III's two preserved discovery windows now have four independently admitted
+raw roles: the original and candidate executions of each window. The new
+candidate work is **678 frames, 21,108,383 native instructions, zero interpreted
+instructions and 3,390 block retirements**. All 40 corresponding full RAM/image
+cuts match. The read-only window's extra initial checkpoint matches its own
+parent; no missing reference checkpoint is fabricated. The assisted window's
+one actual write is independently reconstructed under its declared two-attempt
+authority, with complete original/compiled/live/future code and alias exclusions.
+
+The linked canonical route reaches frame **112,467 / 3,454,283,960 native / zero
+interpreted**, using its already qualified prefix. Its actual positive-key union
+is **53,614 of 58,039 compiled identities**, leaving 4,425 unexercised. Exactly
+one already compiled identity is first exercised in this extension. The new
+windows have 7,794 unique encoded identities; that window union is separate
+from the route union. Exploration branches and checkpoint/audio forks are
+excluded. The route has 315 declared validated writes including its older
+prefix; this batch adds one. These are assisted finite routes, not campaign
+or hardware certification. See [the exact extension scope](NATIVE_MIGRATIONS.md#raw-audited-same-build-discovery-extension).
+
+Runtime/compiler/CMake bytes, ABI 28, the staged profile and the selected
+consumer package remain unchanged. New diagnostics are pinned separately from
+the original 82-file producer/decoder and the 84-file candidate producer.
+The fresh required SDL check passes **1,616 Python tests with zero skips,
+68 C++ suites and 12 fresh-process audio checkpoint cases**, preserving the
+shared source identity and complete recorded verification-source epoch.
+
+Fresh TCP forks from the admitted frame-112,467 own checkpoint now also pass
+independent raw audits. Each 60-frame direct/restored continuation executes
+**1,866,468 native instructions with zero fallback**, with matching entire
+immediate/continued files, CORE/HOST, RAM, pixels and all 2,510 encoded counts.
+A separate paced 120-frame fork executes **3,732,624 native instructions with
+zero fallback**. Its digital queue equation is `30 + 88,456 = 88,446 + 40`:
+the imported 30 PCM frames, 687-frame planned pause clear and 40-frame shutdown
+tail stay separate from newly generated work. Active observations show zero
+drops; the conservative fresh accepted/nonzero lower bound is 87,729 frames.
+The 88,200-frame WAV contains 30 imported and 88,170 fresh nonzero frames;
+286 newly generated tail frames are outside that capped WAV. Packaged SDL
+selection is verified; clean-PATH evidence retains its earlier separate
+receipt. These forks do not extend the canonical route or identity union.
+
 ## Independent pending-VRAM guest coverage and reference admission
 
 The new opt-in queue race matrix passes 24 cases / 1,536 records against

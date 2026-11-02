@@ -1,5 +1,22 @@
 # Developer guide
 
+## Consumer raw-audit integration
+
+The pure host-side relations in `scripts.dev_audit_relation` validate same-ABI
+imported-window counters and full encoded identities. Authored tests include
+different source/candidate prefixes, PC wrap, all-MPR sensitivity, exact
+per-key promotion and deliberately malformed counter/capture evidence:
+
+```text
+python -m unittest discover -s tests -p test_dev_audit_relation.py -v
+```
+
+Use them with the existing raw journal and typed paused-write validators.
+Consumer-owned role contracts must independently admit their original raw
+responses, exact build/input/parent checkpoints and complete code footprints.
+See [the integration sequence and API](RAW_AUDIT_INTEGRATION.md). These helpers
+require no runtime ABI change or native module rebuild.
+
 ## Layout
 
 ```text

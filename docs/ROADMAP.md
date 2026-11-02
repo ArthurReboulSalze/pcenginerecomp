@@ -240,6 +240,10 @@ separate qualification gates.
 [Durable wire replies and strict paused observations](PAUSED_OBSERVATIONS.md)
 add reusable diagnostics; legacy fresh
 host delivery and current exact-build queue continuation keep separate scope.
+The [same-ABI raw-audit integration layer](RAW_AUDIT_INTEGRATION.md) adds typed
+own-origin counters and complete encoded-key relations. Consumer role adapters
+still independently admit each original raw journal, parent dependency, saved
+state and write authority before composing an execution qualification.
 Its streaming offline reader checks retained raw journals without requiring a
 new guest run or loading the whole log. A complete raw ledger remains separate
 from client admission, process completion and a qualification decision.

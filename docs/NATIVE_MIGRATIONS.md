@@ -6,6 +6,80 @@ runtime ABI, a changed observation catalogue, or promotion of interpreted
 source identities into native code. It does not certify complete game or
 hardware compatibility.
 
+## Staged profile-v2 late-identity qualification
+
+The ABI28 `fixed`/`nec-invalid` consumer using the staged profile retains all
+58,035 prior identities and adds four exact byte/mapping variants, for 58,039
+compiled identities. The original 16 capture inputs and their ABI/origin labels
+remain unchanged. This qualification uses the already compiled candidate;
+no new runtime, emitter operation, ABI or checkpoint migration is introduced.
+
+The route's actual positive-key union contains 53,613 identities; 4,426 compiled
+identities remain unexercised. The prior 53,606 executed keys all recur, with
+three previously compiled keys first exercised later and one native retirement
+for each of the four additions. Repeat/audio forks are excluded from that union.
+
+A new authentic reset replay reaches frame 104,745 with 3,209,517,525 native
+instructions and zero interpretation. Seven separately launched continuations
+load only that candidate's own checkpoint lineage. Together the eight route
+processes reach **111,789 frames and 3,433,175,577 native instructions with zero
+interpreted instructions**. Imported lifetime work is not counted again.
+
+The final three reference windows prove the added variants:
+
+| Window | Frames | Original native / interpreted | Candidate native / interpreted |
+|---|---:|---:|---:|
+| Three new identities | 504 | 16,144,589 / 3 | 16,144,592 / 0 |
+| Validated data-assist continuation | 678 | 21,458,925 / 0 | 21,458,925 / 0 |
+| Fourth new identity | 522 | 16,168,346 / 1 | 16,168,347 / 0 |
+
+Each target is a positive full encoded identity: logical PC, all eight MPRs,
+physical fetch addresses and instruction bytes. The source and candidate
+per-key retirement counts obey `candidate_native = source_native + source_interpreted`
+and `candidate_interpreted = 0`. Their
+shared logical PC does not merge their distinct bytes or mapping contexts.
+Original files, ABI labels and failed historical attempts retain their identity.
+
+The full route has **314 explicit validated data writes**, including the three
+ordered position/health requests in the 678-frame window. Fresh authority binds
+the candidate's actual predecessor checkpoint. Expected bytes, full backing-RAM
+readbacks, source generations, aliases, compiled/live source-footprint exclusions
+and one-attempt CAS journals remain checked. These are declared assists, not an
+unassisted campaign. No owner save or installation is used.
+
+Every continuation joins the actual parent receipt, checkpoint file and save
+ACK. Source checkpoint comparisons keep exact tier-counter equations and all
+other machine/device bytes strict; existing precisely ACK-bound WAV-marker
+relations remain separate. No historical checkpoint is rewritten or loaded
+into another build.
+
+The final 522-frame window then runs again from the same candidate-owned
+predecessor. Both executions contain the fourth key and match complete
+immediate/final checkpoint files, CORE/HOST, RAM, rendered pixels and all 6,851
+encoded identity counts. The extra execution is a repeatability fork, excluded
+from the canonical route's frame, instruction and coverage totals.
+
+Separate fresh continuations of a new prefix checkpoint each execute 60 frames
+and 1,836,171 native instructions with zero fallback and identical complete
+state, RAM, pixels and source counts. A separate paced 120-frame fork executes
+3,672,293 native instructions with zero fallback and produces 88,457 new PCM
+frames. Its imported 40 frames, 605-frame planned pause tail and ten-frame
+shutdown remainder stay distinct from active observations, which show zero
+drops. The fresh accepted-device lower bound is 87,842 frames, including at
+least 86,824 fresh nonzero frames. These digital checks do not qualify listening
+or physical hardware, and these forks do not extend route coverage.
+
+The tested implementation remains `cd5bff67b323098979345f76d5b87075fc628e72`,
+source84 SHA256
+`16679df8f6758cbac67e97dc2a3cb20d327ee80631e3cce25601dc0672b0734a`.
+Its existing required SDL check remains **1,583 Python tests without skips,
+68 C++ suites and 12 fresh-process audio cases**. This batch adds execution
+qualification on that unchanged build; it does not claim another compiler
+build or hardware-reference run. Original source82/995 decoder provenance and
+the actual source84 producer remain separately bound. Consumer selection and
+publication remain consumer-owned; this toolkit qualification changes no
+default game installation. Whole-game and broader-library coverage remain open.
+
 ## ABI 28 migration contract
 
 First qualify the rebuilt native consumer with the explicit `fixed` CD timing

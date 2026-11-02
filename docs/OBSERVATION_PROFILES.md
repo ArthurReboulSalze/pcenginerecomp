@@ -299,8 +299,11 @@ the unchanged limit. Its 948 baseline code files reproduce exactly; only two
 extended C++ partitions change, containing four added direct LDA cases.
 Compilation and finite retail startup/checkpoint tests retain their separate
 [current status](STATUS.md#staged-additive-observation-composition) scope;
-the four later game identities and complete route are not execution-qualified
-by those startup tests. ABI 28 and runtime/layout source remain unchanged.
+those startup tests alone did not execution-qualify the four later identities.
+A subsequent [dedicated late-identity qualification](NATIVE_MIGRATIONS.md#staged-profile-v2-late-identity-qualification)
+now proves their positive native hits and known-route checkpoint repeatability
+on the same built candidate. Whole-game coverage remains unqualified. ABI 28
+and runtime/layout source remain unchanged.
 
 The additive consumer-binding freeze
 `40f44c843e29c72a39dc982ed59a2af2e7de5e6b` passes a fresh SDL Release build and

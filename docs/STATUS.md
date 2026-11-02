@@ -1,5 +1,33 @@
 # Current status — 1 November 2026
 
+## Four staged late identities qualified
+
+The existing profile-v2 consumer now completes a fresh 104,745-frame reset
+replay and seven candidate-owned continuations: **111,789 route frames,
+3,433,175,577 native instructions and zero interpreted instructions** across
+eight processes. All four added byte/mapping identities have positive native
+execution and conserve their original per-key native-plus-interpreted counts.
+Complete source/state comparisons retain their exact declared relations.
+
+The canonical route exercises **53,613 of 58,039 compiled identities**, leaving
+4,426 unexercised. All 53,606 previously exercised identities recur; three
+retained identities are first exercised later alongside the four additions.
+Each addition retires exactly once natively in the canonical route. Repeated
+checkpoint/audio forks do not inflate this coverage union.
+
+The final 522-frame window repeats from the same candidate-owned checkpoint;
+all 6,851 encoded identities/counts, whole checkpoint files, CORE/HOST, RAM and
+pixels match. Independent prefix checkpoint and paced digital-audio forks also
+pass. All repeat/audio forks are excluded from route and coverage totals.
+The route contains 314 declared validated data writes, not an unassisted
+campaign. No older-build checkpoint, owner save or installation is used.
+
+This qualifies execution of the four additions on the unchanged
+`cd5bff67b323098979345f76d5b87075fc628e72` implementation and its already built
+58,039-identity candidate. It adds no runtime/ABI semantics or fresh hardware
+claim, and changes no consumer default. See [the complete source, checkpoint
+and digital-audio scope](NATIVE_MIGRATIONS.md#staged-profile-v2-late-identity-qualification).
+
 ## Staged additive observation composition
 
 Opt-in [profile-v2 composition](OBSERVATION_PROFILES.md#add-identities-without-duplicating-overlapping-contributions)
@@ -48,8 +76,9 @@ pixels and all 187 encoded identities/counts in the 900-to-960 suffix match.
 The first 900 frames retain separate aggregate counters. Its runtime PATH
 contains Git and Windows directories; the actual adjacent SDL library is
 verified. No old-build checkpoint is imported and no guest RAM write is used.
-This candidate remains unselected: startup/checkpoint qualification does not
-establish that the four later identities execute or qualify the full route.
+That initial startup/checkpoint qualification did not establish execution of
+the four later identities. The subsequent dedicated qualification above does;
+consumer selection remains a separate responsibility.
 
 Separately, the existing selected consumer's new 84-frame checkpoint route
 executes **2,666,212 native and one interpreted instruction**, exposing the first

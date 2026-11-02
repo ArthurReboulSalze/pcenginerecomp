@@ -10,6 +10,16 @@ project owns its game-specific routes, patches, assets and presentation choices.
 Ys III is one regression case; compatibility evidence remains tied to the
 tested CPU, hardware, media and runtime profiles.
 
+**All four new late-game identities now execute natively.** The staged-profile
+Ys III candidate completes a fresh reset replay and seven own-checkpoint
+continuations: **111,789 route frames, 3,433,175,577 native instructions and
+zero interpreter fallback** across eight processes. Each added full source
+identity has positive native hits. The final 522-frame window also repeats
+from the same candidate-owned checkpoint with matching complete state, RAM,
+pixels and per-identity counts. This finite assisted qualification keeps
+checkpoint/audio forks separate from route totals and does not certify a
+complete game port. See [late-identity qualification](docs/NATIVE_MIGRATIONS.md#staged-profile-v2-late-identity-qualification).
+
 **Observation catalogues can grow without counting every overlap again.**
 Opt-in `compose-observations --baseline-profile ... --new-identities-only`
 preserves the original captures, ABI labels and origins while selecting only
@@ -17,8 +27,8 @@ new instruction identities from each extension. A versioned stage ledger keeps
 earlier selections stable; dry-run reports exact output costs before emission.
 Parser limits remain unchanged, and original historical hits stay separate
 from selected contribution counts. A separately built v2 consumer passes fresh
-TCP startup and exact-build checkpoint continuation; execution of its four late
-additions remains unqualified. See [additive composition](docs/OBSERVATION_PROFILES.md#add-identities-without-duplicating-overlapping-contributions).
+TCP startup, retained-route replay and exact-build checkpoint continuation;
+its four late additions have measured native execution. See [additive composition](docs/OBSERVATION_PROFILES.md#add-identities-without-duplicating-overlapping-contributions).
 
 **Interrupted builds can resume verified completed work.** Opt in before the
 first configure with `build --recoverable`, then use `project resume` after an

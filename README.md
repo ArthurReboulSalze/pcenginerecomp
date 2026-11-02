@@ -18,11 +18,23 @@ use the same binary, module and machine recipe; old or disabled-build checkpoint
 remain incompatible. See [setup, API and comparison rules](docs/REFERENCE_MODE.md).
 Runtime ABI 29 and guest checkpoint encoding remain unchanged.
 
+The reference-mode SDL build/check passes **1,771 Python tests without skips,
+72 C++ suites and 12 fresh-process audio checkpoint cases**. All 88 shared
+source files and 498 verification files remain unchanged throughout the run.
+
 Authored tests compare 70,000 actual native instructions with 70,000 interpreted
 instructions from one checkpoint: complete machine state, completed RGB and
 filtered PCM agree after excluding only four tier-accounting counters. This is
 internal tier parity; independent hardware/emulator and campaign evidence remain
 separate.
+
+A new Ys III test candidate boots **3,002 frames with 83,530,787 native
+instructions and zero fallback**, then forks its own checkpoint into two
+120-frame runs. Each retires 3,204,842 instructions, with matching complete
+machine state apart from the four tier counters, WRAM, RGB, 188 encoded source
+identities and captured WAV samples. The reference fork makes zero generated
+dispatch calls. This validates the development feature; the selected game
+package keeps its existing build and qualification.
 
 **Consumer evidence now has shared snapshot and admission helpers.** Exact-byte
 JSON snapshots, streamed artifact bindings and explicit process/seal boundaries

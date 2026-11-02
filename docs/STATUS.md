@@ -16,6 +16,12 @@ captures, mixed-ABI/profile composition, emission, native catalog admission and
 consumer receipts. Cold captures cannot acquire a fictitious checkpoint origin.
 CPU/Bus layouts, guest checkpoint encoding and runtime ABI 29 are unchanged.
 
+The required SDL build/check passes **1,771 Python tests without skips,
+72 C++ suites and 12 fresh-process audio checkpoint cases**. All 88 shared source
+files and 498 verification files remain unchanged through the completed run.
+Shared source SHA256 is
+`52b82fd94e087ed713f085c787c8953dbdfd4fdd272ceab0e052d8a8e5b2f747`.
+
 The independently authored fixture executes 70,000 native and 70,000 interpreted
 instructions from the same canonical checkpoint, plus a separate interpreted
 operand-change continuation. Entire decoded machine state, actual completed RGB
@@ -24,6 +30,32 @@ device state and time remain in the comparison. Separate host tests exercise
 headless and SDL TCP/checkpoint paths, strict capability identity, multiple
 bounded reference segments and pure live capture inspection. This is internal
 tier/reference-interface evidence, not a new Geargrafx or campaign comparison.
+
+A new private Ys III candidate uses the exact tested implementation commit
+`e5182d4fd3fb4b00593560d1d87b6ad8428dc7b3` and source digest above. Fresh reset
+into the dragon intro advances **3,002 frames / 83,530,787 native instructions /
+zero interpreted retirements**, reading 95 sectors without errors. It creates
+its own reference-enabled checkpoint; no older build's checkpoint is imported.
+
+Two sequential 120-frame children each retire **3,204,842 instructions**: all
+native in one, all interpreted in the other. Both immediately re-save an
+identical whole origin file. The reference child reports zero native dispatcher
+batches/calls/completions and preserves imported counters. A separately reviewed
+offline auditor reconstructs actual wire input/frame/ACK/poll/checkpoint joins,
+checks all 188 full encoded identities and their per-key counts, and compares
+the complete 2,633,611-byte CORE plus HOST. Only the four tier-counter spans
+differ; guards, all device state/RAM and guest time remain exact. Actual WRAM,
+completed RGB and capped WAV bytes also match.
+
+Each WAV contains 88,200 stereo frames, including one imported pending frame;
+88,199 are fresh and 88,197 of those are nonzero. Generated frames beyond the
+WAV cap, planned pause discards and shutdown drains remain separately accounted.
+The conservative fresh nonzero device-accepted lower bounds are 87,757 native
+and 87,756 reference frames. This is internal same-build parity and bounded
+boot/intro evidence. It does not select a new game package or establish a new
+original-emulator, hardware, listening or campaign qualification. All three
+guests exit naturally; the offline audit revalidates inputs and published result
+bytes before its separate completion receipt.
 
 The earlier completed helper/discovery verification below retains its original
 producer and scope; it is not a test of the new reference capability.

@@ -118,6 +118,11 @@ receipts and locate the first difference. Matching only instruction totals is
 insufficient. A reference endpoint can seed a later same-build process, but its
 imported interpreted prefix remains interpreted evidence.
 
+Raw wire pairing alone does not establish route semantics. Qualification
+adapters must explicitly admit `reference_frames` and join actual input/frame
+requests, acknowledged targets, settled statuses and capture origins; existing
+ordinary-step adapters cannot be reused by relabeling commands.
+
 ## Runtime API and compatibility
 
 `step(..., ExecutionPolicy::interpreter_only)` explicitly bypasses generated

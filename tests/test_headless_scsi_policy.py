@@ -15,6 +15,19 @@ BINARY = next((p for p in CANDIDATES if p.is_file()), None)
 
 @unittest.skipUnless(BINARY, 'Build pce-headless for protocol policy checks')
 class HeadlessScsiPolicyTests(unittest.TestCase):
+    def test_subchannel_default_and_explicit_synthesis_are_reported(self):
+        for options in ([], ['--cd-subchannel', 'synthesized']):
+            result = self.run_case(['--cd-unknown-status', 'gear-good', *options])
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(json.loads(result.stdout)['cd_subchannel'], {'profile': 'synthesized'})
+
+    def test_subchannel_refuses_invalid_duplicate_and_missing_provider(self):
+        for options in (['--cd-subchannel', 'raw'], ['--cd-subchannel', 'true'],
+                        ['--cd-subchannel', 'captured-q'],
+                        ['--cd-subchannel', 'synthesized', '--cd-subchannel', 'captured-q']):
+            result = self.run_case(options)
+            self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+
     def test_cd_timing_defaults_and_explicit_profiles_are_reported(self):
         for extra, expected in (([], 'fixed'), (['--cd-timing', 'fixed'], 'fixed'),
                                 (['--cd-timing', 'gear-distance'], 'gear-distance')):

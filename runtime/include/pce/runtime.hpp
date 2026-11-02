@@ -18,7 +18,7 @@
 #include <string>
 
 namespace pce {
-inline constexpr unsigned abi_version = 28;
+inline constexpr unsigned abi_version = 29;
 enum Flag : std::uint8_t { C=1, Z=2, I=4, D=8, B=16, T=32, V=64, N=128 };
 enum class Exit { executed, miss, unsupported, budget };
 enum class BankKind { unmapped, ram, rom, io, bram };
@@ -111,6 +111,18 @@ struct CdSense {
 };
 // Explicit response profiles, not implementations of unrecognized operations.
 enum class CdUnknownPolicy : std::uint8_t { fault, gear_good, nec_invalid };
+// The default preserves synthesized position replies. Captured Q is an
+// explicitly selected CRC/ADR-retention profile; it does not expose a P-W
+// byte FIFO or change the BRAM/IRQ interpretation of port $1807.
+enum class CdSubchannelProfile : std::uint8_t { synthesized, captured_q };
+struct CdSubchannel {
+    std::array<std::uint8_t,12> last{}, position{};
+    bool last_valid=false, position_valid=false;
+    std::optional<std::uint32_t> sampled_lba;
+    std::uint64_t samples=0, missing=0, crc_errors=0;
+};
+// Q uses the complemented CRC-16/CCITT remainder of its first ten bytes.
+bool cd_subq_crc_valid(const std::array<std::uint8_t,12>& packet);
 struct CdControl {
     bool enabled=false, bram_unlocked=true, ack=false;
     std::uint8_t interrupt_enable=0, interrupt_active=0, reset=0;
@@ -121,6 +133,8 @@ struct CdControl {
     bool audio_enabled=false;
     CdUnknownPolicy unknown_policy=CdUnknownPolicy::fault;
     CdTimingProfile timing_profile=CdTimingProfile::fixed;
+    CdSubchannelProfile subchannel_profile=CdSubchannelProfile::synthesized;
+    CdSubchannel subchannel;
     std::uint64_t unknown_commands=0;
     std::uint64_t invalid_commands=0; // Completed NEC-profile invalid CDB responses.
     // Bounded diagnostics. Counts dispatched attempts in all profiles; unknown_commands
@@ -141,6 +155,10 @@ struct CdControl {
     void advance_to(std::uint64_t ticks);
     void set_toc(const CdToc& value);
     void set_sector_provider(std::shared_ptr<SectorProvider> value);
+    void set_subchannel_profile(CdSubchannelProfile);
+    // Called only when the selected guest drive acquires a sector. A command
+    // querying retained Q never reads the image or moves the drive head.
+    void sample_subchannel(std::uint32_t lba);
     std::uint8_t transport_read(unsigned port);
     void transport_write(unsigned port, std::uint8_t value);
 private:

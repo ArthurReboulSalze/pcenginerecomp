@@ -50,9 +50,9 @@ subprocess.run([str(args.build.resolve() / ("pce-cd-timing-checkpoint-tests.exe"
 joypad_binary=args.build.resolve() / ("pce-joypad-tests.exe" if os.name=="nt" else "pce-joypad-tests")
 subprocess.run([str(joypad_binary)], cwd=root, check=True, timeout=60)
 
-for suite in ("pce-read-tests", "pce-sense-tests", "pce-cue-tests", "pce-cue-gap-tests", "pce-sector-tests", "pce-cd-position-tests"):
+for suite in ("pce-read-tests", "pce-sense-tests", "pce-cue-tests", "pce-cue-gap-tests", "pce-sector-tests", "pce-subchannel-sector-tests", "pce-subchannel-tests", "pce-cd-position-tests"):
     command=[str(args.build.resolve() / (suite + (".exe" if os.name=="nt" else "")))]
-    if suite in ("pce-sector-tests", "pce-cd-position-tests"):
+    if suite in ("pce-sector-tests", "pce-subchannel-sector-tests", "pce-cd-position-tests"):
         extension=".dll" if os.name=="nt" else (".so")
         prefix=""
         if sys.platform=="darwin": extension=".so"

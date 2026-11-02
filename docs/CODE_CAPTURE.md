@@ -4,7 +4,7 @@ The optional host observer collects exact identities of instructions that
 actually retire. It supplies an offline compiler input for overlays, MPR
 changes and self-modifying code without guessing a global control-flow graph.
 It is available in both headless and desktop hosts. The current runtime ABI is
-26; observations from ABI 12 through 26 retain their original labels for offline regeneration. This is
+29; observations from ABI 12 through 29 retain their original labels for offline regeneration. This is
 an execution profile, not a save state or complete program.
 
 **Captures contain game or firmware instruction bytes. Keep them and generated
@@ -64,7 +64,7 @@ The top-level fields are:
 
 | Field | Meaning |
 |---|---|
-| `schema`, `runtime_abi` | Schema 1; individual offline observations accept ABI 12 through 26 with their original labels |
+| `schema`, `runtime_abi` | Schema 1; individual offline observations accept ABI 12 through 29 with their original labels |
 | `capacity` | Maximum unique identities retained |
 | `retired_instructions` | All observed native plus interpreted retirements |
 | `dropped_instructions` | Retirement occurrences for new identities when full |

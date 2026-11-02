@@ -106,6 +106,34 @@ def exercise(test, binary, desktop=False):
 
 @unittest.skipUnless(HEADLESS.is_file(), 'Build the headless runner')
 class CheckpointCliTests(unittest.TestCase):
+    def test_subchannel_selection_is_bound_before_any_acquisition(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            opts = ['--checkpoint-dir', str(root), '--checkpoint-context', 'e'*64]
+            first = RunningSandbox(HEADLESS, root, bios=True,
+                                   extra_options=opts+['--cd-subchannel', 'synthesized'])
+            try:
+                self.assertEqual(first.client.call('status')['host']['cd_subchannel'],
+                                 {'profile': 'synthesized'})
+                first.client.call('save_checkpoint', name='explicit-subchannel.pcec')
+                first.client.call('quit')
+                first.process.communicate(timeout=5)
+                self.assertEqual(first.process.returncode, 0)
+            finally:
+                first.close()
+            second = RunningSandbox(HEADLESS, root, bios=True, extra_options=opts)
+            try:
+                before = second.client.call('status')
+                with self.assertRaisesRegex(DevError, 'identity mismatch'):
+                    second.client.call('load_checkpoint', name='explicit-subchannel.pcec')
+                self.assertEqual({k:v for k,v in before.items() if k!='id'},
+                                 {k:v for k,v in second.client.call('status').items() if k!='id'})
+                second.client.call('quit')
+                second.process.communicate(timeout=5)
+                self.assertEqual(second.process.returncode, 0)
+            finally:
+                second.close()
+
     def test_exact_fresh_process_tcp_continuation_and_rejections(self):
         exercise(self, HEADLESS)
 

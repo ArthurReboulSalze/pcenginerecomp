@@ -55,6 +55,12 @@ media, analysis, bus, or validation interfaces.
 
 ## Cartridge and System Card startup
 
+ABI 29 adds an explicit `synthesized|captured-q` CD subchannel selection.
+Supported original CHD P–W data stays distinct from absence and synthesized
+TOC position. Captured Q uses CRC validation and retained ADR-1 state, with
+profile/latches serialized in exact-build checkpoints. It does not change
+the existing BRAM port into a subchannel FIFO. See [CD subchannels](CD_SUBCHANNEL.md).
+
 ABI 28 adds an explicit CD drive timing selection to the shared transport.
 `fixed` retains the existing deterministic deadlines; opt-in `gear-distance`
 uses bounded rational seek geometry and separates physical seek from playback
@@ -129,7 +135,7 @@ The manifest pins every translation unit and generated header. The consumer
 interface verifies these files in build/run bindings, and CMake rechecks their
 hashes on configuration and tracks them as configuration dependencies.
 Legacy single-source manifests remain accepted. Source/runtime rebuilds are
-required after a tool update; current ABI 28 does not accept ABI-12 through ABI-27 binary objects.
+required after a tool update; current ABI 29 does not accept ABI-12 through ABI-28 binary objects.
 
 Opt-in [stable emission](STABLE_EMISSION.md) uses one part per full eight-MPR
 mapping and fixed 256-byte logical-PC range, with local deterministic names.
@@ -240,7 +246,7 @@ original captures from supported ABI epochs without manufacturing a combined
 execution capture. Exact raw inputs are embedded and hash-verified; union
 identities retain PC, all eight MPRs and instruction bytes, with checked
 per-input contributions. A shared guarded emitter translates this catalogue
-for current ABI 28 while recording original input ABI/origin metadata separately.
+for current ABI 29 while recording original input ABI/origin metadata separately.
 Profile validation reconstructs the union; historical hit sums are not fresh
 retirement evidence. The single-capture interface remains available.
 
@@ -255,7 +261,7 @@ checkpoint schema or runtime/CMake change is involved.
 
 ## Consumer interface
 
-Consumer TOML schema 1 pins ABI 28, a complete tool revision and exact relevant
+Consumer TOML schema 1 pins ABI 29, a complete tool revision and exact relevant
 source-tree digest, module source/manifest hashes, input hashes, the initial
 load/MPR recipe and explicit runtime profiles and execution limits.
 `python -m pcerecomp.project` verifies these identities, builds through
@@ -335,7 +341,8 @@ sectors through a separately attached read-only provider. ABI 22 adds fixed
 NEC REQUEST SENSE and retained error context: expected typed media failures
 are recoverable, while source/configuration/host faults remain terminal.
 Pending sense survives warm bus reset separately from an active response;
-see [CD_SENSE.md](CD_SENSE.md). Raw subchannels remain unsupported. The extended profile
+see [CD_SENSE.md](CD_SENSE.md). Original CHD `RW_RAW` subchannels and opt-in
+captured-Q replies are implemented with [separate limits](CD_SUBCHANNEL.md). The extended profile
 implements D8/D9/DA/DD audio control/position with a guest timeline and fader;
 separately enabled PCM output consumes digital CDDA samples. Optional `--toc` attaches metadata
 exported from CHD, supported BIN/CUE or single-track ISO and can enable transport without firmware.
@@ -592,7 +599,7 @@ BIOS initialization are not reconstructed. See [FIRMWARE.md](FIRMWARE.md).
 | Scheduler / IRQ | Implemented aggregate boundary delivery, RTI, timer and priority; finer access phases remain | Independent Gear CPU/RAM/sequence-clock checks; timer-edge and MMIO phase qualification still needed |
 | Video | Implemented VDC ports/raster, VCE palette, VRAM/SATB DMA, state inspection and continuous line-history output | Local historical pixel expectations and full-frame Geargrafx comparisons; physical fetch/contention and fine latch windows still needed |
 | Sound | Implemented opt-in digital PSG synthesis, MSM5205 ADPCM decode, raw CHD CDDA, bounded 44.1 kHz stereo mixing and SDL/WAV output, alongside existing control/DMA state | Authored digital expectations; 56 raw CDDA stereo pairs and 24 PSG phase points match Gear; mixed/resampled/analog output and physical device qualification remain |
-| CD | Implemented control, TOC, read-only READ streaming, TOC-based audio position responses and optional calibrated distance seeks; raw subchannels remain planned | Authored full-sector and distance/command Gear checks, provider identity/failure expectations and bounded private CHD execution; no hardware qualification |
+| CD | Implemented control, TOC, READ streaming, synthesized or opt-in captured-Q replies, original CHD RW_RAW data and optional calibrated distance seeks; subchannel byte FIFO/IRQ remains planned | Authored media/Q/state tests and separate original-core comparisons; bounded private CHD execution without captured subchannels is separate; no hardware qualification |
 | Input | Implemented two/six-button pads, five-port TurboTap, guest-write-sampled reference profile and optional SDL slot-zero mapping | Independent protocol checks and synthetic host/virtual-device tests; physical-controller qualification still required |
 | Persistence | Implemented opt-in 2 KiB CD BRAM export and isolated checked consumer sessions; migration and other persistent RAM remain planned | Authored save/reload, damaged/foreign files, concurrency and failure tests; per-title real save flows require separate qualification |
 | Host | Implemented optional SDL3 window/audio playback, keyboard/gamepad mapping, nearest pixels, resize/fullscreen/pause and guest-clock pacing; opt-in TCP development control and bounded WAV capture; unthrottled device output muted; settings persistence remains | Synthetic renderer/input/audio queue and actual TCP tests; paced real SDL stream accepts/drains 930,219 frames; full audio-enabled route matches 25 retained guest images and original final guest state; no listening/analog parity claim |
@@ -618,7 +625,7 @@ compatibility. Native hooks need guards and a reference route. Co-op and
 netplay require game-specific authority/state work; rollback also needs
 deterministic simulation, captured inputs and complete device/CD state.
 
-**Implemented developer checkpoint schema 1** uses runtime ABI 28 and is
+**Implemented developer checkpoint schema 1** uses runtime ABI 29 and is
 restricted to exact reviewed builds. The host binds the executable, adjacent
 DLLs, actual input identities, selected machine profiles and explicit reviewed
 source/module context. It accepts paused TCP save and fresh-window restore
@@ -711,6 +718,12 @@ status reports it explicitly. The default fixed deadlines remain available,
 but neither that default nor an offline ABI comparison permits cross-build
 checkpoint loading. See [CD timing](CD_TIMING.md) and
 [native migration contracts](NATIVE_MIGRATIONS.md#abi-28-migration-contract).
+
+ABI 29 additionally serializes the selected subchannel profile, acquisition
+metadata, counters and both CRC-validated Q latches. A different profile or
+missing captured-media capability rejects restore atomically. The active
+SCSI response includes partial `$DD` progress. This adds no cross-build
+state compatibility; see [captured Q](CD_SUBCHANNEL.md).
 
 ## Validation and optimization order
 

@@ -176,31 +176,35 @@ still track broader work; the current finite probes do not close those gates.
    and idle position responses are independently checked against Gear.
    Remaining work includes richer program/gap/index/control metadata for
    position responses beyond the implemented program/gap classification,
-   captured subchannels, additional layouts and actual
+   broader captured-subchannel device interfaces, additional layouts and actual
    title/drive qualification. These checks do not establish raw-Q support.
    D8 start admission at known program gaps is now implemented with its own
    [state/handshake contract](CD_AUDIO_GAPS.md). It preserves existing audio
    and does not create a replacement seek. Unknown-metadata approximations,
-   raw subchannels and hardware consensus remain open. The optional
+   byte-stream subchannels and hardware consensus remain open. The optional
    [distance timing profile](CD_TIMING.md) now covers bounded READ/CDDA seeks
    and playback readiness while retaining the fixed default. Further measured
    drive models and addresses outside its calibration need separate work.
-   The next subchannel milestone needs an explicit provider contract for
-   original 96-byte data, its representation and absence, then captured-Q
-   validation and a separately selected byte-stream/IRQ profile. The current
-   provider exposes no captured subchannel data; synthesized position replies
-   must not be advertised as raw-Q support. Gear's ordinary media path and
-   Beetle's FIFO acknowledgements differ. Preserve the existing default and
-   qualify each proposed profile against the original core that implements
-   it, including malformed Q, overflow, mixed IRQ sources and a checkpoint
-   restored halfway through a packet. This is planned work, not a newly
-   implemented device or a reason to change a qualified consumer's SDK pin.
+   ABI 29 now provides [original 96-byte P–W and opt-in captured Q](CD_SUBCHANNEL.md):
+   explicit representation/absence, CHD RW_RAW extents, CRC/ADR retention and
+   exact-build checkpoint state. Synthesized replies remain the default.
+   A separately selected byte-stream/IRQ profile remains planned. Gear's
+   ordinary media path and Beetle's FIFO acknowledgements differ; qualify
+   each proposed interface against the original core that implements it,
+   including overflow, mixed IRQ sources and restoration midway through a
+   byte packet. New ABI 29 consumer packages require regeneration/rebuilding
+   and independent qualification; existing SDK selections do not auto-migrate.
 5. **Capture inspection and trace coverage.** Paused, bounded read-only TCP
    summaries and retired source-span pages are implemented, including exact
    native/interpreted counts, completeness/loss and deferred-window metadata.
    They preserve guest state and the final capture contract. Future
    chronological or bus-access traces require separate bounded storage and
    semantics; the current accumulated identity set is not such a trace.
+   [Native discovery guidance](NATIVE_DISCOVERY.md) describes joining authentic
+   captures to actual emitted identities and using the existing bounded,
+   mapping-aware analyzer. Reusable gap reporting and authenticated paused
+   physical-snapshot export remain planned; static candidates are not executed
+   coverage. RomAtlas's current PCE frontend is HuCard-only.
 6. **Identity-bound developer checkpoints.** Paused exact-build machine save
    and fresh-process restore are implemented, including pending device/DSP
    state and explicit resumed-window evidence. This remains separate from CD
@@ -273,7 +277,7 @@ bounds refuse excess rather than truncate. Current
 capture identity capacity is 65,536; input sizes cannot simply be added or
 assumed to fit before deduplication. A composed set remains source evidence,
 not a combined execution receipt or new current-ABI retirement count.
-Emission distinguishes original capture epochs from generated-code ABI 28,
+Emission distinguishes original capture epochs from generated-code ABI 29,
 with per-input imported work kept separate. Consumer adoption still needs a
 fresh cold run, newly created exact-module checkpoints and its own route checks;
 profile composition does not migrate checkpoints or qualify a campaign.

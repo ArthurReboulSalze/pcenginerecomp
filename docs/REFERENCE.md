@@ -8,6 +8,18 @@ scope, including unavailable state and real reference disagreements. See
 not turn either emulator into a hardware oracle or certify complete CPU,
 bus, video, audio or retail compatibility.
 
+## Captured Q device comparison
+
+The opt-in [captured subchannel check](CD_SUBCHANNEL.md#references-and-limits)
+builds original pinned Geargrafx and Beetle source in separate executables.
+All 315 authored raw96 records match their declared expectations; the toolkit
+matches original Beetle's CRC, retained last/ADR-1 packets and complete `$DD`
+payloads. Gear independently checks its own captured-Q extraction/ADR admission.
+Frozen input/artifact preservation is a separate required part of the receipt.
+This is a device-layer comparison, not a guest-access timing, byte FIFO/IRQ,
+hardware or retail-media qualification. Source disagreements remain explicit;
+the runtime's synthesized default is not relabelled as captured data.
+
 The optional `scripts/reference_geargrafx.py` harness controls a separately
 developed **Geargrafx** emulator through its actual HTTP MCP tools. It starts
 and terminates its own headless portable process on a dedicated loopback

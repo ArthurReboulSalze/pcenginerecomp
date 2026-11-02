@@ -6,6 +6,32 @@ runtime ABI, a changed observation catalogue, or promotion of interpreted
 source identities into native code. It does not certify complete game or
 hardware compatibility.
 
+## ABI 29 captured-subchannel migration contract
+
+ABI 29 adds read-only original P–W access and opt-in captured-Q device state;
+the default synthesized position profile remains available. A consumer must
+regenerate its module, rebuild the runtime and qualify a new candidate through
+its own startup. Preserve original capture producer ABI/source identities.
+No checkpoint import from ABI 28, relaxed package fingerprint or automatic
+selection change is permitted by this interface. See [consumer upgrade steps](CONSUMER.md#upgrade-a-consumer-to-abi-29)
+and [media/state/reference scope](CD_SUBCHANNEL.md).
+
+The selected Ys III ABI 28 package remains separate: its CHD declares no
+captured subchannels. Its TCP/checkpoint regressions test that exact existing
+build, while authored ABI 29 media/Q/checkpoint checks establish the new
+feature's bounded scope. Neither result is evidence of an ABI 29 retail
+migration or a subchannel FIFO/IRQ implementation.
+
+The same-build regression extends its independently raw-admitted route by
+1,584 frames / 49,685,371 native / zero interpreted instructions, with no new
+writes. Thirteen actual canonical captures exercise 53,616 of 58,039 compiled
+identities at frame 114,051; two existing compiled identities are first
+exercised. Exact-build checkpoint and separate paced audio forks pass from
+that admitted frontier, excluding imported work and all test forks from the
+route union. A failed initial TCP listener-discovery attempt remains failed;
+the corrected harness and subsequent successful attempt retain distinct
+receipts. See [the complete consumer regression scope](STATUS.md#selected-abi-28-consumer-regression).
+
 ## Raw-audited same-build discovery extension
 
 The existing staged-profile ABI28 `fixed`/`nec-invalid` package continues from

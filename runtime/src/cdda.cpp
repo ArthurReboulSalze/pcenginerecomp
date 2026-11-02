@@ -5,6 +5,16 @@
 #include <limits>
 
 namespace pce {
+bool cd_subq_crc_valid(const std::array<std::uint8_t,12>& packet) {
+    std::uint16_t crc=0;
+    for(unsigned i=0;i<10;++i) {
+        crc^=static_cast<std::uint16_t>(unsigned(packet[i])<<8);
+        for(unsigned bit=0;bit<8;++bit)
+            crc=static_cast<std::uint16_t>((crc&0x8000) ? (unsigned(crc)<<1)^0x1021:unsigned(crc)<<1);
+    }
+    const auto stored=static_cast<std::uint16_t>((unsigned(packet[10])<<8)|packet[11]);
+    return stored==static_cast<std::uint16_t>(~crc);
+}
 namespace {
 constexpr unsigned busy_phase=8;
 constexpr std::uint64_t resume_ticks=4810909;
@@ -61,6 +71,53 @@ ProgramTrackLookup program_location(const CdToc& toc,const std::shared_ptr<Secto
     }
     return result;
 }
+}
+void CdControl::set_subchannel_profile(CdSubchannelProfile profile) {
+    if(profile!=CdSubchannelProfile::synthesized && profile!=CdSubchannelProfile::captured_q)
+        throw Fault("invalid CD subchannel profile");
+    if(scsi.master_ticks || scsi.phase || scsi.event || scsi.auto_ack_deadline || scsi.load_deadline ||
+       ack || audio.commands || sectors_read || read_commands || subchannel.samples)
+        throw Fault("CD subchannel profile selection requires a pristine idle transport");
+    if(profile==CdSubchannelProfile::captured_q &&
+       (!enabled || !scsi.enabled || !provider || !provider->has_subchannel()))
+        throw Fault("captured Q requires an enabled transport with captured P-W media");
+    subchannel_profile=profile;
+}
+void CdControl::sample_subchannel(std::uint32_t lba) {
+    if(subchannel_profile==CdSubchannelProfile::synthesized)return;
+    if(subchannel_profile!=CdSubchannelProfile::captured_q)
+        throw Fault("invalid CD subchannel profile");
+    if(!provider || !provider->has_subchannel())throw Fault("captured Q lost its captured P-W media");
+    if(lba>=provider->toc().leadout_lba)throw Fault("captured Q acquisition outside disc");
+    // Finish all source I/O before committing counters or any retained packet.
+    // Missing capture is not a synthetic packet; bad CRC preserves both old
+    // latches. Other valid ADR modes change last, never the ADR-1 position.
+    auto next=subchannel;
+    if(next.missing>next.samples || next.crc_errors>next.samples-next.missing)
+        throw Fault("CD subchannel counters are inconsistent");
+    if(next.samples==std::numeric_limits<std::uint64_t>::max())throw Fault("CD subchannel counter overflow");
+    const auto raw=[&] {
+        try {return provider->read_subchannel(lba);}
+        catch(const SectorReadError&) {
+            // SectorReadError classifies user-data READ outcomes only. Never
+            // let a custom capture provider turn a host/contract failure into
+            // a recoverable SCSI sector error in load_sector's outer handler.
+            throw Fault("subchannel provider returned a user-data sector error");
+        }
+    }();
+    ++next.samples;next.sampled_lba=lba;
+    if(!raw)++next.missing;
+    else {
+        std::array<std::uint8_t,12> packet{};
+        for(unsigned bit=0;bit<96;++bit)
+            packet[bit/8]|=static_cast<std::uint8_t>((((*raw)[bit]>>6)&1)<<(7-bit%8));
+        if(!cd_subq_crc_valid(packet))++next.crc_errors;
+        else {
+            next.last=packet;next.last_valid=true;
+            if((packet[0]&15)==1) {next.position=packet;next.position_valid=true;}
+        }
+    }
+    subchannel=next;
 }
 void CdAudio::reschedule() {
     deadline=0;
@@ -129,6 +186,18 @@ void CdControl::audio_command() {
         audio.reschedule();start_status(0);return;
     }
     if(op==0xDD) {
+        if(subchannel_profile==CdSubchannelProfile::captured_q) {
+            // Retained ADR-1 fields and reserved byte follow the declared
+            // captured-Q profile. No validity flag or invented TOC position
+            // is substituted before the first accepted position packet.
+            scsi.response.fill(0);scsi.response_size=10;scsi.response_index=0;
+            scsi.response[0]=static_cast<std::uint8_t>(audio.state==0 ? 0:audio.state==2 ? 2:3);
+            const auto& q=subchannel.position;
+            scsi.response[2]=q[1];scsi.response[3]=q[2];
+            for(unsigned i=0;i<3;++i) {scsi.response[4+i]=q[3+i];scsi.response[7+i]=q[7+i];}
+            schedule(6,3000);return;
+        }
+        if(subchannel_profile!=CdSubchannelProfile::synthesized)throw Fault("invalid CD subchannel profile");
         const auto lba=audio.state==1 ? scsi.current_lba:
             (audio.state==0 && audio.seek_deadline ? audio.seek_start_lba:audio.current_lba);
         int track=-1;
@@ -162,6 +231,8 @@ void CdControl::audio_command() {
     if(op!=0xD9) throw Fault("unsupported CD audio command");
     const auto mode=scsi.command[1];
     if(mode>3) throw Fault("unsupported CD audio stop mode");
+    if(mode && audio.state!=2 && !audio.seek_deadline && !audio.sector_deadline && !audio.playback_deadline)
+        sample_subchannel(audio.current_lba);
     if(mode==0) {
         // StopAudio leaves an already pending physical seek countdown intact;
         // bus reset and READ's SetIdle use the stronger stop() cancellation.
@@ -183,15 +254,24 @@ void CdControl::audio_command() {
 void CdControl::audio_event() {
     const auto now=scsi.master_ticks;
     if(audio.seek_deadline && audio.seek_deadline<=now) {
+        if(audio.state==0 && !audio.playback_deadline)sample_subchannel(audio.current_lba);
         audio.seek_deadline=0;
         if(scsi.phase==busy_phase) start_status(0);
         if(audio.state==0 && !audio.playback_deadline) next_sector(audio,now);
     }
     if(audio.playback_deadline && audio.playback_deadline<=now) {
+        if(audio.state==0 && !audio.seek_deadline)sample_subchannel(audio.current_lba);
         audio.playback_deadline=0;
         if(audio.state==0 && !audio.seek_deadline) next_sector(audio,now);
     }
     if(audio.sector_deadline && audio.sector_deadline<=now) {
+        // Determine the next real sector before changing the active timeline,
+        // so a host/decoder failure cannot leave the retained Q half-updated.
+        if(audio.state==0) {
+            auto next=audio.current_lba+1;
+            if(next>audio.stop_lba && audio.stop_mode==1)next=audio.start_lba;
+            if(next<=audio.stop_lba)sample_subchannel(next);
+        }
         audio.sector_deadline=0;
         if(audio.state==0) {
             ++audio.sectors_played;++audio.current_lba;

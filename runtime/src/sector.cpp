@@ -112,11 +112,14 @@ public:
 };
 
 class ImageProvider final : public SectorProvider {
+    enum class Subtype { none, raw, cooked };
     struct Track {
         std::uint32_t start,count;
         std::uint64_t frame;
         bool raw,audio;
         std::uint32_t stored_pregap=0;
+        Subtype sub=Subtype::none,pgsub=Subtype::none;
+        unsigned pregap_data_bytes=0;
     };
     fs::path path;
     Stamp initial;
@@ -174,6 +177,12 @@ class ImageProvider final : public SectorProvider {
         if(value>449850) throw Fault("CHD track metadata exceeds CD geometry bound");
         return static_cast<std::uint32_t>(value);
     }
+    static Subtype subtype(const std::string& text) {
+        if(text=="NONE") return Subtype::none;
+        if(text=="RW_RAW") return Subtype::raw;
+        if(text=="RW") return Subtype::cooked;
+        throw Fault("Unsupported CHD subchannel metadata representation");
+    }
     void chd_metadata() {
         std::array<std::uint8_t,124> header{};
         exact(input,0,header.data(),header.size());
@@ -210,13 +219,27 @@ class ImageProvider final : public SectorProvider {
                 auto postgap=number(values.contains("POSTGAP")?values["POSTGAP"]:"0");
                 bool stored=values.contains("PGTYPE") && values["PGTYPE"].starts_with("V");
                 auto type=values["TYPE"];
+                const auto sub=subtype(values.contains("SUBTYPE")?values["SUBTYPE"]:"NONE");
+                const auto pgsub=subtype(values.contains("PGSUB")?values["PGSUB"]:"NONE");
+                unsigned pregap_data_bytes=0;
+                if(stored && pregap && pgsub!=Subtype::none) {
+                    const auto pgtype=values["PGTYPE"].substr(1);
+                    if(pgtype=="MODE1") pregap_data_bytes=2048;
+                    else if(pgtype=="MODE1_RAW" || pgtype=="AUDIO") pregap_data_bytes=2352;
+                    else throw Fault("Captured CHD pregap requires a supported explicit PGTYPE");
+                    // CHDMAN's stored-frame writer and MAME read_subcode use
+                    // the program track payload size for the whole extent.
+                    // A differing pregap size has no qualified byte layout.
+                    if(pregap_data_bytes!=(type=="MODE1"?2048U:2352U))
+                        throw Fault("Captured CHD pregap payload size differs from program track");
+                }
                 if(tracks.size()>=99 || number(values["TRACK"])!=tracks.size()+1 || !frames || (stored && pregap>=frames)
                     || (type!="MODE1" && type!="MODE1_RAW" && type!="AUDIO")) throw Fault("Unsupported CHD track geometry or format");
                 auto start=disc+pregap;
                 auto count=frames-(stored?pregap:0);
                 if(start+count>449850) throw Fault("CHD disc geometry exceeds supported bound");
                 tracks.push_back({static_cast<std::uint32_t>(start),count,storage+(stored?pregap:0),type=="MODE1_RAW",type=="AUDIO",
-                                  stored ? pregap:0});
+                                  stored ? pregap:0,sub,pgsub,pregap_data_bytes});
                 table.tracks[table.track_count++]={static_cast<std::uint32_t>(start),static_cast<std::uint8_t>(type=="AUDIO"?0:4)};
                 storage+=(std::uint64_t(frames)+3)/4*4;
                 disc+=frames+postgap+(stored?0:pregap);
@@ -246,6 +269,44 @@ public:
         same(path,initial);
     }
     const CdToc& toc() const override {return table;}
+    bool has_subchannel() const override {
+        same(path,initial);
+        const bool result=std::any_of(tracks.begin(),tracks.end(),[](const auto& track){
+            return track.sub==Subtype::raw || (track.stored_pregap && track.pgsub==Subtype::raw);
+        });
+        same(path,initial);return result;
+    }
+    std::optional<SubchannelSector> read_subchannel(std::uint32_t lba) override {
+        same(path,initial);
+        if(!hunk_bytes || lba>=table.leadout_lba) return std::nullopt;
+        for(const auto& track:tracks) {
+            const bool program=lba>=track.start && lba-track.start<track.count;
+            const bool pregap=lba<track.start && track.start-lba<=track.stored_pregap;
+            if(!program && !pregap) continue;
+            const auto representation=program?track.sub:track.pgsub;
+            if(representation==Subtype::none) {same(path,initial);return std::nullopt;}
+            // Cooked R-W does not establish original P/Q or raw symbol order.
+            // Preserve data/audio compatibility but refuse this opt-in access.
+            if(representation!=Subtype::raw) throw Fault("Cooked CHD RW subchannels are unsupported; original RW_RAW P-W is required");
+            const auto frame=program?track.frame+(lba-track.start):track.frame-(track.start-lba);
+            const auto position=frame*2448;
+            const auto hunk=static_cast<std::uint32_t>(position/hunk_bytes);
+            const auto within=static_cast<std::size_t>(position%hunk_bytes);
+            if(cached_hunk!=hunk) {
+                // A failed decoder can partially overwrite the previous hunk.
+                cached_hunk=std::numeric_limits<std::uint32_t>::max();
+                if(decoder.read(decoder.handle,hunk,cache.data())!=0) throw Fault("libchdr subchannel hunk decode failed");
+                cached_hunk=hunk;
+            }
+            // CHDMAN appends subcode directly after the declared payload, then
+            // pads the whole unit to 2448; MODE1 subcode starts at 2048.
+            const auto offset=program?(track.raw||track.audio?2352U:2048U):track.pregap_data_bytes;
+            SubchannelSector result{};
+            std::copy_n(cache.data()+within+offset,result.size(),result.begin());
+            same(path,initial);return result;
+        }
+        same(path,initial);return std::nullopt;
+    }
     ProgramTrackLookup program_track(std::uint32_t lba) const override {
         same(path,initial);
         ProgramTrackLookup result{true,{}};

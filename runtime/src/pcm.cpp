@@ -306,6 +306,13 @@ struct AudioCheckpointAccess {
         if(drive_timing>static_cast<std::uint8_t>(CdTimingProfile::gear_distance))
             throw checkpoint::ArchiveError("invalid checkpoint CD timing profile");
         if constexpr(reading<A>)v.timing_profile=static_cast<CdTimingProfile>(drive_timing);
+        auto subchannel_profile=static_cast<std::uint8_t>(v.subchannel_profile);
+        ar(subchannel_profile);
+        if(subchannel_profile>static_cast<std::uint8_t>(CdSubchannelProfile::captured_q))
+            throw checkpoint::ArchiveError("invalid checkpoint CD subchannel profile");
+        if constexpr(reading<A>)v.subchannel_profile=static_cast<CdSubchannelProfile>(subchannel_profile);
+        auto& q=v.subchannel;
+        ar(q.last,q.position,q.last_valid,q.position_valid,q.sampled_lba,q.samples,q.missing,q.crc_errors);
         ar(v.unknown_commands,v.invalid_commands,v.unknown_opcodes,v.last_unknown_command,v.last_unknown_size);
         origin(ar,v.pending_origin);origin(ar,v.last_unknown_origin);
         auto& s=v.scsi;
@@ -448,6 +455,19 @@ void validate_audio(const Bus& bus) {
     for(auto time:{a.read_deadline,a.write_deadline,a.dma_deadline})
         if(time && time<=a.master_ticks)throw ArchiveError("checkpoint ADPCM event is not in the future");
     const auto& cd=bus.cd;const auto& s=cd.scsi;const auto& audio=cd.audio;
+    const auto& q=cd.subchannel;
+    const auto zero=[](const auto& packet) {return std::all_of(packet.begin(),packet.end(),[](auto value){return value==0;});};
+    if(static_cast<std::uint8_t>(cd.subchannel_profile)>static_cast<std::uint8_t>(CdSubchannelProfile::captured_q) ||
+       q.missing>q.samples || q.crc_errors>q.samples-q.missing || bool(q.samples)!=q.sampled_lba.has_value() ||
+       (q.sampled_lba && (!cd.toc || *q.sampled_lba>=cd.toc->leadout_lba)) ||
+       q.last_valid!=(q.samples-q.missing-q.crc_errors!=0) ||
+       (q.last_valid ? !cd_subq_crc_valid(q.last):!zero(q.last)) ||
+       (q.position_valid ? (!q.last_valid || (q.position[0]&15)!=1 || !cd_subq_crc_valid(q.position)):!zero(q.position)) ||
+       (q.last_valid && (q.last[0]&15)==1 && (!q.position_valid || q.last!=q.position)) ||
+       (cd.subchannel_profile==CdSubchannelProfile::synthesized && q.samples) ||
+       (cd.subchannel_profile==CdSubchannelProfile::captured_q &&
+        (!cd.enabled || !s.enabled || !cd.provider || !cd.provider->has_subchannel())))
+        throw ArchiveError("checkpoint captured Q state or media configuration is invalid");
     if((s.phase!=0 && s.phase!=3 && s.phase!=4 && s.phase!=6 && s.phase!=7 && s.phase!=8) ||
        s.event>7 || s.command_size>s.command.size() || s.last_command_size>s.last_command.size() ||
        s.response_size>s.response.size() || s.response_index>s.response_size || s.load_remaining>256 ||
@@ -485,7 +505,8 @@ void validate_audio_configuration(const Bus& decoded,const Bus& configured) {
        decoded.psg.centered_dac!=configured.psg.centered_dac ||
        decoded.adpcm.enabled!=configured.adpcm.enabled || a.enabled!=b.enabled ||
        a.scsi.enabled!=b.scsi.enabled || a.audio_enabled!=b.audio_enabled ||
-       a.unknown_policy!=b.unknown_policy || a.timing_profile!=b.timing_profile || bool(a.provider)!=bool(b.provider) ||
+       a.unknown_policy!=b.unknown_policy || a.timing_profile!=b.timing_profile ||
+       a.subchannel_profile!=b.subchannel_profile || bool(a.provider)!=bool(b.provider) ||
        bool(a.toc)!=bool(b.toc) || (a.toc && !same_toc(*a.toc,*b.toc)) ||
        decoded.pcm.enabled!=configured.pcm.enabled || decoded.pcm.profile()!=configured.pcm.profile() ||
        decoded.pcm.output_rate()!=configured.pcm.output_rate() || decoded.pcm.timing()!=configured.pcm.timing())

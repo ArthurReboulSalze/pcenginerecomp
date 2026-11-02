@@ -10,6 +10,30 @@ project owns its game-specific routes, patches, assets and presentation choices.
 Ys III is one regression case; compatibility evidence remains tied to the
 tested CPU, hardware, media and runtime profiles.
 
+**ABI 29 adds opt-in captured CD subchannels.** Read-only CHD providers expose
+original 96-byte P–W packets from supported `RW_RAW` extents, with explicit
+absence, stored-pregap mapping and fatal decoder/source-error handling.
+`--cd-subchannel captured-q` validates Q CRCs, retains position packets and
+returns them through `$DD`; `synthesized` remains the default. Complete Q state
+and the selected profile participate in exact-build checkpoints. Native modules
+need regeneration and rebuilding; existing consumer checkpoints stay with their
+original builds. The byte FIFO/subchannel IRQ interface remains separate work.
+See [captured subchannel contracts and references](docs/CD_SUBCHANNEL.md).
+
+The required SDL check passes **1,636 Python tests without skips, 70 C++ suites
+and 12 fresh-process audio checkpoint cases**. Original Geargrafx/Beetle checks
+pass 315 authored captured-Q records. The selected Ys III build remains ABI 28;
+its media declares no captured subchannels. Its regression and any future ABI 29
+migration retain separate evidence.
+
+Fresh TCP/checkpoint tests on that selected package pass with zero fallback
+and matching complete state, RAM, images and instruction counts; a separate
+paced audio fork also passes. See [current verification scope](docs/STATUS.md#selected-abi-28-consumer-regression).
+
+[Native discovery guidance](docs/NATIVE_DISCOVERY.md) now distinguishes
+executed, compiled and statically reachable code, explains existing mapping-aware
+analysis, and records the missing reusable gap-report/snapshot-export interfaces.
+
 **Consumer raw audits now have reusable same-ABI relations.** The new pure
 helper validates imported counters, explicit source/candidate tier relations
 and complete encoded instruction identities. It rejects boolean counters,
@@ -23,9 +47,9 @@ Ys III's two retained discovery windows now pass all four raw role audits:
 linked route exercises 53,614 of 58,039 compiled identities. Fresh own-checkpoint
 repeatability and a separate paced audio fork also pass; imported work and
 test forks stay outside the new route totals. See [the extension's scope](docs/NATIVE_MIGRATIONS.md#raw-audited-same-build-discovery-extension).
-The required SDL check passes **1,616 Python tests without skips, 68 C++
-suites and 12 fresh-process audio checkpoint cases**. ABI 28 and the selected
-consumer's compiled package are unchanged.
+That earlier raw-audit SDL check passed **1,616 Python tests without skips,
+68 C++ suites and 12 fresh-process audio checkpoint cases**, retaining ABI 28
+and the selected consumer's compiled package.
 
 **VDC register races now have independent guest-code coverage.** A new
 24-case matrix runs actual translated and interpreted instructions against
@@ -37,8 +61,8 @@ timestamps match. See [queued-register race coverage](docs/VDC_ACCESS.md#guest-r
 **Reference checks now reject mismatched or ambiguous replies.** The shared
 Geargrafx MCP client validates response IDs and rejects duplicate JSON keys,
 non-finite numbers and malformed results. Authored regressions and a real
-isolated Gear smoke check the boundary. Runtime ABI 28 and the qualified
-consumer's compiled code stay unchanged. See [the reference client contract](docs/REFERENCE.md#shared-http-reference-boundary).
+isolated Gear smoke check the boundary. At that milestone, runtime ABI 28 and
+the qualified consumer's compiled code remained unchanged. See [the reference client contract](docs/REFERENCE.md#shared-http-reference-boundary).
 Ys III also passes a fresh TCP checkpoint pair on that qualified package:
 each 60-frame continuation executes 1,866,913 native instructions with zero
 fallback and matching complete state, RAM, pixels and encoded hit counts.
@@ -369,7 +393,7 @@ The opt-in TCP host saves complete machine state to a new private `.pcec`
 file, including pending video/CD work, audio queues and filter history. A
 fresh paused run can restore it with the same executable, DLLs, source/module
 context, media and runtime profiles. Resumed receipts and code captures keep
-the imported prefix separate from newly executed work. Current ABI 28 requires
+the imported prefix separate from newly executed work. Current ABI 29 requires
 fresh exact-build checkpoints; the original introduction retained ABI 25.
 Portable saves, cross-module loading and in-process rewind remain future work.
 See [developer checkpoints](docs/DEVELOPER_CHECKPOINTS.md) for setup and limits.
@@ -477,7 +501,8 @@ positions without consuming stored bytes. Authored layouts, direct original
 Beetle media checks and explicitly equivalent Gear fixtures verify the stated
 geometry/payload scope. Successful CD READs also advance the retained head
 used by position queries, matching Gear; failed and blocked loads preserve it.
-Raw subchannel/index history remains separate work. See
+Captured Q now has an [explicit profile](docs/CD_SUBCHANNEL.md); subchannel
+byte/IRQ and broader index history remain separate work. See
 [media formats and limits](docs/MEDIA.md).
 
 **Repeated consumer builds can reuse verified native packages.** The optional
@@ -514,7 +539,7 @@ Clocked VDC profiles now queue CPU VRAM transfers and model display/DMA
 contention. BUSY reflects pending work; CPU stalls advance devices and IRQ
 sampling without inventing extra instruction retirements. The shared VRAM
 read bus and fetched sprite data remain intact, and inspection stays pure.
-The current shared layout requires **runtime ABI 28**: re-emit original-labeled captures and rebuild
+The current shared layout requires **runtime ABI 29**: re-emit original-labeled captures and rebuild
 consumers together. `--vdc-access immediate` preserves the previous reference
 path; consumer projects can pin either profile. See
 [queued accesses and qualification limits](docs/VDC_ACCESS.md) and
@@ -601,7 +626,7 @@ uses ceiling-rational sample edges and clock-latched PSG DAC outputs, including
 register writes between PSG clocks. `--audio-timing legacy` preserves the
 previous sample timing and PCM path. Timing is independent of raw/filtered
 selection. **ABI 15** introduced the guest CDDA cursor and sample latch alongside
-the held PSG DAC state. Retained ABI-12 through ABI-27 captures can be re-emitted for current ABI 28, but
+the held PSG DAC state. Retained ABI-12 through ABI-28 captures can be re-emitted for current ABI 29, but
 modules and runtime must be rebuilt together.
 Consumer schema remains **1**. See [audio controls, evidence and limits](docs/AUDIO_OUTPUT.md).
 
@@ -619,13 +644,13 @@ desktop runs reproduce the **94,800-frame, 39-checkpoint assisted route** in
 all three modes; fresh headless comparisons match guest state and PCM/WAV
 within each audio timing profile.
 Regeneration retains the existing native coverage; it adds no new gameplay
-milestone. See the [current upgrade guide](docs/CONSUMER.md#upgrade-a-consumer-to-abi-28)
+milestone. See the [current upgrade guide](docs/CONSUMER.md#upgrade-a-consumer-to-abi-29)
 and [consumer integration evidence](docs/STATUS.md#abi-16-consumer-integration).
 
 The base compatibility profile now includes **BRK in both execution tiers**,
 **8 KiB work-RAM mirrors across banks `$F8..$FB`**, and **VDC sprite-zero
 collision / sprite-overflow status and interrupts**, independently of host
-rendering or audio. Current runtime **ABI 28** requires regenerated modules and a
+rendering or audio. Current runtime **ABI 29** requires regenerated modules and a
 matching runtime; retained ABI-12 through ABI-23 captures remain usable as
 original compiler inputs. Bounded unknown-CD diagnostics retain opcode counts
 and the original command source context. Strict unknown-command behavior is
@@ -773,7 +798,8 @@ especially welcome.
   latches at `$1801`, REQ/ACK reception, six-byte TEST UNIT READY, and delayed
   status/message completion with an IRQ2 source. REQUEST SENSE returns the
   fixed NEC 18-byte error response, with typed media failures and retry support;
-  raw subchannel capture remains unsupported. See [CD error recovery](docs/CD_SENSE.md).
+  original CHD RW_RAW capture and opt-in retained Q now have a
+  [separate contract](docs/CD_SUBCHANNEL.md). See [CD error recovery](docs/CD_SENSE.md).
   Drive delays follow an explicit
   reference-emulator profile; GOOD status does not certify readable media.
   Geargrafx checks passed **743 settled CPU/device checkpoints and 21 full
@@ -985,7 +1011,7 @@ Geargrafx independently checks CPU/device behavior, scoped assists and normal
 SAVE/LOAD; an aligned STATUS text crop matches **2,560 pixels**. It does not
 qualify the complete boss route. The retained ABI-12 observed-code dispatch batch
 passes **78 authored Geargrafx plans**, matching CPU/MPR/latch states, instruction
-clocks and complete RAM in both tiers. Current runtime ABI is **27**; ABI-12 through ABI-26
+clocks and complete RAM in both tiers. Current runtime ABI is **29**; ABI-12 through ABI-28
 observation captures can be regenerated, but old binary modules are incompatible.
 The explicit unknown-command response profile is still required. Standard/Super
 reset-vector startup is implemented separately; complete campaign, electrical

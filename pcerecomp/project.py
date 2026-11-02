@@ -335,7 +335,7 @@ def verify(descriptor: Path, *, allow_revision_override=False) -> dict:
         if not size or load + size > 0x200000 or any(bank not in {*range(0x80, 0x88), 0xf8}
                 for bank in range(load >> 13, ((load + size - 1) >> 13) + 1)):
             raise ValueError("Payload must fit standard CD/work RAM")
-    runtime = _table(config["runtime"], {"tier", "video", "cd_unknown_status", "joypad", "region", "multitap"}, optional={"audio", "audio_profile", "audio_rate", "audio_timing", "vdc_access", "native_span", "cd_timing"}, name="runtime")
+    runtime = _table(config["runtime"], {"tier", "video", "cd_unknown_status", "joypad", "region", "multitap"}, optional={"audio", "audio_profile", "audio_rate", "audio_timing", "vdc_access", "native_span", "cd_timing", "cd_subchannel"}, name="runtime")
     if 'native_span' in runtime:
         _integer(runtime['native_span'], 1, 256, 'native_span')
         if runtime['native_span'] > 1 and 'native_span' not in manifest:
@@ -346,6 +346,10 @@ def verify(descriptor: Path, *, allow_revision_override=False) -> dict:
         _choice(runtime['cd_timing'], ('fixed', 'gear-distance'), 'cd_timing')
         if hucard_boot and runtime['cd_timing'] != 'fixed':
             raise ValueError('HuCard has no distance-aware CD timing profile')
+    if 'cd_subchannel' in runtime:
+        _choice(runtime['cd_subchannel'], ('synthesized', 'captured-q'), 'cd_subchannel')
+        if runtime['cd_subchannel'] == 'captured-q' and (hucard_boot or 'disc' not in config):
+            raise ValueError('captured-q requires an explicit CD disc provider')
     for key, values in (("tier", ("native", "hybrid")), ("video", ("snapshot", "continuous")),
                         ("cd_unknown_status", ("fault", "gear-good", "nec-invalid")), ("joypad", (2, 6)),
                         ("region", ("usa", "japan")), ("multitap", ("off", "on"))):
@@ -661,7 +665,7 @@ def command_for(project: dict, binary: Path, *, dev_port=None, start_paused=Fals
     command += ["--wall-seconds", str(limits["wall_seconds"])]
     if "audio" in runtime:
         command += ["--audio-output", runtime["audio"]]
-    for field, flag in (("audio_profile", "audio-profile"), ("audio_rate", "audio-rate"), ("audio_timing", "audio-timing"), ("vdc_access", "vdc-access"), ("native_span", "native-span"), ("cd_timing", "cd-timing")):
+    for field, flag in (("audio_profile", "audio-profile"), ("audio_rate", "audio-rate"), ("audio_timing", "audio-timing"), ("vdc_access", "vdc-access"), ("native_span", "native-span"), ("cd_timing", "cd-timing"), ("cd_subchannel", "cd-subchannel")):
         if field in runtime:
             command += ["--" + flag, str(runtime[field])]
     for name in sorted(ASSETS & files.keys()):

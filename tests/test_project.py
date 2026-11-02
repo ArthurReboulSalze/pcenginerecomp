@@ -12,6 +12,33 @@ from pcerecomp import project
 
 
 class ConsumerProjectTests(unittest.TestCase):
+    def test_subchannel_profile_is_typed_explicit_forwarded_and_checkpoint_bound(self):
+        implicit = project.checkpoint_context(self.verify())
+        self.replace('cd_unknown_status = "fault"',
+                     'cd_unknown_status = "fault"\ncd_subchannel = "synthesized"')
+        checked = self.verify()
+        command = project.command_for(checked, Path('runner'))
+        self.assertEqual(command[command.index('--cd-subchannel') + 1], 'synthesized')
+        self.assertNotEqual(implicit, project.checkpoint_context(checked))
+        for token in ('true', '0', '"raw"', '"captured-q"'):
+            with self.subTest(token=token):
+                self.replace('cd_unknown_status = "fault"',
+                             f'cd_unknown_status = "fault"\ncd_subchannel = {token}')
+                with self.assertRaises(ValueError):
+                    self.verify()
+
+    def test_captured_q_requires_a_pinned_disc_and_forwards_its_recipe(self):
+        disc = self.root / 'authored.iso'
+        disc.write_bytes(bytes(2048))
+        self.replace('cd_unknown_status = "fault"',
+                     'cd_unknown_status = "fault"\ncd_subchannel = "captured-q"')
+        with self.descriptor.open('a', encoding='utf-8') as stream:
+            stream.write('\n[disc]\npath = "authored.iso"\nsha256 = "' + project.sha256(disc) + '"\n')
+        checked = self.verify()
+        command = project.command_for(checked, Path('runner'))
+        self.assertEqual(command[command.index('--cd-subchannel') + 1], 'captured-q')
+        self.assertEqual(command[command.index('--disc') + 1], str(disc))
+
     def test_recoverable_build_forwards_explicit_options_to_separate_producer(self):
         with patch('pcerecomp.build_recovery.build', return_value={'recovery': True}) as produce:
             result = project.build(Path('project.toml'), Path('fresh'), recoverable=True,

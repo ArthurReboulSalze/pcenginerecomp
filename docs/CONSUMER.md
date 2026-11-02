@@ -14,7 +14,7 @@ selection or require unrelated work to freeze. Keep media and the explicitly
 selected test package strict and immutable.
 
 The public contract is `python -m pcerecomp.project` (Python 3.11+), consumer
-TOML schema **1**, runtime ABI **28**, and the existing `pce-dev-1` TCP protocol.
+TOML schema **1**, runtime ABI **29**, and the existing `pce-dev-1` TCP protocol.
 No Python package dependency, installation, download or save write is implicit.
 
 For finite TCP progression checks, [state-aware routes](STATE_ROUTES.md)
@@ -32,8 +32,16 @@ Explicit mutable BRAM sessions are available through `run --save-root`,
 immutable descriptor assets and qualify boot provenance before committing.
 See [persistence contracts](PERSISTENCE.md) and the
 [authored native counter example](../examples/persistent-consumer/README.md).
-Those host-only additions retained ABI 22. Current runtime interfaces require ABI 28; rebuild hosts
+Those host-only additions retained ABI 22. Current runtime interfaces require ABI 29; rebuild hosts
 from the newly pinned source to expose them.
+
+Optional `[runtime] cd_subchannel = "captured-q"` selects retained captured Q
+for a pinned disc with original supported P–W data. Omission preserves the
+synthesized position profile; `"synthesized"` is also an explicit choice.
+Plain ISO/BINARY CUE and CHD `NONE` media cannot opt in. Regenerate modules
+for ABI 29, rebuild, then qualify a candidate through its own startup. No
+cross-build checkpoints or automatic package promotion are implied. See
+[media, state and reference details](CD_SUBCHANNEL.md).
 
 ## Start with an authored example
 
@@ -175,7 +183,7 @@ name = "my-consumer"
 path = "../pcenginerecomp"
 revision = "COMPLETE_40_CHARACTER_COMMIT"
 source_sha256 = "TOOL_SOURCE_SHA256"
-runtime_abi = 28
+runtime_abi = 29
 
 [module.source]
 path = "private/generated/module.cpp"
@@ -232,7 +240,7 @@ sha256 = "BRAM_SHA256"
 There is one initial contiguous payload, which must fit the existing standard
 CD/work RAM loader. PC is logical 16-bit; all eight MPR bytes are required.
 The module source and manifest are pinned independently. Manifest schema 1,
-runtime ABI 28 and a positive emitted native-site count are required; optional
+runtime ABI 29 and a positive emitted native-site count are required; optional
 emitter provenance fields are retained in the hash-pinned manifest. Initial
 payload identity does not identify every later overlay. Generated dispatch
 continues to guard logical PC, complete MPR mapping and exact fetched bytes.
@@ -287,7 +295,7 @@ Keep those contracts separate when validating an upgrade. Gear timing adds
 `audio_output.timing = "gear-v1"`; legacy timing retains the prior PCM report
 shape. Timing can legitimately change PCM and raw-source activity/hash fields;
 compare against a fresh reference with the same timing rather than demanding
-an old PCM hash. Descriptor schema remains 1. Current ABI 28 requires re-emitting
+an old PCM hash. Descriptor schema remains 1. Current ABI 29 requires re-emitting
 compatible captures and rebuilding modules and runtime together. Exact DSP
 history is retained by the opt-in [developer checkpoint format](DEVELOPER_CHECKPOINTS.md);
 it does not provide migration between these audio/runtime epochs.
@@ -313,6 +321,21 @@ builds and uncertain process cleanup also refuse resume. Preserve original
 logs and failed receipts. Package-cache reuse and managed module rebuilds remain
 separate producers. No runtime ABI or guest-checkpoint exception follows from
 an interrupted host build.
+
+## Upgrade a consumer to ABI 29
+
+Pin the reviewed toolkit revision/source digest, set `runtime_abi = 29`, and
+re-emit the original observation captures or retained composed profile. Keep
+their original producer ABI/origin labels. Rebuild the complete native package
+and qualify a separate candidate from its own startup before changing selection.
+ABI 28 objects and checkpoints are not ABI 29 inputs.
+
+The default subchannel profile remains synthesized. Opting into `captured-q`
+also requires media with supported original raw P–W extents and an explicit
+recipe change. A game whose CHD declares `NONE` does not acquire captured Q
+merely by recompiling it. See [the profile and checkpoint contract](CD_SUBCHANNEL.md).
+Earlier consumer evidence remains bound to its old implementation, package
+and profile; a successful authored device test does not migrate that consumer.
 
 ## Upgrade a consumer to ABI 28
 

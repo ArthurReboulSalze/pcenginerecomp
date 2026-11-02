@@ -97,6 +97,7 @@ void CdControl::load_sector() {
             throw SectorReadError(SectorReadReason::out_of_range,scsi.load_lba,"CD sector past leadout");
         // Read into a temporary: a failed provider cannot expose a partial sector.
         const auto sector=provider->read(scsi.load_lba);
+        sample_subchannel(scsi.load_lba);
         scsi.response=sector;
     } catch(const SectorReadError& error) {
         if(error.lba!=scsi.load_lba) throw Fault("CD provider error does not identify the requested LBA");

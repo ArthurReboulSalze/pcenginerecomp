@@ -1,6 +1,69 @@
-# Current status — 1 November 2026
+# Current status — 2 November 2026
 
-## Consumer raw-audit integration
+## Captured CD subchannels and retained Q
+
+ABI 29 implements original 96-byte P–W data from supported CHD `RW_RAW`
+extents and an explicit `captured-q` profile. Default synthesized position
+replies remain available. Original bytes, absent capture, unsupported cooked
+representations and fatal source/decoder failures are distinct. Q CRC and
+ADR-1 retention feed `$DD` without synthesizing missing captured positions.
+Profile/latches/counters and partial responses participate in exact-build
+checkpoints. See [the complete media and state contract](CD_SUBCHANNEL.md).
+
+The final original Geargrafx/Beetle comparison passes **315 authored records**
+with unchanged pinned source/artifacts. Toolkit retained state and all ten
+`$DD` response bytes match original Beetle; Gear independently checks its
+captured-Q decoder. Provider fixtures, direct-device acquisition and ten
+partial-response checkpoint cuts retain separate scopes. No byte FIFO,
+subchannel IRQ interface, physical drive or hardware qualification is claimed.
+
+The required fresh SDL build/check passes **1,636 Python tests without skips,
+70 C++ suites and 12 fresh-process audio checkpoint cases**. All 84 shared
+compiler/runtime/CMake files and the complete verification-source epoch remain
+unchanged during that run. The shared source digest is
+`39ae16de66d9e57c2c7bf0cf04caacff325ff0abcec6af623c7dc10d71722c5c`.
+
+[Native discovery guidance](NATIVE_DISCOVERY.md) records existing full-identity
+capture/compilation and bounded mapping-aware analysis capabilities. A reusable
+gap report and provenance-bound paused physical-snapshot exporter remain
+planned; authentic captures, static candidates and actual retirements are
+distinct. RomAtlas is a possible independent decoder reference, with a current
+HuCard frontend; it is not an implemented CD integration.
+
+Native modules require regeneration/rebuilding for ABI 29. Ys III's existing
+selected ABI 28 package remains separate; all 25 tracks in its private CHD
+declare `SUBTYPE=NONE` and `PGSUB=NONE`. A regression on that package cannot
+qualify captured-Q retail behavior, and its checkpoints cannot migrate into
+an ABI 29 candidate.
+
+## Selected ABI 28 consumer regression
+
+Six independently admitted original/candidate raw roles cover three additional
+Ys III windows: **1,584 new frames, 49,685,371 native instructions, zero
+interpreted and no new data writes**. All 27 corresponding full RAM/image
+cuts match. The thirteen-capture canonical route reaches frame **114,051 /
+3,503,969,331 native / zero interpreted**, exercising **53,616 of 58,039**
+compiled identities. Two already compiled identities are first exercised;
+4,423 remain unexercised. Its 315 earlier declared writes remain inherited.
+Excluded exploration and fresh test forks are not part of this union.
+
+Two distinct naturally closed TCP processes each continue 60 frames from the
+admitted own checkpoint: **1,882,945 native / zero fallback**, matching entire
+immediate/continued checkpoint files, CORE/HOST, RAM, pixels and all 2,187
+encoded identity counts. An initial attempt failed during TCP port discovery;
+its harness accepted an incomplete port line. That failure remains failed.
+The corrected newline parser and new attempt are separately verified.
+
+A separate naturally closed paced 120-frame fork executes **3,765,070 native /
+zero fallback**. Digital accounting is `21 + 88,456 = 88,446 + 31`: imported
+PCM, 666 planned pause-clear frames, zero observed active drops and 31 shutdown
+frames stay distinct. The conservative fresh accepted/nonzero lower bound is
+87,759 frames. The capped WAV contains 21 imported and 88,179 fresh nonzero
+frames; 277 newly generated tail frames are outside the WAV. These are
+exact-build continuation/digital submission checks, not a fresh cold replay,
+new clean-PATH proof, listening test, complete campaign or ABI 29 migration.
+
+## Earlier ABI 28 consumer raw-audit integration
 
 The reusable pure same-ABI relation layer now validates typed imported
 counters, own-origin windows and complete encoded identity maps. It rejects
@@ -29,8 +92,8 @@ excluded. The route has 315 declared validated writes including its older
 prefix; this batch adds one. These are assisted finite routes, not campaign
 or hardware certification. See [the exact extension scope](NATIVE_MIGRATIONS.md#raw-audited-same-build-discovery-extension).
 
-Runtime/compiler/CMake bytes, ABI 28, the staged profile and the selected
-consumer package remain unchanged. New diagnostics are pinned separately from
+For that raw-audit milestone, runtime/compiler/CMake bytes, ABI 28, the staged
+profile and the selected consumer package remained unchanged. Its diagnostics are pinned separately from
 the original 82-file producer/decoder and the 84-file candidate producer.
 The fresh required SDL check passes **1,616 Python tests with zero skips,
 68 C++ suites and 12 fresh-process audio checkpoint cases**, preserving the
@@ -74,12 +137,12 @@ empty notification acknowledgement and no-media tool call pass. These checks
 qualify transport admission, not CPU semantics. See
 [the shared reference boundary](REFERENCE.md#shared-http-reference-boundary).
 
-Compiler/runtime source remains the same 84-file digest
+The earlier VDC/reference-boundary compiler/runtime source retained the 84-file digest
 `16679df8f6758cbac67e97dc2a3cb20d327ee80631e3cce25601dc0672b0734a`;
-runtime ABI 28 and exact-build checkpoint compatibility are unchanged. No
-consumer rebuild is required. This batch strengthens verification without inventing a VDC
-or CD runtime defect. Captured subchannels and other device profiles remain
-[planned work](ROADMAP.md).
+runtime ABI 28 and exact-build checkpoint compatibility were unchanged for
+that milestone, which required no consumer rebuild. It strengthened verification without inventing a VDC
+or CD runtime defect. Captured Q is now implemented separately in ABI 29;
+additional subchannel/device interfaces remain [planned work](ROADMAP.md).
 
 The Ys III project separately tests its now-selected, previously qualified
 native package through TCP. Two distinct processes each continue 60 frames

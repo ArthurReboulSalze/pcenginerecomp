@@ -10,7 +10,6 @@ import ctypes
 import hashlib
 import os
 from pathlib import Path
-import re
 import struct
 
 
@@ -33,6 +32,9 @@ class Track:
     postgap: int
     chd_start: int
     disc_start: int  # INDEX 01, LBA zero is start of disc, excludes lead-in
+    subtype: str = "NONE"
+    pregap_subtype: str = "NONE"
+    pregap_type: str = ""
 
     @property
     def index1_frame(self) -> int:
@@ -49,7 +51,9 @@ class Chd:
     def __init__(self, path: Path):
         self.path = Path(path)
         self.tracks: list[Track] = []
-        size = self.path.stat().st_size
+        initial = self.path.stat()
+        self._stamp = (initial.st_size, initial.st_mtime_ns)
+        size = initial.st_size
         with self.path.open("rb") as stream:
             header = stream.read(124)
             if len(header) != 124 or header[:8] != b"MComprHD":
@@ -81,7 +85,16 @@ class Chd:
                     raise MediaError("Truncated or oversized metadata")
                 data = stream.read(count)
                 if tag in (b"CHT2", b"CHTR"):
-                    fields = dict(re.findall(r"(\w+):([^\s\x00]+)", data.decode("ascii")))
+                    try:
+                        tokens = data.decode("ascii").split("\0", 1)[0].split()
+                    except UnicodeDecodeError as exc:
+                        raise MediaError("Malformed non-ASCII track metadata") from exc
+                    fields = {}
+                    for token in tokens:
+                        key, separator, value = token.partition(":")
+                        if not separator or not key or not value or key in fields:
+                            raise MediaError("Malformed or duplicate track metadata")
+                        fields[key] = value
                     try:
                         number, frames = int(fields["TRACK"]), int(fields["FRAMES"])
                         pregap, postgap = int(fields.get("PREGAP", "0")), int(fields.get("POSTGAP", "0"))
@@ -89,6 +102,15 @@ class Chd:
                     except (KeyError, ValueError) as exc:
                         raise MediaError("Malformed track metadata") from exc
                     stored = fields.get("PGTYPE", "").startswith("V")
+                    subtype, pgsub = fields.get("SUBTYPE", "NONE"), fields.get("PGSUB", "NONE")
+                    pgtype = fields.get("PGTYPE", "")[1:] if stored else ""
+                    if subtype not in ("NONE", "RW", "RW_RAW") or pgsub not in ("NONE", "RW", "RW_RAW"):
+                        raise MediaError("Unsupported CHD subchannel metadata representation")
+                    if stored and pregap and pgsub != "NONE" and pgtype not in ("MODE1", "MODE1_RAW", "AUDIO"):
+                        raise MediaError("Captured CHD pregap requires a supported explicit PGTYPE")
+                    if (stored and pregap and pgsub != "NONE"
+                            and (2048 if pgtype == "MODE1" else 2352) != (2048 if kind == "MODE1" else 2352)):
+                        raise MediaError("Captured CHD pregap payload size differs from program track")
                     if number != len(self.tracks)+1 or frames <= 0 or min(pregap, postgap) < 0:
                         raise MediaError("Invalid track ordering or length")
                     if stored and pregap >= frames:
@@ -96,7 +118,8 @@ class Chd:
                     # MAME adds virtual gaps to disc time, but only stored gaps
                     # occupy CHD frames. Each track is padded to four frames.
                     index1 = disc_cursor + pregap
-                    self.tracks.append(Track(number, kind, frames, pregap, stored, postgap, chd_start, index1))
+                    self.tracks.append(Track(number, kind, frames, pregap, stored, postgap, chd_start, index1,
+                                             subtype, pgsub, pgtype))
                     chd_start += (frames + 3) // 4 * 4
                     disc_cursor += frames + postgap + (0 if stored else pregap)
                 elif tag == b"CHCD" or tag in (b"CHGT", b"CHGD"):
@@ -104,6 +127,19 @@ class Chd:
                 offset = next_offset
         if not self.tracks or chd_start * self.unit_bytes != self.logical_bytes:
             raise MediaError("Track metadata and CHD logical size disagree")
+        self._same_source()
+
+    def _same_source(self):
+        current = self.path.stat()
+        if (current.st_size, current.st_mtime_ns) != self._stamp:
+            raise MediaError("CHD source changed after metadata inspection")
+
+    @property
+    def has_subchannel(self) -> bool:
+        """At least one original RW_RAW extent; not a Q-validity guarantee."""
+        self._same_source()
+        return any(t.subtype == "RW_RAW" or (t.stored_pregap and t.pregap and t.pregap_subtype == "RW_RAW")
+                   for t in self.tracks)
 
     def report(self, hash_file: bool = False) -> dict:
         result = {"format": "chd-v5", "file_bytes": self.path.stat().st_size,
@@ -185,6 +221,40 @@ class ChdReader:
             if track.disc_start <= number < track.disc_start + track.data_frames:
                 return self.sector(track, number - track.disc_start)
         raise MediaError("LBA falls in a gap or outside disc")
+
+    def subchannel(self, number: int) -> bytes | None:
+        """Original 96 P-W symbols (bit7=P through bit0=W), or explicit absence.
+
+        Never repairs Q CRC or substitutes TOC data. CHD RW cooked R-W is not
+        an established original P-W representation and is refused explicitly.
+        Stored pregaps use PGSUB and PGTYPE; virtual gaps/padding are absent.
+        """
+        if type(number) is not int or not 0 <= number <= 0xFFFFFFFF:
+            raise MediaError("Subchannel LBA requires an unsigned 32-bit integer")
+        self.disc._same_source()
+        if not self.handle:
+            raise MediaError("CHD reader is closed")
+        for track in self.disc.tracks:
+            program = track.disc_start <= number < track.disc_start + track.data_frames
+            pregap = track.stored_pregap and track.disc_start - track.pregap <= number < track.disc_start
+            if not program and not pregap:
+                continue
+            representation = track.subtype if program else track.pregap_subtype
+            if representation == "NONE":
+                return None
+            if representation != "RW_RAW":
+                raise MediaError("Cooked CHD RW subchannels are unsupported; original RW_RAW P-W is required")
+            kind = track.type if program else track.pregap_type
+            if kind not in ("MODE1", "MODE1_RAW", "AUDIO"):
+                raise MediaError("Unsupported captured CHD payload type")
+            frame = self.frame(track.index1_frame + number - track.disc_start)
+            offset = 2048 if kind == "MODE1" else 2352
+            result = frame[offset:offset+96]
+            if len(result) != 96:
+                raise MediaError("Truncated captured CHD subchannel frame")
+            self.disc._same_source()
+            return result
+        return None
 
 
 class IsoReader:

@@ -10,6 +10,14 @@ project owns its game-specific routes, patches, assets and presentation choices.
 Ys III is one regression case; compatibility evidence remains tied to the
 tested CPU, hardware, media and runtime profiles.
 
+**Independent HuC6280 vector diagnostics are now available.** The test-only
+[SingleStepTests adapter](docs/HUC6280_VECTORS.md) compares pinned Mesen-generated
+expectations with the interpreter and emitted, compiled native code. A maintainer
+run checks 640,000 vectors and 9,091 native cases; the native sample matches the
+interpreter, while known corpus differences remain explicit. Reports retain raw
+output, original/remapped cases and input/artifact hashes. Runtime behavior and
+ABI 29 remain unchanged. Hardware and bus-cycle parity remain separate work.
+
 **Same-build interpreter reference windows are now supported.** An explicitly
 enabled build can restore its own checkpoint and run bounded interpreter-only
 segments over TCP. Generated dispatch is bypassed, imported counters stay exact,

@@ -1,4 +1,35 @@
-# Current status — 2 November 2026
+# Current status — 5 November 2026
+
+## SingleStepTests HuC6280 diagnostics - PR #6
+
+Arthur Reboul Salze contributed a test-only [vector adapter](HUC6280_VECTORS.md)
+for the pinned MIT SingleStepTests corpus. Interpreter and actual emitted/compiled
+native modules run separately. Runtime, CPU, emitter and ABI 29 semantics remain
+unchanged. A related one-line test fix avoids the Windows `max` macro; the
+maintainer verification uses LLVM-MinGW, not MSVC.
+
+The maintainer rerun at `e02613898bfb9d95fa7fb6fb0cc0d516ffd69938` reproduces
+640,000 vectors: 585,000 executed, 55,000 reserved-opcode refusals, 12,481 capped
+states excluded and 563,514 complete state/cycle matches. It retains 1,492 TSB/TRB
+flag differences, 13 TMA-zero register differences and 7,500 ST0/ST1/ST2 cycle
+differences. The alias-free canonical native sample executes 9,091 cases across
+231 opcodes and five modules, with no faults/refusals and zero differences from
+its interpreted counterpart. Corpus comparisons retain 26 flag and 120 cycle
+differences in that native sample.
+
+The fresh SDL build and required check pass **1,791 Python tests without skips,
+73 C++ suites and 12 fresh-process audio checkpoint cases**. All 685 tracked input
+files remain unchanged through verification. The 20 focused adapter tests include
+empty/partial result rejection, typed count conservation, input mutation and
+preservation of a later module's first difference.
+
+Private bundles bind actual supplied source/probe/library/compiler inputs and
+retain raw output, commands, native artifacts and original/remapped cases. A
+completion sidecar binds the report. Their `qualification: false` and explicit
+unauthenticated build/source correspondence remain: hashes alone do not prove
+compiler provenance or hardware correctness. This adds no bus instrumentation,
+fresh Geargrafx comparison or Ys III replay. Existing consumer builds/checkpoints
+remain unchanged; issue #4's broader timing work stays open.
 
 ## Supported same-build interpreter reference mode
 

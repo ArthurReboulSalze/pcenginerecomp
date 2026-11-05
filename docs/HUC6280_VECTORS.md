@@ -38,7 +38,22 @@ against the manifest and stops on any difference. `run` verifies the corpus agai
 refuses an existing report path, and needs the CMake-built `pce-huc6280-vector-probe` and the `pce-runtime`
 library of `--build`. `--compiler` takes a GCC- or Clang-style command (MSVC `cl` is not supported); without it
 the native tier is reported as not run. Commands are argv only, with
-bounded output and a timeout.
+bounded output and a timeout. `--ops` selects the same opcode subset for both tiers.
+
+Each run retains a new `REPORT.artifacts/` directory containing raw process output,
+commands, generated modules, original/remapped selections and native case files and
+executables. Input SHA-256 bindings cover the corpus, adapter/toolkit sources, probe,
+runtime library, optional CMake cache and selected compiler. Content is revalidated
+across execution/publication boundaries. Missing/duplicate/wrong-tier rows, invalid
+counts and incomplete execution refuse publication; failed-run diagnostics stay in
+the artifacts directory. A separate `REPORT.closed.json` binds the completed report.
+
+These private diagnostics use `qualification: false`. Hashing a supplied executable
+and library does not authenticate their compilation from the recorded current source;
+`build_source_correspondence` explicitly remains `not_authenticated_by_adapter`.
+A qualification runner must separately establish that build relationship. Compiler
+subtools and dynamically loaded dependencies are not authenticated by this adapter.
+The bundle is not a portable or independently authenticated execution receipt.
 
 ## What is compared, and what is not
 
@@ -92,3 +107,12 @@ sets `PCE_TEST_HUC6280_PROBE`) it also checks that a wrong register, a wrong fla
 reported in their own class, that a cut vector is neither a pass nor a failure, that a reserved opcode is listed
 as refused, and that malformed or mismatched files stop the run. `pce-huc6280-vector-probe selftest` (a CTest
 case) checks the same comparison on in-memory authored vectors.
+
+## Maintainer hardening
+
+Authored regression tests also reject empty/partial/duplicate result streams,
+non-integer or inconsistent counters, malformed opcode selections, trailing binary
+bytes and corpus mutation during execution. A three-module regression preserves the
+first actual difference after earlier matching modules. Closed-report tests bind raw
+output and actual supplied input hashes without treating mocked processes as runtime
+qualification. Original mappings remain linked to canonical native selections.

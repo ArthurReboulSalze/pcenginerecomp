@@ -97,6 +97,7 @@ std::vector<Vector> parse_corpus(const std::vector<char>& data) {
         for(std::uint32_t k=0;k<stored;++k) r.get<std::uint32_t>(); // bus cycles: kept in the corpus, not observable here
         out.push_back(std::move(v));
     }
+    if(r.p!=data.size()) throw std::runtime_error("trailing corpus bytes");
     return out;
 }
 
@@ -350,7 +351,8 @@ int main(int argc,char** argv) {
         if(argc>=2 && std::string(argv[1])=="selftest") return selftest();
         if(argc>=3 && std::string(argv[1])=="interp") {
             std::vector<unsigned> only;
-            if(argc>=4 && std::string(argv[3])!="all") { std::istringstream is(argv[3]); std::string tok; while(std::getline(is,tok,',')) only.push_back(std::stoul(tok,nullptr,16)); }
+            if(argc>=4 && std::string(argv[3])!="all") { std::istringstream is(argv[3]); std::string tok; while(std::getline(is,tok,',')) { std::size_t used=0; const auto op=std::stoul(tok,&used,16); if(tok.empty()||tok.size()>2||used!=tok.size()||op>255||std::find(only.begin(),only.end(),op)!=only.end()) throw std::runtime_error("invalid or duplicate opcode"); only.push_back(static_cast<unsigned>(op)); } }
+            if(argc>=4 && std::string(argv[3])!="all" && only.empty()) throw std::runtime_error("empty opcode selection");
             const unsigned limit=argc>=5 ? static_cast<unsigned>(std::stoul(argv[4])) : 0;
             return run_interp(argv[2],only,limit);
         }

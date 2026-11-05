@@ -619,7 +619,7 @@ int main() {
           "capture exception escaped server");
       ++checks;
       invalid = state;
-      invalid.frame = std::numeric_limits<std::uint64_t>::max();
+      invalid.frame = (std::numeric_limits<std::uint64_t>::max)();
       require(has(peer.call(server, invalid,
                             "{\"id\":1,\"cmd\":\"step_frames\",\"frames\":1}"),
                   "\"ok\":false"),

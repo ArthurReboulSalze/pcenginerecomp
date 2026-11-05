@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import shutil
 import struct
@@ -27,6 +28,7 @@ import time
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
+from pcerecomp.snapshots import SnapshotStore
 
 REPOSITORY = 'https://github.com/SingleStepTests/huc6280'
 COMMIT = '4ce378e04e243437e6f74dfe76c3cb7c70e45bf1'
@@ -118,6 +120,8 @@ def read_vectors(path):
             raise ValueError('Cycle record count out of range')
         p += 4 * stored
         vectors.append(dict(name=name, opcode=opcode, init=init, fin=final, cycles=total, stored=stored))
+    if p != len(data):
+        raise ValueError('Corpus records do not consume the complete file')
     return vectors
 
 
@@ -171,7 +175,7 @@ def to_canonical(vector):
     init, final = convert(vector['init']['ram']), convert(vector['fin']['ram'])
     if init is None or final is None:
         return None
-    return dict(vector, init=dict(vector['init'], ram=init), fin=dict(vector['fin'], ram=final))
+    return dict(vector, original=vector, init=dict(vector['init'], ram=init), fin=dict(vector['fin'], ram=final))
 
 
 def site_bytes(vector, isa):
@@ -215,12 +219,21 @@ def write_cases(path, vectors):
     Path(path).write_text('\n'.join(lines) + '\n', encoding='utf-8', newline='\n')
 
 
-def run_command(argv, timeout, cwd=None):
+def run_command(argv, timeout, cwd=None, *, log=None):
     """Argv only, no shell; output bounded; a timeout ends the process."""
-    with tempfile.TemporaryFile() as output:
+    if log is not None:
+        Path(str(log) + '.command.json').write_text(json.dumps(dict(argv=list(map(str, argv)), cwd=str(cwd) if cwd else None)), encoding='utf-8')
+    with (Path(log).open('x+b') if log is not None else tempfile.TemporaryFile()) as output:
         process = subprocess.Popen(argv, cwd=cwd, stdout=output, stderr=subprocess.STDOUT)
         try:
-            process.wait(timeout=timeout)
+            deadline = time.monotonic() + timeout
+            while process.poll() is None:
+                if os.fstat(output.fileno()).st_size > MAX_PROBE_OUTPUT:
+                    process.kill(); process.wait()
+                    raise RuntimeError('Command output exceeded its bound')
+                if time.monotonic() >= deadline:
+                    raise subprocess.TimeoutExpired(argv, timeout)
+                time.sleep(0.02)
         except subprocess.TimeoutExpired:
             process.kill(); process.wait()
             raise RuntimeError(f'Command exceeded {timeout} seconds: {argv[0]}')
@@ -249,8 +262,80 @@ def find_runtime_library(build):
     raise FileNotFoundError('The pce-runtime library was not found in the build directory')
 
 
+def requested_opcodes(text):
+    if text is None or text == 'all':
+        return list(range(256))
+    parts = text.split(',')
+    if not parts or any(not re.fullmatch(r'[0-9a-fA-F]{1,2}', p) for p in parts):
+        raise ValueError('Opcodes must be comma-separated hex bytes')
+    result = [int(p, 16) for p in parts]
+    if len(set(result)) != len(result):
+        raise ValueError('Duplicate requested opcode')
+    return sorted(result)
+
+
 def parse_lines(text):
-    return [json.loads(line) for line in text.splitlines() if line.startswith('{')]
+    def pairs(items):
+        result = {}
+        for k, v in items:
+            if k in result:
+                raise ValueError('Duplicate probe JSON key')
+            result[k] = v
+        return result
+    def constant(value):
+        raise ValueError('Non-finite probe JSON')
+    rows = [json.loads(line, object_pairs_hook=pairs, parse_constant=constant)
+            for line in text.splitlines() if line.strip()]
+    if any(not isinstance(row, dict) for row in rows):
+        raise ValueError('Probe rows must be objects')
+    return rows
+
+
+def validate_rows(rows, expected, tier):
+    actual = {}
+    counters = ('vectors', 'executed', 'refused', 'faulted', 'state_not_comparable',
+                'state_equal', 'state_different', 'cycles_equal', 'cycles_different', 'both_equal')
+    for row in rows:
+        op = row.get('opcode')
+        if row.get('tier') != tier or op not in expected or op in actual:
+            raise ValueError('Unexpected, duplicate or wrong-tier probe row')
+        if any(type(row.get(k)) is not int or row[k] < 0 for k in counters):
+            raise ValueError('Invalid probe counter')
+        if row['vectors'] != expected[op] or row['vectors'] != row['executed'] + row['refused'] + row['faulted']:
+            raise ValueError('Probe vector accounting differs')
+        if row['executed'] != row['state_equal'] + row['state_different'] + row['state_not_comparable'] or row['executed'] != row['cycles_equal'] + row['cycles_different']:
+            raise ValueError('Probe state/cycle accounting differs')
+        if row['both_equal'] > min(row['state_equal'], row['cycles_equal']):
+            raise ValueError('Impossible fully-equal count')
+        classes = row.get('classes')
+        if not isinstance(classes, dict) or set(classes) != {'registers', 'flags', 'pc', 'mpr', 'memory'} or any(type(v) is not int or not 0 <= v <= row['state_different'] for v in classes.values()):
+            raise ValueError('Invalid difference classes')
+        if sum(classes.values()) < row['state_different']:
+            raise ValueError('Missing difference classification')
+        if bool(row['state_different'] or row['cycles_different']) != isinstance(row.get('first_difference'), dict):
+            raise ValueError('Missing or unexpected first difference')
+        actual[op] = row
+    if not actual or set(actual) != set(expected):
+        raise ValueError('Missing or empty probe results')
+    return rows
+
+
+def merge_rows(rows):
+    merged = {}
+    for row in rows:
+        op = row['opcode']
+        if op not in merged:
+            merged[op] = json.loads(json.dumps(row))
+            continue
+        target = merged[op]
+        for k, value in row.items():
+            if type(value) is int:
+                target[k] += value
+        for k, value in row['classes'].items():
+            target['classes'][k] += value
+        if not target.get('first_difference') and row.get('first_difference'):
+            target['first_difference'] = row['first_difference']
+    return list(merged.values())
 
 
 def totals(rows):
@@ -271,9 +356,9 @@ def summarize_tier(rows):
 def run_native_tier(args, corpus, probe_source, work):
     from pcerecomp import analysis, emitter, isa
     library = find_runtime_library(args.build)
-    selected_all, excluded_all, sites = [], {}, []
+    excluded_all, sites = {}, []
     for op in range(256):
-        if op not in isa.NATIVE:
+        if op not in isa.NATIVE or op not in requested_opcodes(args.ops):
             continue
         vectors = read_vectors(Path(corpus) / 'v1' / f'{op:02x}.json.bin')
         selected, excluded = select_native(vectors, args.native_per_opcode, isa.NATIVE)
@@ -298,26 +383,31 @@ def run_native_tier(args, corpus, probe_source, work):
         entries = tuple(v['init']['pc'] for v, _ in module['items'])
         snapshot = analysis.Snapshot(CANONICAL_FRAME, memory, entries, f'huc6280-vectors-{index}')
         emitter.emit(analysis.analyze(snapshot, limit=len(entries) * 4 + 16), directory)
-        write_cases(directory / 'cases.txt', [v for v, _ in module['items']])
+        vectors = [v for v, _ in module['items']]
+        write_cases(directory / 'cases.txt', vectors)
+        (directory / 'selection.json').write_text(json.dumps(dict(canonical_mpr=CANONICAL_FRAME, cases=vectors)), encoding='utf-8')
         exe = directory / ('probe.exe' if os.name == 'nt' else 'probe')
         run_command([args.compiler, '-std=c++20', '-O1', '-I', str(ROOT / 'runtime' / 'include'), str(probe_source),
-                     str(directory / 'module.cpp'), str(library), *system, '-o', str(exe)], args.timeout)
-        lines = parse_lines(run_command([str(exe), 'native', str(directory / 'cases.txt')], args.timeout))
-        rows += [r for r in lines if r.get('tier') == 'native']
-        summary = [r for r in lines if 'native_vs_interpreter_different' in r][0]
+                     str(directory / 'module.cpp'), str(library), *system, '-o', str(exe)], args.timeout, log=directory / 'compile.log')
+        lines = parse_lines(run_command([str(exe), 'native', str(directory / 'cases.txt')], args.timeout, log=directory / 'raw.jsonl'))
+        expected = {}
+        for v in vectors:
+            op = f"{v['opcode']:02X}"
+            expected[op] = expected.get(op, 0) + 1
+        native_rows = validate_rows([r for r in lines if r.get('tier') == 'native'], expected, 'native')
+        validate_rows([r for r in lines if r.get('tier') == 'interpreter-on-native-cases'], expected, 'interpreter-on-native-cases')
+        summaries = [r for r in lines if set(r) == {'native_vs_interpreter_different', 'cases'}]
+        if len(summaries) != 1 or len(lines) != 2 * len(expected) + 1:
+            raise ValueError('Missing or unexpected native summary')
+        summary = summaries[0]
+        if type(summary['cases']) is not int or summary['cases'] != len(vectors) or type(summary['native_vs_interpreter_different']) is not int or not 0 <= summary['native_vs_interpreter_different'] <= len(vectors):
+            raise ValueError('Native summary accounting differs')
+        if any(r['faulted'] or r['refused'] or r['executed'] != r['vectors'] for r in lines if 'tier' in r):
+            raise ValueError('Native sample did not execute all selected cases')
+        rows += native_rows
         different += summary['native_vs_interpreter_different']; cases += summary['cases']
-    merged = {}
-    for r in rows:
-        if r['opcode'] in merged:
-            for k in r:
-                if isinstance(r[k], int):
-                    merged[r['opcode']][k] += r[k]
-            for c in r['classes']:
-                merged[r['opcode']]['classes'][c] += r['classes'][c]
-            merged[r['opcode']].setdefault('first_difference', r.get('first_difference'))
-        else:
-            merged[r['opcode']] = r
-    result = summarize_tier(list(merged.values()))
+    merged = merge_rows(rows)
+    result = summarize_tier(merged)
     result.update(modules=len(modules), cases=cases, native_vs_interpreter_different=different,
                   selection=dict(per_opcode=args.native_per_opcode, excluded=excluded_all,
                                  native_opcodes_with_sites=len(merged)))
@@ -335,29 +425,71 @@ def command_run(args):
     out = Path(args.out)
     if out.exists():
         raise FileExistsError('The report path exists; choose a new file')
+    ops = requested_opcodes(args.ops)
+    bundle = Path(str(out) + '.artifacts')
+    bundle.mkdir()  # Retain diagnostics even when execution fails.
+    store = SnapshotStore()
+    inputs = {}
+    def bind(label, path):
+        snap = store.bind(Path(path).absolute())
+        inputs[label] = dict(path=str(snap.path), sha256=snap.sha256, size_bytes=snap.size_bytes)
+    bind('manifest', MANIFEST)
     manifest = load_manifest()
     corpus_bytes = verify_corpus(args.corpus, manifest)
+    for name, (digest, size) in manifest.items():
+        bind('corpus/' + name, Path(args.corpus) / name)
+        if inputs['corpus/' + name]['sha256'] != digest:
+            raise ValueError('Corpus changed after admission')
+    for base in ('pcerecomp', 'runtime', 'cmake'):
+        for path in sorted((ROOT / base).rglob('*')):
+            if path.is_file() and path.suffix in {'.py', '.cpp', '.hpp', '.h', '.cmake'}:
+                bind('source/' + path.relative_to(ROOT).as_posix(), path)
+    for name in ('CMakeLists.txt', 'scripts/huc6280_vector_reference.py', 'tests/huc6280_vector_probe.cpp'):
+        bind('source/' + name, ROOT / name)
     started = time.monotonic()
-    probe = find_probe(args.build)
-    ops = args.ops or 'all'
-    interpreter = parse_lines(run_command([str(probe), 'interp', str(Path(args.corpus) / 'v1'), ops], args.timeout))
+    probe = find_probe(args.build).resolve()
+    bind('probe', probe)
+    bind('runtime_library', find_runtime_library(args.build))
+    cache = Path(args.build) / 'CMakeCache.txt'
+    if cache.is_file():
+        bind('cmake_cache', cache)
+    if args.compiler:
+        compiler = shutil.which(args.compiler)
+        if compiler is None:
+            raise FileNotFoundError('Native compiler not found')
+        args.compiler = str(Path(compiler).resolve())
+        bind('compiler', args.compiler)
+    expected = {f'{op:02X}': len(read_vectors(Path(args.corpus) / 'v1' / f'{op:02x}.json.bin')) for op in ops}
+    store.revalidate()
+    interpreter = validate_rows(parse_lines(run_command([str(probe), 'interp', str(Path(args.corpus).resolve() / 'v1'), ','.join(f'{op:02x}' for op in ops)], args.timeout, log=bundle / 'interpreter.jsonl')), expected, 'interpreter')
+    store.revalidate()
     report = dict(
-        schema=1, kind='huc6280-vector-reference',
+        schema=1, kind='huc6280-vector-reference', qualification=False, requested_opcodes=ops,
         corpus=dict(repository=REPOSITORY, commit=COMMIT, files=len(manifest), bytes=corpus_bytes,
                     digest_of_digests=digest_of_digests(manifest), generator='Mesen (revision not recorded by the corpus)',
                     nature='expectations from another emulator, not hardware measurements'),
-        toolkit=dict(git_revision=git_revision()),
+        toolkit=dict(git_revision=git_revision(), inputs=inputs, build_source_correspondence='not_authenticated_by_adapter'),
         not_observed=list(NOT_OBSERVED),
         tiers=dict(interpreter=summarize_tier(interpreter)))
     if args.compiler:
-        with tempfile.TemporaryDirectory() as work:
-            report['tiers']['native'] = run_native_tier(args, args.corpus, ROOT / 'tests' / 'huc6280_vector_probe.cpp', work)
+        report['tiers']['native'] = run_native_tier(args, args.corpus, ROOT / 'tests' / 'huc6280_vector_probe.cpp', bundle)
     else:
         report['tiers']['native'] = dict(not_run='no --compiler given')
+    store.revalidate()
+    artifacts = {}
+    for path in sorted(bundle.rglob('*')):
+        if path.is_file():
+            snap = store.bind(path.absolute())
+            artifacts[path.relative_to(bundle).as_posix()] = dict(sha256=snap.sha256, size_bytes=snap.size_bytes)
+    report['artifacts'] = artifacts
+    store.revalidate()
     report['elapsed_seconds'] = round(time.monotonic() - started, 1)
     with out.open('x', encoding='utf-8', newline='\n') as stream:
         json.dump(report, stream, indent=1, sort_keys=True)
         stream.write('\n')
+    store.revalidate()
+    with Path(str(out) + '.closed.json').open('x', encoding='utf-8') as closed:
+        json.dump(dict(schema=1, complete=True, report_sha256=sha256_file(out), qualification=False), closed)
     totals_ = report['tiers']['interpreter']['totals']
     print(f"interpreter: {totals_['vectors']} vectors, {totals_['both_equal']} fully equal, "
           f"{totals_['state_different']} state differences, {totals_['cycles_different']} cycle differences, "
@@ -403,6 +535,8 @@ def main(argv=None):
     run.add_argument('--compiler', help='GCC- or Clang-style C++20 compiler for the native tier (MSVC cl is not supported); without it the native tier is reported as not run')
     run.add_argument('--native-per-opcode', type=int, default=40); run.add_argument('--ops'); run.add_argument('--timeout', type=int, default=900)
     args = parser.parse_args(argv)
+    if hasattr(args, 'timeout') and not 1 <= args.timeout <= 86400:
+        parser.error('--timeout must be in 1..86400')
     if args.command == 'run' and not 1 <= args.native_per_opcode <= 500:
         parser.error('--native-per-opcode must be in 1..500')
     return dict(fetch=command_fetch, verify=command_verify, run=command_run)[args.command](args)

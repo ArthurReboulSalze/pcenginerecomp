@@ -5,6 +5,9 @@ expectations written by hand from the instruction definitions. The probe-based c
 run when the CMake-built probe is available (PCE_TEST_HUC6280_PROBE, set by check.py).
 """
 import json
+import copy
+from types import SimpleNamespace
+from unittest import mock
 import os
 from pathlib import Path
 import struct
@@ -141,6 +144,89 @@ class DecoderAndSelection(unittest.TestCase):
         self.assertEqual([[v['name'] for v, _ in m['items']] for m in modules], [['a', 'd'], ['b', 'c']])
 
 
+class ClosedProbeReports(unittest.TestCase):
+    def row(self):
+        return dict(tier='interpreter', opcode='A9', vectors=1, executed=1, refused=0, faulted=0,
+                    state_not_comparable=0, state_equal=1, state_different=0, cycles_equal=1,
+                    cycles_different=0, both_equal=1,
+                    classes=dict(registers=0, flags=0, pc=0, mpr=0, memory=0))
+
+    def test_rows_require_complete_typed_conserved_results(self):
+        row = self.row()
+        self.assertEqual(ref.validate_rows([row], {'A9': 1}, 'interpreter'), [row])
+        invalid = [[], [row, row]]
+        for field, value in [('vectors', 2), ('executed', True), ('both_equal', 2),
+                             ('state_equal', 0), ('opcode', 'A8'), ('tier', 'native')]:
+            bad = copy.deepcopy(row); bad[field] = value; invalid.append([bad])
+        for rows in invalid:
+            with self.subTest(rows=rows), self.assertRaises(ValueError):
+                ref.validate_rows(rows, {'A9': 1}, 'interpreter')
+
+    def test_strict_json_and_opcode_selection(self):
+        for raw in ['noise', '{"tier":1,"tier":2}', '{"count":NaN}', '[]']:
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                ref.parse_lines(raw)
+        for ops in ['', '100', '-1', 'a9,a9', 'a9,', 'a9xyz']:
+            with self.subTest(ops=ops), self.assertRaises(ValueError):
+                ref.requested_opcodes(ops)
+        self.assertEqual(ref.requested_opcodes('a9,01'), [1, 169])
+
+    def test_first_difference_survives_two_matching_modules(self):
+        good = self.row(); good['tier'] = 'native'
+        bad = copy.deepcopy(good)
+        bad.update(state_equal=0, state_different=1, both_equal=0,
+                   first_difference=dict(vector='third module', classes_mask=2))
+        bad['classes']['flags'] = 1
+        result = ref.merge_rows([good, good, bad])[0]
+        self.assertEqual(result['state_different'], 1)
+        self.assertEqual(result['first_difference']['vector'], 'third module')
+        self.assertNotIn('first_difference', good)
+
+    def run_report(self, folder, output, *, mutate=False):
+        (folder / 'v1').mkdir()
+        source = folder / 'v1/a9.json.bin'
+        data = encode_file([lda()]); source.write_bytes(data)
+        probe = folder / 'pce-huc6280-vector-probe.exe'; probe.write_bytes(b'authored probe placeholder')
+        library = folder / 'libpce-runtime.a'; library.write_bytes(b'authored library placeholder')
+        manifest = {'v1/a9.json.bin': (ref.hashlib.sha256(data).hexdigest(), len(data))}
+        args = SimpleNamespace(out=folder / 'report.json', corpus=folder, build=folder,
+                               ops='a9', timeout=5, compiler=None)
+        def child(*a, **kw):
+            kw['log'].write_text(output, encoding='utf-8')
+            if mutate:
+                source.write_bytes(data[:-1] + bytes([data[-1] ^ 1]))
+            return output
+        with mock.patch.object(ref, 'load_manifest', return_value=manifest), mock.patch.object(ref, 'find_probe', return_value=probe), mock.patch.object(ref, 'run_command', side_effect=child):
+            return ref.command_run(args)
+
+    def test_empty_probe_cannot_publish_a_report(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            with self.assertRaises(ValueError):
+                self.run_report(folder, '')
+            self.assertFalse((folder / 'report.json').exists())
+            self.assertFalse((folder / 'report.json.closed.json').exists())
+            self.assertTrue((folder / 'report.json.artifacts/interpreter.jsonl').exists())
+
+    def test_input_mutation_refuses_publication(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            with self.assertRaises(ValueError):
+                self.run_report(folder, json.dumps(self.row()), mutate=True)
+            self.assertFalse((folder / 'report.json').exists())
+
+    def test_closed_report_binds_actual_inputs_and_raw_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp)
+            self.assertEqual(self.run_report(folder, json.dumps(self.row())), 0)
+            report = json.loads((folder / 'report.json').read_text())
+            closed = json.loads((folder / 'report.json.closed.json').read_text())
+            self.assertEqual(closed['report_sha256'], ref.sha256_file(folder / 'report.json'))
+            self.assertFalse(report['qualification'])
+            self.assertEqual(report['toolkit']['inputs']['runtime_library']['sha256'], ref.sha256_file(folder / 'libpce-runtime.a'))
+            self.assertIn('interpreter.jsonl', report['artifacts'])
+
+
 @unittest.skipUnless(PROBE and Path(PROBE).is_file(), 'Build the huc6280 vector probe (set by scripts/check.py)')
 class ProbeFlagsBadResults(unittest.TestCase):
     def run_probe(self, files, ops):
@@ -148,6 +234,11 @@ class ProbeFlagsBadResults(unittest.TestCase):
             for name, data in files.items():
                 (Path(folder) / name).write_bytes(data)
             return subprocess.run([PROBE, 'interp', folder, ops], capture_output=True, text=True, timeout=60)
+
+    def test_invalid_opcode_and_trailing_bytes_refuse(self):
+        for ops in ['100', 'a9,a9', 'a9junk', '']:
+            self.assertEqual(self.run_probe({}, ops).returncode, 2)
+        self.assertEqual(self.run_probe({'a9.json.bin': encode_file([lda()]) + b'extra'}, 'a9').returncode, 2)
 
     def test_selftest_passes(self):
         self.assertEqual(subprocess.run([PROBE, 'selftest'], capture_output=True, timeout=60).returncode, 0)

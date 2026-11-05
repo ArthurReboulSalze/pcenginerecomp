@@ -8,6 +8,11 @@ scope, including unavailable state and real reference disagreements. See
 not turn either emulator into a hardware oracle or certify complete CPU,
 bus, video, audio or retail compatibility.
 
+The test-only [SingleStepTests HuC6280 vector adapter](HUC6280_VECTORS.md) plays
+640,000 published Mesen-generated vectors through the interpreter and compiled native
+code. It reports architectural state and cycle totals separately and does not claim
+bus-event, dummy-access or master-tick parity.
+
 The [original RomAtlas decoder comparison](ROMATLAS_REFERENCE.md) adds an
 isolated, offline locked Rust probe. It checks all 256 encoding slots over
 boundary/MPR/operand cases and retains exact BRK metadata disagreements.

@@ -40,6 +40,14 @@ Geargrafx executable (GPL-3.0) through its MCP interface. The emulator is not
 linked into this runtime or redistributed in this source repository. Use a
 dedicated portable instance under `.deps/`; its own license remains in force.
 
+The optional [HuC6280 vector adapter](docs/HUC6280_VECTORS.md) reads the
+**SingleStepTests/huc6280** test corpus (MIT, Copyright (c) 2025 SingleStepTests)
+at commit `4ce378e04e243437e6f74dfe76c3cb7c70e45bf1`. The vectors were generated with
+Mesen (GPL-3.0); they are numeric test data only, fetched on demand into an ignored
+folder and verified against `tests/huc6280_vectors.sha256`. No Mesen code, table or
+binary is vendored, linked or executed. The notice is retained in
+[licenses/SingleStepTests-huc6280.txt](licenses/SingleStepTests-huc6280.txt).
+
 SNESRecomp and PSXRecomp currently use PolyForm Noncommercial 1.0.0.
 N64Recomp uses MIT; N64ModernRuntime and Mesen use GPL terms. They are
 research references, not an interchangeable pool of MIT code. See the
